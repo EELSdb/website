@@ -61,7 +61,7 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
         <h1>Contact</h1>
         <p class="lede">Write to the people who run the EELS Data Base. A person reads every message.</p>
         <p class="hint">
-          To report a bug in public or ask for a feature, <a href="https://github.com/ewels/EELSdb/issues">open an issue on GitHub</a> instead, so others can follow it.
+          To report a bug in public or ask for a feature, <a href="https://github.com/EELSdb/website/issues">open an issue on GitHub</a> instead, so others can follow it.
         </p>
         {Object.keys(errors).length > 0 && <p class="notice error-summary" role="alert">{errors.form ?? "Please fix the fields marked below."}</p>}
         <form method="post" action="/contact/" novalidate>

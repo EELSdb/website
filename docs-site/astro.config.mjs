@@ -8,8 +8,23 @@ import starlightLinksValidator from 'starlight-links-validator';
 import starlightLlmsTxt from 'starlight-llms-txt';
 import starlightOpenAPI, { openAPISidebarGroups } from 'starlight-openapi';
 import starlightPageActions from 'starlight-page-actions';
+import { runnerImport } from 'vite';
 
-import { openapiV2 } from '../worker/src/api/v2.ts';
+// The Worker's site.ts reads SITE_URL from `cloudflare:workers`, which only exists in the Workers runtime. An empty
+// env gives the docs production links, which the Worker rewrites when it serves them on another host.
+const {
+  module: { openapiV2 },
+} = await runnerImport(new URL('../worker/src/api/v2.ts', import.meta.url).pathname, {
+  configFile: false,
+  plugins: [
+    {
+      name: 'cloudflare-workers-stub',
+      enforce: 'pre',
+      resolveId: (id) => (id === 'cloudflare:workers' ? '\0cloudflare:workers' : undefined),
+      load: (id) => (id === '\0cloudflare:workers' ? 'export const env = {};' : undefined),
+    },
+  ],
+});
 
 // API v2's OpenAPI file comes from the Worker's route schemas, the same code that serves /api/openapi-v2.json.
 // v1 is frozen, so its file is written by hand.
@@ -25,7 +40,7 @@ writeFileSync(
   `---
 title: Contribution guidelines
 description: How to set up, test and change the EELSdb website code.
-editUrl: https://github.com/ewels/EELSdb/edit/rewrite/CONTRIBUTING.md
+editUrl: https://github.com/EELSdb/website/edit/rewrite/CONTRIBUTING.md
 ---
 
 ${readFileSync('../CONTRIBUTING.md', 'utf-8')}`,
@@ -60,7 +75,7 @@ export default defineConfig({
       favicon: '/favicon.svg',
       head: [{ tag: 'link', attrs: { rel: 'stylesheet', href: '/tokens.css' } }],
       customCss: ['./src/styles/eelsdb.css'],
-      editLink: { baseUrl: 'https://github.com/ewels/EELSdb/edit/rewrite/' },
+      editLink: { baseUrl: 'https://github.com/EELSdb/website/edit/rewrite/' },
       routeMiddleware: './src/routeData.ts',
       lastUpdated: true,
       // The Worker serves the site's own 404 page for every missing path, /docs/ included.

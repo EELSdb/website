@@ -3,7 +3,7 @@ import { existsSync, realpathSync } from 'node:fs';
 import { defineRouteMiddleware } from '@astrojs/starlight/route-data';
 
 const LINK = 'src/content/docs/';
-const EDIT_BASE = 'https://github.com/ewels/EELSdb/edit/rewrite/docs/';
+const EDIT_BASE = 'https://github.com/EELSdb/website/edit/rewrite/docs/';
 
 // The pages live in the repo's top-level docs/ folder, which src/content/docs links to. Git and GitHub do not
 // follow that link, so point the edit link and the last-updated date at the real file.

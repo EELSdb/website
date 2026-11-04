@@ -214,7 +214,7 @@ export function Layout(props: {
           <footer class="site-footer">
             <div class="wrap">
               <a href="/contact/">Contact</a>
-              <a href="https://github.com/ewels/EELSdb">Website source code on GitHub</a>
+              <a href="https://github.com/EELSdb/website">Website source code on GitHub</a>
               <a class="downloads" href="/downloads/">Bulk download</a>
               <span class="licence">
                 Data under the <a href="https://opendatacommons.org/licenses/odbl/">Open Database Licence (ODbL)</a> unless{" "}

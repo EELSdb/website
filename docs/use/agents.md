@@ -38,7 +38,7 @@ EELSdb has one, in the [Agent Skills](https://agentskills.io) format that Claude
 Install it from GitHub with the [`skills`](https://www.npmjs.com/package/skills) tool:
 
 ```sh
-$ npx skills add ewels/EELSdb
+$ npx skills add EELSdb/website
 ```
 
 Add `-g` to install it for all your projects.

@@ -41,7 +41,7 @@ describe("contact form", () => {
     const html = await (await go("/contact/")).text();
     expect(html).toContain('action="/contact/"');
     expect(html).toContain('name="topic"');
-    expect(html).toContain("https://github.com/ewels/EELSdb/issues");
+    expect(html).toContain("https://github.com/EELSdb/website/issues");
     expect(html).not.toContain("Signed in as");
     expect((await go("/contact/")).status).toBe(200);
   });

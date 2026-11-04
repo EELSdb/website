@@ -3,7 +3,6 @@ title: "0036. Share cards"
 description: "The Worker draws each public page's share image from the page's own data, as SVG turned into PNG with resvg."
 adr:
   date: 2026-10-23
-  implemented: "yes"
 ---
 
 ## Context

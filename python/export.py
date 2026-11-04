@@ -37,7 +37,7 @@ Microscopy and Microanalysis 22, 717-724 (2016). doi:10.1017/S1431927616000179
 
 
 def fetch(url):
-    req = urllib.request.Request(url, headers={"User-Agent": "EELSdb-export (+https://github.com/ewels/EELSdb)"})
+    req = urllib.request.Request(url, headers={"User-Agent": "EELSdb-export (+https://github.com/EELSdb/website)"})
     with urllib.request.urlopen(req, timeout=120) as res:
         return res.read()
 

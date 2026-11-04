@@ -15,11 +15,11 @@ adr:
 
 ## Decision
 
-- An `eelsdb` GitHub organisation holds the website repository and a second repository. The second repository holds full copies of all published spectra.
+- The [EELSdb](https://github.com/EELSdb) GitHub organisation holds two repositories. [`website`](https://github.com/EELSdb/website) holds the website code. [`eelsdb-spectra`](https://github.com/EELSdb/eelsdb-spectra) holds full copies of all published spectra.
 - A daily GitHub Actions job exports from API v2. It commits only when spectra were added, updated or removed. Uploads are infrequent, so most days produce no commit.
 - The data repository holds only data files and metadata files. It has no zips or Releases. GitHub already offers any repository as a zip download. Individual files keep the repository small, because a daily commit holds only the spectra that changed. A new zip each day would store the whole dataset again.
 - The data repository follows these rules:
-  - The data repository is a read-only mirror, and the site stays the source of truth. Pull requests to the data repository would split the source of truth.
+  - The data repository is a read-only mirror, and the site stays the source of truth. Pull requests to the data repository would split the source of truth. Its README says so and sends people to the website to submit or edit spectra.
   - Each spectrum has one folder (`spectra/<id>-<slug>/`) with the original file, the MSA and `metadata.json`.
   - Each spectrum records its licence ([ADR 0023](/docs/adr/0023-licences/)). The repository also has a README and `CITATION.cff`.
   - The repository has no large files. GitHub blocks files over 100 MB and recommends repositories under 1–5 GB.

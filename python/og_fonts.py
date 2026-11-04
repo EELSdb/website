@@ -77,7 +77,7 @@ def advances(font: TTFont) -> dict[str, float]:
 
 
 def noto(weight: int) -> TTFont:
-    request = urllib.request.Request(NOTO[weight], headers={"User-Agent": "EELSdb-rewrite/0.1 (+https://github.com/ewels/EELSdb)"})
+    request = urllib.request.Request(NOTO[weight], headers={"User-Agent": "EELSdb-rewrite/0.1 (+https://github.com/EELSdb/website)"})
     font = TTFont(BytesIO(urllib.request.urlopen(request).read()))
     options = Options()
     options.layout_features = []

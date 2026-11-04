@@ -13,7 +13,7 @@ More and more people reach data through AI assistants. EELSdb should be easy for
 
 - The docs build owns `/llms.txt`. The site also serves `/robots.txt`, which blocks `/admin/`, `/account/` and `/submissions/`.
 - Spectrum, author and news pages have Markdown versions at the page address plus `.md` (`worker/src/pages/markdown.ts`). Each page links to its Markdown version with `rel="alternate"`. Docs pages have `.md` routes too.
-- One Agent Skill, `skills/eelsdb`, covers reading the API and creating drafts ([ADR 0017](/docs/adr/0017-no-package-drafts-api/)). The skill points to `llms.txt` and the OpenAPI files and does not copy them, so it cannot drift. Users install it with `npx skills add ewels/EELSdb`. The site serves it at `/docs/skills/`.
+- One Agent Skill, `skills/eelsdb`, covers reading the API and creating drafts ([ADR 0017](/docs/adr/0017-no-package-drafts-api/)). The skill points to `llms.txt` and the OpenAPI files and does not copy them, so it cannot drift. Users install it with `npx skills add EELSdb/website`. The site serves it at `/docs/skills/`.
 - EELSdb has no MCP server for now. [ADR 0017](/docs/adr/0017-no-package-drafts-api/) gives the reasons.
 
 ## Consequences

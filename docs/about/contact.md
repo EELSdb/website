@@ -13,6 +13,6 @@ The form asks for your name, your email address, what the message is about and t
 
 For a bug report or a feature request that others may want to follow, open an issue on GitHub instead. It is public, so do not put private details in it.
 
-[Open an issue on GitHub](https://github.com/ewels/EELSdb/issues)
+[Open an issue on GitHub](https://github.com/EELSdb/website/issues)
 
 The [moderators](/moderators/) check each submitted spectrum before it is published.

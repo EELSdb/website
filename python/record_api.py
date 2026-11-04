@@ -18,7 +18,7 @@ ROOT = Path(__file__).resolve().parents[1]
 OUT = ROOT / "data" / "fixtures" / "api-v1"
 
 # Polite read-only HTTP for the live site: GET only, at most 1 request per second.
-USER_AGENT = "EELSdb-rewrite/0.1 (+https://github.com/ewels/EELSdb)"
+USER_AGENT = "EELSdb-rewrite/0.1 (+https://github.com/EELSdb/website)"
 MIN_INTERVAL_S = 1.0
 
 _last_request = 0.0
