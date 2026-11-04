@@ -19,6 +19,7 @@ export const PAGE_CARDS: Record<string, { title: string; description: string; ur
   browse: { title: "Browse spectra", description: "Filter by element, edge, type, energy range and resolution.", url: `${SITE_HOST}/spectra/` },
   downloads: { title: "Bulk download", description: "Every published spectrum in one archive, with its metadata.", url: `${SITE_HOST}/downloads/` },
   moderators: { title: "Moderators", description: "The people who check each submitted spectrum before it is published.", url: `${SITE_HOST}/moderators/` },
+  stats: { title: "Statistics", description: "How the API and the spectrum downloads are used, and how the collection has grown.", url: `${SITE_HOST}/stats/` },
   news: { title: "News", description: "Archived news from the EELS Data Base.", url: `${SITE_HOST}/news/` },
   contact: { title: "Contact", description: "Questions about the EELS Data Base, a spectrum or your account.", url: `${SITE_HOST}/contact/` },
 };

@@ -37,7 +37,7 @@ These records explain the main design decisions in EELSdb. Each record gives the
 | [0027. Bulk download](/docs/adr/0027-bulk-download/) | A script outside Cloudflare builds the bulk download from API v2. |
 | [0028. Access for AI agents](/docs/adr/0028-agent-facing-surface/) | AI agents read EELSdb through llms.txt, Markdown pages and a skill, without an MCP server. |
 | [0035. GitHub data backup](/docs/adr/0035-github-data-backup/) | A GitHub repository holds a copy of every published spectrum as plain files. |
-| [0037. Usage analytics](/docs/adr/0037-usage-analytics/) | Workers Logs, an Analytics Engine count of API calls by client, and Cloudflare Web Analytics for the pages, with no IP addresses or cookies. |
+| [0037. Usage analytics](/docs/adr/0037-usage-analytics/) | Workers Logs, an Analytics Engine count of API calls and downloads, a daily copy into D1 for the statistics page, and Cloudflare Web Analytics for the pages, with no IP addresses or cookies. |
 
 ## Contributing data
 

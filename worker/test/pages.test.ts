@@ -76,7 +76,7 @@ describe("pages", () => {
       expect(button, path).toContain("current");
       expect(button).toContain('aria-expanded="false"');
       const id = button.match(/aria-controls="([^"]+)"/)?.[1];
-      expect(html).toMatch(new RegExp(`<ul class="drop-panel" id="${id}">(<li><a href="[^"]+"[^>]*>[^<]+</a></li>){5}</ul>`));
+      expect(html).toMatch(new RegExp(`<ul class="drop-panel" id="${id}">(<li><a href="[^"]+"[^>]*>[^<]+</a></li>){6}</ul>`));
       expect(html).toContain(`<li><a href="${path}" aria-current="page">`);
     }
     const browse = (await page("/spectra/")).html;

@@ -13,6 +13,8 @@ interface Env {
   LEGACY_PASSWORD_LOGIN?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
+  ANALYTICS_ACCOUNT_ID?: string;
+  ANALYTICS_API_TOKEN?: string;
 }
 
 declare module "@resvg/resvg-wasm/index_bg.wasm" {

@@ -11,6 +11,7 @@ export const ABOUT_NAV = [
   ["/docs/about/", "About EELSdb"],
   ["/docs/about/citation/", "How to cite"],
   ["/moderators/", "Moderators"],
+  ["/stats/", "Statistics"],
   ["/docs/about/logo/", "Logo and colours"],
   ["/contact/", "Contact"],
 ] as const;

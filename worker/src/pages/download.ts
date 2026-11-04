@@ -6,6 +6,7 @@ import { licenceOf } from "../api/metadata";
 import { formatV2 } from "../api/v2";
 import { attachment } from "../files";
 import { parseSpectrum } from "../preview";
+import { recordDownload } from "../usage";
 import { visibleSpectrumId } from "./spectrum";
 
 export const FORMATS = ["msa", "csv", "json"] as const;
@@ -59,6 +60,7 @@ export async function downloadSpectrum(c: Context<AppEnv>) {
   if (x.length < 2) return c.notFound();
   const body = { msa: toMsa, csv: toCsv, json: toJson }[format](b, x, y);
   const name = `${b.spectrum.slug}.${format}`;
+  recordDownload(c, b.spectrum.id);
   return new Response(body, {
     headers: {
       "Content-Type": TYPES[format],

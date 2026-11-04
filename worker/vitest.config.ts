@@ -18,6 +18,7 @@ export default defineConfig({
           // Tests must not depend on the developer's worker/.env.
           TURNSTILE_SITE_KEY: "",
           TURNSTILE_SECRET_KEY: "",
+          ANALYTICS_API_TOKEN: "",
           EMAIL_PROVIDER: "log",
           ORCID_BASE: "https://orcid.org",
           SITE_URL: "https://eelsdb.eu",

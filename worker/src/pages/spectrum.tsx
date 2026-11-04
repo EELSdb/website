@@ -197,13 +197,17 @@ export async function spectrumPage(c: Context<AppEnv>) {
   const canEdit = !!user && (s.owner_id === user.id || isModerator(user));
   const published = s.status === "published";
   const orcid = published ? ((await creatorOrcids(c.env.DB, [s.id])).get(s.id) ?? null) : null;
-  const [owner, history] = await Promise.all([
+  const [owner, history, downloaded] = await Promise.all([
     c.env.DB.prepare(
       `SELECT avatar_key, use_gravatar,
               (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email
        FROM users u WHERE id = ?`,
     ).bind(s.owner_id).first<any>(),
     published ? spectrumHistory(c.env.DB, s) : [],
+    c.env.DB.prepare(
+      `SELECT (SELECT SUM(n) FROM usage_daily WHERE dimension = 'spectrum' AND surface = 'download' AND value = ?) AS n,
+              (SELECT MIN(day) FROM usage_daily WHERE dimension = 'total' AND surface = 'download') AS since`,
+    ).bind(String(s.id)).first<{ n: number | null; since: string | null }>(),
   ]);
   const avatar = owner ? await avatarUrl(owner.avatar_key, owner.email, owner.use_gravatar) : null;
   const uploaderEmail = published ? await unclaimedUploaderEmail(c.env.DB, s.owner_id) : null;
@@ -432,6 +436,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </>
                 ),
               ],
+              ["Downloads", downloaded?.n ? `${downloaded.n.toLocaleString("en")} since ${downloaded.since}` : null],
             ]}
           />
           {uploaderEmail && (

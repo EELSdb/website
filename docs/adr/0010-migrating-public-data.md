@@ -68,6 +68,7 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
    - Workers Paid on the Cloudflare account, which email sending needs.
    - Real Turnstile keys.
    - OAuth client IDs.
+   - A Cloudflare API token with only the Account Analytics Read permission. Set it and the account ID as the secrets `ANALYTICS_API_TOKEN` and `ANALYTICS_ACCOUNT_ID`, so the daily cron copies usage counts into D1 ([ADR 0037](/docs/adr/0037-usage-analytics/)).
    - Two-step sign-in on the admin account of the owner. With the defaults, an admin without two-step sign-in has no powers, and contact messages reach nobody.
 6. Watch 404s and failed sign-ins for a few weeks. Email the kept accounts. Announce the new site on HyperSpy channels.
 7. Decommission the old host and rotate its credentials.

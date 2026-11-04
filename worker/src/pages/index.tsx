@@ -21,6 +21,7 @@ import { account } from "./account";
 import { spectrumPage } from "./spectrum";
 import { downloadSpectrum } from "./download";
 import { suggestSpectra } from "./suggest";
+import { statsPage } from "./stats";
 import { settings } from "./settings";
 import { HAS_PAGE_SQL, LINK_FIELDS, STAFF_ROLES, linkText, linkUrl, parseLinks } from "./profile";
 import { LinkIcon } from "./link-icons";
@@ -75,6 +76,8 @@ pages.get(`/${EXPORT_KEY}`, async (c) => {
   headers.set("Cache-Control", "public, max-age=3600");
   return new Response(object.body, { headers });
 });
+
+pages.get("/stats/", statsPage);
 
 pages.get("/downloads/", async (c) => {
   const head = await c.env.FILES.head(EXPORT_KEY);

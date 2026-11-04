@@ -742,8 +742,23 @@ ul.mod-list { list-style: none; padding: 0; margin: 1.5rem 0 0; border-top: 1px 
 .news-list p { margin: 0; }
 .news-list p.small { margin-bottom: 0.5rem; }
 
+/* Statistics page */
+.stats-about { max-width: 72ch; font-size: 0.95rem; }
+.stats-grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 0 4.5rem; }
+.plot.stats-plot { min-height: 200px; }
+.stats-bars { list-style: none; margin: 0; padding: 0; font-size: 0.92rem; }
+.stats-bars li { display: grid; grid-template-columns: 9.5rem minmax(0, 1fr) 3.5rem; gap: 0.75rem; align-items: center; padding: 0.35rem 0; border-bottom: 1px solid var(--rule); break-inside: avoid; }
+.stats-bars li:last-child { border-bottom: 0; }
+.stats-bars a { color: var(--ink); text-decoration: none; }
+.stats-bars a:hover, .stats-bars a:hover .type { color: var(--accent-ink); }
+.stats-bars b { font-weight: 600; }
+.stats-bars .bar { display: block; min-width: 2px; height: 0.6rem; border-radius: 2px; background: color-mix(in oklab, var(--plot) 55%, transparent); }
+.stats-bars .bar-n { text-align: right; }
+.stats-elements { columns: 3 18rem; column-gap: 3rem; }
+.stats-elements li { grid-template-columns: 8.5rem minmax(0, 1fr) 3rem; }
+
 @media (max-width: 860px) {
-  .browse, .spectrum-cols, .spectrum-intro { grid-template-columns: minmax(0, 1fr); }
+  .browse, .spectrum-cols, .spectrum-intro, .stats-grid { grid-template-columns: minmax(0, 1fr); }
   .filters { position: static; max-height: none; overflow: visible; margin: 0; padding: 1.5rem 0 0; border-top: 1px solid var(--line); border-right: 0; }
   .filter-actions { position: static; border-top: 0; margin: 0; padding: 0.25rem 0 0; }
   .browse > section { order: -1; }
