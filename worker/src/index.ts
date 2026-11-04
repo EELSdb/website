@@ -2,7 +2,7 @@ import { api } from "./api/index";
 import { pages } from "./pages/index";
 import { deleteOldMessages } from "./contact";
 import { deleteOldDrafts } from "./submit/drafts";
-import { IS_PRODUCTION } from "./site";
+import { IS_PRODUCTION, apiPath } from "./site";
 
 // No full Content-Security-Policy yet: Pyodide (wasm) and Turnstile need careful allowances.
 const SECURITY_HEADERS = {
@@ -13,8 +13,13 @@ const SECURITY_HEADERS = {
 
 export default {
   async fetch(req, env, ctx) {
-    const host = new URL(req.url).hostname;
-    const app = host.startsWith("api.") || host.startsWith("www.api.") ? api : pages;
+    const url = new URL(req.url);
+    const path = apiPath(url);
+    if (path) {
+      url.pathname = path;
+      req = new Request(url, req);
+    }
+    const app = path || url.hostname.startsWith("api.") || url.hostname.startsWith("www.api.") ? api : pages;
     const res = await app.fetch(req, env, ctx);
     const out = new Response(res.body, res);
     for (const [k, v] of Object.entries(SECURITY_HEADERS)) if (!out.headers.has(k)) out.headers.set(k, v);

@@ -35,9 +35,9 @@
   // other hosts. Bindings are not inherited from the top level, so each environment lists them all.
   "env": {
     "dev": {
-      // workers.dev has no api. host, so the API is unreachable here. Once eelsdb.eu is on Cloudflare, move to
-      // dev.eelsdb.eu with "routes": [{ "pattern": "dev.eelsdb.eu", "custom_domain": true }, and the same for api.dev.eelsdb.eu].
-      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev" },
+      // workers.dev has no api. host, so the API is under /_api. Once eelsdb.eu is on Cloudflare, move to dev.eelsdb.eu,
+      // drop API_URL and add "routes": [{ "pattern": "dev.eelsdb.eu", "custom_domain": true }, and the same for api.dev.eelsdb.eu].
+      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev", "API_URL": "https://eelsdb-dev.eelsdb.workers.dev/_api" },
       "d1_databases": [
         {
           "binding": "DB",
