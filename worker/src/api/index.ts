@@ -1,4 +1,5 @@
 import { Hono, type Context } from "hono";
+import { routePath } from "hono/route";
 import type { AppEnv } from "../auth";
 import { API_HOST, SITE, formatV1, loadBundle, loadMany } from "./format";
 import { localise } from "../site";
@@ -19,6 +20,14 @@ const notFound = (c: Context) => json(c, { message: "API path not recognised", d
 api.use(async (c, next) => {
   await next();
   c.res.headers.set("Access-Control-Allow-Origin", "*");
+  const first = c.req.path.split("/")[1];
+  const surface = first === "v2" || first === "oai" || first === "dcat" ? first : "v1";
+  // Only a leading product token such as "exSpy/0.4": full User-Agents can hold an email address.
+  const client = c.req.header("User-Agent")?.match(/^[\w.-]+(\/[\w.+-]+)?(?=[\s;(]|$)/)?.[0].slice(0, 64) ?? "";
+  const country = (c.req.raw.cf as IncomingRequestCfProperties | undefined)?.country ?? "";
+  try {
+    c.env.API_USAGE?.writeDataPoint({ indexes: [surface], blobs: [surface, routePath(c), c.req.method, client, country], doubles: [c.res.status] });
+  } catch {}
 });
 
 const INDEX = {

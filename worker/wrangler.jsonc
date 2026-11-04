@@ -21,30 +21,34 @@
     }
   ],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "eelsdb-files" }],
+  "analytics_engine_datasets": [{ "binding": "API_USAGE", "dataset": "eelsdb_api" }],
   // Simulated locally (wrangler dev and the tests). Before deploying, onboard a sending domain in the
   // Cloudflare account (Email Sending) and set EMAIL_PROVIDER=cloudflare and EMAIL_FROM on that domain.
   "send_email": [{ "name": "EMAIL" }],
-  // Daily: delete drafts that were never submitted.
+  // Daily: delete old drafts, contact messages and rate-limit events.
   "triggers": { "crons": ["17 3 * * *"] },
+  // Caps the CPU one invocation can bill (Workers Paid default: 30 s); env.dev inherits it. The heaviest work,
+  // an old bcrypt (cost 12) password check, needs well under 1 s.
+  "limits": { "cpu_ms": 2000 },
+  "observability": { "enabled": true },
   // A test deployment on its own hosts, data and files: `npx wrangler deploy --env dev`. Copy this block for
   // other hosts. Bindings are not inherited from the top level, so each environment lists them all.
   "env": {
     "dev": {
-      "vars": { "SITE_URL": "https://dev.eelsdb.eu" },
-      "routes": [
-        { "pattern": "dev.eelsdb.eu", "custom_domain": true },
-        { "pattern": "api.dev.eelsdb.eu", "custom_domain": true }
-      ],
+      // workers.dev has no api. host, so the API is unreachable here. Once eelsdb.eu is on Cloudflare, move to
+      // dev.eelsdb.eu with "routes": [{ "pattern": "dev.eelsdb.eu", "custom_domain": true }, and the same for api.dev.eelsdb.eu].
+      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev" },
       "d1_databases": [
         {
           "binding": "DB",
           "database_name": "eelsdb-dev",
-          "database_id": "00000000-0000-0000-0000-000000000000",
+          "database_id": "326de155-d564-4fff-ac76-f699ebef4cc2",
           "migrations_dir": "migrations",
           "remote": true
         }
       ],
       "r2_buckets": [{ "binding": "FILES", "bucket_name": "eelsdb-dev-files", "remote": true }],
+      "analytics_engine_datasets": [{ "binding": "API_USAGE", "dataset": "eelsdb_dev_api" }],
       "send_email": [{ "name": "EMAIL" }]
     }
   }

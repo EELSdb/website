@@ -58,7 +58,7 @@ exSpy depends on these behaviours (`exspy/data/_eelsdb.py`, 0.3.2 and main, Octo
 - The fixtures store recorded list responses as IDs into `spectra/all.json`. This takes 2 MB instead of 28 MB.
 - The recorder refuses unpublished spectra. It stops if an `email` key appears in a response.
 - exSpy gets the same spectra and data from `wrangler dev` as from the live site. `python/tests/test_exspy_against_worker.py` checks this when `EELSDB_API` is set.
-- We can remove v1 only after two things happen. exSpy must move to v2 through an exSpy pull request ([ADR 0006](/docs/adr/0006-no-hard-external-dependencies/)). Old exSpy versions must also go out of use.
+- We can remove v1 only after two things happen. exSpy must move to v2 through an exSpy pull request ([ADR 0006](/docs/adr/0006-no-hard-external-dependencies/)). Old exSpy versions must also go out of use. The API usage counts in [ADR 0037](/docs/adr/0037-usage-analytics/) show who still calls v1, and how often.
 
 ## Alternatives considered
 

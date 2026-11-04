@@ -184,8 +184,7 @@ contact.post("/contact/", async (c) => {
   let delivered = 0;
   for (const address of to) {
     try {
-      await sendEmail(c.env, { to: address, subject: `[EELSdb contact] ${TOPICS[v.topic]}`, text, replyTo: v.email, footer: "You received this email because you are an administrator of the EELS Data Base. Reply to answer the sender." });
-      delivered++;
+      if (await sendEmail(c.env, { to: address, subject: `[EELSdb contact] ${TOPICS[v.topic]}`, text, replyTo: v.email, footer: "You received this email because you are an administrator of the EELS Data Base. Reply to answer the sender." })) delivered++;
     } catch (e) {
       console.error("contact email failed", e instanceof Error ? e.message : e);
     }

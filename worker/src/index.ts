@@ -24,5 +24,7 @@ export default {
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(deleteOldDrafts(env));
     ctx.waitUntil(deleteOldMessages(env));
+    // Must outlast the longest window any rate limit counts over.
+    ctx.waitUntil(env.DB.prepare("DELETE FROM rate_events WHERE at < datetime('now', '-1 day')").run());
   },
 } satisfies ExportedHandler<Env>;

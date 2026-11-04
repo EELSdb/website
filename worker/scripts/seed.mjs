@@ -3,6 +3,7 @@
 // `--env dev` fills that Wrangler environment's real D1 and R2 instead (its bindings are marked remote), without accounts.
 import { execFileSync } from "node:child_process";
 import { existsSync, readFileSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { getPlatformProxy } from "wrangler";
 
 const root = new URL("../../", import.meta.url);
@@ -34,14 +35,26 @@ if (!envName && existsSync(accountsFile)) {
 }
 
 let missing = 0;
-for (const u of uploads) {
-  const file = new URL(u.file, root);
+async function upload(u) {
+  // A plain path: some WordPress file names contain literal "%c2%ba", which a URL would decode.
+  const file = fileURLToPath(root) + u.file;
   if (!existsSync(file)) {
     missing++;
-    continue;
+    return;
   }
   const contentType = u.key.endsWith(".msa") || u.key.endsWith(".txt") ? "text/plain; charset=utf-8" : "application/octet-stream";
-  await env.FILES.put(u.key, readFileSync(file), { httpMetadata: { contentType }, sha256: u.sha256 });
+  // Remote R2 sometimes fails a put with an internal error that works on a second try.
+  for (let attempt = 1; ; attempt++) {
+    try {
+      return await env.FILES.put(u.key, readFileSync(file), { httpMetadata: { contentType }, sha256: u.sha256 });
+    } catch (e) {
+      if (attempt === 3) throw e;
+    }
+  }
 }
+const queue = [...uploads];
+await Promise.all(Array.from({ length: 16 }, async () => {
+  while (queue.length) await upload(queue.pop());
+}));
 console.log(`R2: ${uploads.length - missing} files${missing ? `, ${missing} missing (run download_files)` : ""}`);
 await dispose();

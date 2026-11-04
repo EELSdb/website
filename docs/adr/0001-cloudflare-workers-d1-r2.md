@@ -30,14 +30,14 @@ The new site has these requirements:
 
 - There is no server, OS or PHP to patch. Dependencies are few and pinned ([ADR 0004](/docs/adr/0004-server-rendered-hono/)).
 - Local development runs entirely in `wrangler dev`, with Miniflare's local D1 and R2. Developers do not need a Cloudflare account to develop or test.
-- Keep the work per request small, and keep it in D1 queries. Workers Paid allows 30 s of CPU per request by default, but heavy work in the request path still makes pages slow and costs CPU time. Examples are parsing a large JSON index and password hashing.
+- Keep the work per request small, and keep it in D1 queries. Workers Paid allows 30 s of CPU per request by default, and the Worker lowers this to 2 s (`limits.cpu_ms`). Heavy work in the request path still makes pages slow and costs CPU time. Examples are parsing a large JSON index and password hashing.
 - D1 allows at most 100 bound parameters per query. Code must cap or chunk every `IN (...)` that it builds from user input.
 - Heavy work stays out of the request path:
   - Old WordPress password checks use a lot of CPU. They sit behind a flag, and the Worker rehashes each password on first use ([ADR 0018](/docs/adr/0018-sign-in/)).
   - The project does not need server-side HyperSpy, because Python runs in the browser ([ADR 0002](/docs/adr/0002-no-server-side-python/)).
   - A process outside Cloudflare builds the bulk zip ([ADR 0027](/docs/adr/0027-bulk-download/)).
 - Email uses Cloudflare Email Service, behind a provider switch with a "log" default, so local development sends nothing ([ADR 0022](/docs/adr/0022-email-and-contact/)).
-- A cron trigger runs a daily clean-up of old drafts and old contact messages.
+- A cron trigger runs a daily clean-up of old drafts, old contact messages and old `rate_events` rows.
 - Some text is prebuilt with production links: the docs, `llms.txt`, the API v1 OpenAPI file and the migrated API v1 records. On any other address the Worker rewrites `https://eelsdb.eu` and `https://api.eelsdb.eu` in them as it serves them, which is why `robots.txt`, `llms.txt` and `/docs/*` are in `assets.run_worker_first`. Off production the Worker also asks search engines not to index anything (`robots.txt` disallows all, and responses carry `X-Robots-Tag: noindex`).
 
 ## Alternatives considered
