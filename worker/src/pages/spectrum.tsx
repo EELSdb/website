@@ -196,19 +196,22 @@ export async function spectrumPage(c: Context<AppEnv>) {
   ].filter(Boolean).join(", ");
   const canEdit = !!user && (s.owner_id === user.id || isModerator(user));
   const published = s.status === "published";
+  if (published) c.set("spectrumId", s.id);
   const orcid = published ? ((await creatorOrcids(c.env.DB, [s.id])).get(s.id) ?? null) : null;
-  const [owner, history, downloaded] = await Promise.all([
+  const [owner, history, { results: usage }] = await Promise.all([
     c.env.DB.prepare(
       `SELECT avatar_key, use_gravatar,
               (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email
        FROM users u WHERE id = ?`,
     ).bind(s.owner_id).first<any>(),
     published ? spectrumHistory(c.env.DB, s) : [],
-    c.env.DB.prepare(
-      `SELECT (SELECT SUM(n) FROM usage_daily WHERE dimension = 'spectrum' AND surface = 'download' AND value = ?) AS n,
-              (SELECT MIN(day) FROM usage_daily WHERE dimension = 'total' AND surface = 'download') AS since`,
-    ).bind(String(s.id)).first<{ n: number | null; since: string | null }>(),
+    c.env.DB.prepare("SELECT surface, SUM(n) AS n FROM usage_daily WHERE dimension = 'spectrum' AND surface IN ('view', 'download') AND value = ? GROUP BY surface")
+      .bind(String(s.id))
+      .all<{ surface: string; n: number }>(),
   ]);
+  const viewCount = usage.find((u) => u.surface === "view")?.n ?? 0;
+  const downloadCount = usage.find((u) => u.surface === "download")?.n ?? 0;
+  const details = <>{" · "}<a href={`/spectra/${encodeURIComponent(s.slug)}/usage/`} data-open="usage-dialog">Details</a></>;
   const avatar = owner ? await avatarUrl(owner.avatar_key, owner.email, owner.use_gravatar) : null;
   const uploaderEmail = published ? await unclaimedUploaderEmail(c.env.DB, s.owner_id) : null;
 
@@ -436,7 +439,8 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </>
                 ),
               ],
-              ["Downloads", downloaded?.n ? `${downloaded.n.toLocaleString("en")} since ${downloaded.since}` : null],
+              ["Page views", viewCount ? <>{viewCount.toLocaleString("en")}{!downloadCount && details}</> : null],
+              ["Downloads", downloadCount ? <>{downloadCount.toLocaleString("en")}{details}</> : null],
             ]}
           />
           {uploaderEmail && (
@@ -607,6 +611,15 @@ export async function spectrumPage(c: Context<AppEnv>) {
               </svg>
               <span class="dl-name">Download {downloads[0]?.name ?? fileName}</span>
             </a>
+          </div>
+        </dialog>
+      )}
+      {(viewCount > 0 || downloadCount > 0) && (
+        <dialog id="usage-dialog" aria-labelledby="usage-title">
+          <h2 id="usage-title">Page views and downloads</h2>
+          <div id="usage-body" aria-live="polite"><p class="muted">Loading…</p></div>
+          <div class="dialog-actions">
+            <button class="button secondary" type="button" data-close autofocus>Close</button>
           </div>
         </dialog>
       )}

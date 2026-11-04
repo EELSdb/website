@@ -20,3 +20,4 @@ More and more people reach data through AI assistants. EELSdb should be easy for
 
 - `npx skills add` reads the default branch of the repository. It works only after the rewrite becomes the default branch.
 - Agents create drafts and people submit them ([ADR 0017](/docs/adr/0017-no-package-drafts-api/)).
+- Requests for these files are counted by file and by kind of client (AI crawler, AI agent, browser, script), and shown on `/stats/` under "For AI agents" ([ADR 0037](/docs/adr/0037-usage-analytics/)).

@@ -60,7 +60,7 @@ export async function downloadSpectrum(c: Context<AppEnv>) {
   if (x.length < 2) return c.notFound();
   const body = { msa: toMsa, csv: toCsv, json: toJson }[format](b, x, y);
   const name = `${b.spectrum.slug}.${format}`;
-  recordDownload(c, b.spectrum.id);
+  recordDownload(c, b.spectrum.id, format);
   return new Response(body, {
     headers: {
       "Content-Type": TYPES[format],

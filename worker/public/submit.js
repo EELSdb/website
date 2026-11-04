@@ -1095,7 +1095,7 @@ go(withError?.dataset.step ?? "files", { focus: false });
 if (editing && form.dataset.currentFile) {
   (async () => {
     try {
-      const res = await fetch(form.dataset.currentFile);
+      const res = await fetch(`${form.dataset.currentFile}?preview`);
       if (!res.ok) return;
       const f = { file: new File([await res.blob()], form.dataset.currentName), role: "current", current: true, chosen: true, state: "current" };
       files.push(f);

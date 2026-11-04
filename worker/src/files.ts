@@ -43,9 +43,9 @@ export function fileHeaders(name: string) {
 export async function serveFile(c: Context<AppEnv>) {
   const key = decodeURIComponent(new URL(c.req.url).pathname.slice(1));
   const legacy = key.startsWith("wp-content/");
-  const s = await c.env.DB.prepare("SELECT s.id, s.status, s.owner_id FROM files f JOIN spectra s ON s.id = f.spectrum_id WHERE f.r2_key = ?")
+  const s = await c.env.DB.prepare("SELECT s.id, s.status, s.owner_id, f.role FROM files f JOIN spectra s ON s.id = f.spectrum_id WHERE f.r2_key = ?")
     .bind(key)
-    .first<{ id: number; status: string; owner_id: number | null }>();
+    .first<{ id: number; status: string; owner_id: number | null; role: string }>();
   if (!legacy) {
     const user = c.get("user");
     const allowed = s && (s.status === "published" || (user && (user.id === s.owner_id || isModerator(user))));
@@ -60,7 +60,7 @@ export async function serveFile(c: Context<AppEnv>) {
   headers.set("ETag", object.httpEtag);
   headers.set("Cache-Control", legacy || !key.startsWith("submissions/") ? "public, max-age=86400" : "private, no-store");
   headers.set("Access-Control-Allow-Origin", "*");
-  recordDownload(c, s?.id);
+  recordDownload(c, s?.id, s?.role ?? "");
   return new Response(object.body, { headers });
 }
 

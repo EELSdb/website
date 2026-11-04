@@ -16,6 +16,22 @@ for (const radio of document.querySelectorAll("[name=download-format]")) {
     link.querySelector(".dl-name").textContent = `Download ${radio.dataset.name}`;
   });
 }
+// The usage dialog shows the spectrum's usage page, fetched when it first opens.
+const usageLink = document.querySelector("[data-open=usage-dialog]");
+usageLink?.addEventListener("click", async () => {
+  const body = document.getElementById("usage-body");
+  if (body.dataset.loaded) return;
+  body.dataset.loaded = "1";
+  try {
+    const res = await fetch(usageLink.href);
+    if (!res.ok) throw new Error(res.statusText);
+    body.replaceChildren(new DOMParser().parseFromString(await res.text(), "text/html").getElementById("spectrum-usage"));
+    await import("/stats.js");
+  } catch {
+    body.innerHTML = '<p class="muted">The numbers could not be loaded.</p>';
+    delete body.dataset.loaded;
+  }
+});
 // A click on the backdrop lands on the dialog itself, outside its box.
 for (const dialog of document.querySelectorAll("dialog")) {
   dialog.addEventListener("click", (e) => {
@@ -89,8 +105,9 @@ const css = (name) => {
   return getComputedStyle(probe).color;
 };
 
+// "?preview" keeps the site's own fetches out of the download counts.
 async function load(src) {
-  const res = await fetch(src);
+  const res = await fetch(`${src}?preview`);
   if (!res.ok) throw new Error(res.statusText);
   const data = parseSpectrum(await res.text());
   if (data[0].length < 2) throw new Error("no data");
@@ -501,7 +518,7 @@ async function main() {
       if (compares.some((c) => c.slug === s.slug)) return;
       status.textContent = `Loading ${s.title}…`;
       try {
-        const res = await fetch(`/spectra/${encodeURIComponent(s.slug)}/download/json`);
+        const res = await fetch(`/spectra/${encodeURIComponent(s.slug)}/download/json?preview`);
         if (!res.ok) throw new Error(`download failed (${res.status})`);
         const { data: d } = await res.json();
         compares.push({ name: s.title, slug: s.slug, x: d.energy_ev, y: d.intensity });
@@ -783,7 +800,7 @@ for (const details of document.querySelectorAll("details.file-metadata")) {
     details.dataset.loaded = "1";
     const table = details.querySelector("table");
     try {
-      const rows = flatten(await (await fetch(details.dataset.src)).json());
+      const rows = flatten(await (await fetch(`${details.dataset.src}?preview`)).json());
       for (const [k, v] of rows) {
         const tr = table.insertRow();
         tr.append(Object.assign(document.createElement("th"), { textContent: k }), Object.assign(document.createElement("td"), { textContent: v }));

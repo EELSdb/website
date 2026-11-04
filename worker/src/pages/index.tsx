@@ -21,7 +21,8 @@ import { account } from "./account";
 import { spectrumPage } from "./spectrum";
 import { downloadSpectrum } from "./download";
 import { suggestSpectra } from "./suggest";
-import { statsPage } from "./stats";
+import { spectrumUsagePage, statsPage } from "./stats";
+import { recordPage } from "../usage";
 import { settings } from "./settings";
 import { HAS_PAGE_SQL, LINK_FIELDS, STAFF_ROLES, linkText, linkUrl, parseLinks } from "./profile";
 import { LinkIcon } from "./link-icons";
@@ -35,6 +36,10 @@ import { og } from "../og/index";
 export const pages = new Hono<AppEnv>();
 type C = Context<AppEnv>;
 
+pages.use(async (c, next) => {
+  await next();
+  recordPage(c);
+});
 pages.route("/og", og);
 pages.use(csrf());
 pages.use(loadUser);
@@ -62,6 +67,7 @@ pages.get("/author/:file{.+\\.md}", markdown(authorMarkdown));
 pages.get("/search/spectra.json", suggestSpectra);
 pages.get("/spectra/:slug/", spectrumPage);
 pages.get("/spectra/:slug/download/:format{msa|csv|json}", downloadSpectrum);
+pages.get("/spectra/:slug/usage/", spectrumUsagePage);
 pages.get("/spectra/:slug", (c) => c.redirect(`/spectra/${encodeURIComponent(c.req.param("slug"))}/`, 301));
 pages.get("/wp-content/uploads/*", serveFile);
 pages.get("/files/*", serveFile);

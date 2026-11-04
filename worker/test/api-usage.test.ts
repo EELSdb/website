@@ -13,25 +13,91 @@ it("counts API v1 requests by route and client, and never stores the full User-A
   write.mockRestore();
 });
 
-it("counts spectrum downloads by spectrum id, but not the site's own requests for plots", async () => {
+const get = (path: string, headers: Record<string, string> = {}, method = "GET") => exports.default.fetch(`https://eelsdb.eu${path}`, { method, headers });
+
+it("counts downloads with their format and where they started, but not the site's own previews", async () => {
   await env.FILES.put("wp-content/uploads/2023/10/Y20.txt", "Energy Counts\n100.0 5\n100.5 7\n101.0 6\n");
   await env.FILES.put("wp-content/uploads/usage-test.txt", "no spectrum");
   const write = vi.spyOn(env.API_USAGE, "writeDataPoint");
-  const get = (path: string, headers: Record<string, string> = {}) => exports.default.fetch(`https://eelsdb.eu${path}`, { headers });
   await get("/wp-content/uploads/2023/10/Y20.txt", { "User-Agent": "python-requests/2.32" });
-  await get("/wp-content/uploads/2023/10/Y20.txt", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors" });
+  await get("/wp-content/uploads/2023/10/Y20.txt?preview", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors" });
+  await get("/spectra/mlc-nanotube-ylas-tas2/download/json?preview", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors" });
   await get("/spectra/mlc-nanotube-ylas-tas2/download/csv", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "navigate" });
+  // A script on the site that saves a file is a download too.
+  await get("/spectra/mlc-nanotube-ylas-tas2/download/json", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors" });
+  // Safari sends no Sec-Fetch headers on a download, only the Referer.
+  await get("/spectra/mlc-nanotube-ylas-tas2/download/msa", { Referer: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/" });
+  await get("/spectra/mlc-nanotube-ylas-tas2/download/msa", { Referer: "https://example.org/eels" });
   await get("/wp-content/uploads/usage-test.txt");
-  const point = (route: string, client: string, spectrum: string) => ({
+  const point = (route: string, client: string, spectrum: string, format: string, via: string) => ({
     indexes: ["download"],
-    blobs: ["download", route, "GET", client, expect.any(String), spectrum],
+    blobs: ["download", route, "GET", client, expect.any(String), spectrum, format, via],
     doubles: [200],
   });
+  const route = "/spectra/:slug/download/:format{msa|csv|json}";
   expect(write.mock.calls.map(([p]) => p)).toEqual([
-    point("/wp-content/uploads/*", "python-requests/2.32", "22236"),
-    point("/spectra/:slug/download/:format{msa|csv|json}", "", "22236"),
-    point("/wp-content/uploads/*", "", ""),
+    point("/wp-content/uploads/*", "python-requests/2.32", "22236", "legacy", "direct"),
+    point(route, "", "22236", "csv", "site"),
+    point(route, "", "22236", "json", "site"),
+    point(route, "", "22236", "msa", "site"),
+    point(route, "", "22236", "msa", "direct"),
+    point("/wp-content/uploads/*", "", "", "", "direct"),
   ]);
   write.mockRestore();
   await env.FILES.delete(["wp-content/uploads/2023/10/Y20.txt", "wp-content/uploads/usage-test.txt"]);
+});
+
+it("counts public page loads by kind of client, with only the host of another site's referrer", async () => {
+  const write = vi.spyOn(env.API_USAGE, "writeDataPoint");
+  const browser = { "User-Agent": "Mozilla/5.0 (Macintosh) Firefox/140.0", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" };
+  await get("/spectra/mlc-nanotube-ylas-tas2/", { ...browser, Referer: "https://www.google.com/search?q=private+words" });
+  await get("/", { ...browser, Referer: "https://eelsdb.eu/stats/" });
+  await get("/spectra/mlc-nanotube-ylas-tas2/", { "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; GPTBot/1.2; +https://openai.com/gptbot)" });
+  await get("/", { "User-Agent": "Mozilla/5.0 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)" });
+  await get("/", { "User-Agent": "FancyCrawler/1.0 (you@example.org)" });
+  await get("/", { "User-Agent": "curl/8.7.1" });
+  await get("/", { ...browser, "Sec-Purpose": "prefetch" });
+  // Not counted: the site's own fetches, private pages, errors and HEAD requests.
+  await get("/spectra/", { ...browser, "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors", "Sec-Fetch-Dest": "empty" });
+  await get("/login/", browser);
+  await get("/spectra/no-such-spectrum/", browser);
+  await get("/", browser, "HEAD");
+  const point = (route: string, client: string, spectrum: string, referrer: string, kind: string, bot: string) => ({
+    indexes: ["view"],
+    blobs: ["view", route, "GET", client, expect.any(String), spectrum, "", "", referrer, kind, bot],
+    doubles: [200],
+  });
+  const calls = write.mock.calls.map(([p]) => p);
+  expect(calls).toEqual([
+    point("/spectra/:slug/", "Mozilla/5.0", "22236", "www.google.com", "browser", ""),
+    point("/", "Mozilla/5.0", "", "", "browser", ""),
+    point("/spectra/:slug/", "Mozilla/5.0", "22236", "", "ai", "GPTBot"),
+    point("/", "Mozilla/5.0", "", "", "search", "Googlebot"),
+    point("/", "FancyCrawler/1.0", "", "", "bot", ""),
+    point("/", "curl/8.7.1", "", "", "other", ""),
+    point("/", "Mozilla/5.0", "", "", "other", ""),
+  ]);
+  expect(JSON.stringify(calls)).not.toMatch(/private|example\.org|openai|Macintosh/);
+  write.mockRestore();
+});
+
+it("counts requests for the files for AI agents by file and kind of client", async () => {
+  const write = vi.spyOn(env.API_USAGE, "writeDataPoint");
+  await get("/llms.txt", { "User-Agent": "Mozilla/5.0 AppleWebKit/537.36 (KHTML, like Gecko; compatible; Claude-User/1.0; +Claude-User@anthropic.com)" });
+  await get("/spectra/mlc-nanotube-ylas-tas2.md", { "User-Agent": "python-httpx/0.28" });
+  await get("/api/openapi-v2.json", { "User-Agent": "Mozilla/5.0", "Sec-Fetch-Mode": "navigate", "Sec-Fetch-Dest": "document" });
+  const etag = (await get("/llms.txt", { "Sec-Fetch-Site": "same-origin", "Sec-Fetch-Mode": "cors" })).headers.get("ETag")!;
+  await get("/llms.txt", { "User-Agent": "curl/8.7.1", "If-None-Match": etag });
+  const point = (route: string, client: string, kind: string, bot: string, resource: string, status = 200) => ({
+    indexes: ["agent"],
+    blobs: ["agent", route, "GET", client, expect.any(String), "", "", "", "", kind, bot, resource],
+    doubles: [status],
+  });
+  expect(write.mock.calls.map(([p]) => p)).toEqual([
+    point("/llms.txt", "Mozilla/5.0", "ai-user", "Claude-User", "llms.txt"),
+    point("/spectra/:file{.+\\.md}", "python-httpx/0.28", "other", "", "markdown"),
+    point("/api/openapi-v2.json", "Mozilla/5.0", "browser", "", "openapi"),
+    point("/llms.txt", "curl/8.7.1", "other", "", "llms.txt", 304),
+  ]);
+  write.mockRestore();
 });

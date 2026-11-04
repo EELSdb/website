@@ -1,4 +1,4 @@
-// Statistics page: draw each chart from the data in its data-chart attribute.
+// Statistics pages: draw each chart on the page from the data in its data-chart attribute, when this module first loads.
 const probe = document.createElement("span");
 probe.hidden = true;
 document.body.append(probe);
@@ -20,6 +20,10 @@ const dates = [
 const draws = [...document.querySelectorAll("[data-chart]")].map((el) => {
   const chart = JSON.parse(el.dataset.chart);
   const single = chart.series.length === 1;
+  const values = chart.series.map((s) => s.values);
+  // A stacked chart draws running totals, and each band fills down to the series below it.
+  let sum = chart.x.map(() => 0);
+  const ys = chart.stack ? values.map((v) => (sum = sum.map((t, i) => t + v[i]))) : values;
   const height = () => Math.max(200, Math.min(280, el.clientWidth * 0.45));
   const axis = () => ({
     stroke: css("var(--muted)"),
@@ -34,17 +38,19 @@ const draws = [...document.querySelectorAll("[data-chart]")].map((el) => {
     axes: [{ ...axis(), values: dates }, { ...axis(), size: 56, values: (u, splits) => splits.map((v) => (Number.isInteger(v) ? count.format(v) : "")) }],
     scales: { y: { range: (u, lo, hi) => [0, Math.max(1, hi * 1.05)] } },
     series: [
-      chart.step ? { label: "Month", value: "{YYYY}-{MM}" } : { label: "Day", value: "{YYYY}-{MM}-{DD}" },
-      ...chart.series.map((s) => ({
+      chart.step ? { label: "Month", value: "{YYYY}-{MM}" } : { label: chart.week ? "Week of" : "Day", value: "{YYYY}-{MM}-{DD}" },
+      ...chart.series.map((s, k) => ({
         label: s.label,
         stroke: css(`var(${s.colour})`),
         width: 1.5,
         points: { show: false },
-        value: (u, v) => (v == null ? "–" : count.format(v)),
+        value: (u, v, si, i) => (v == null ? "–" : count.format(values[k][i])),
         ...(single && { fill: css(`color-mix(in oklab, var(${s.colour}) 9%, transparent)`) }),
+        ...(chart.stack && { fill: css(`color-mix(in oklab, var(${s.colour}) 35%, transparent)`) }),
         ...(chart.step && { paths: uPlot.paths.stepped({ align: 1 }) }),
       })),
     ],
+    bands: chart.stack ? values.slice(1).map((_, k) => ({ series: [k + 2, k + 1] })) : [],
     legend: { markers: { show: !single } },
     cursor: { drag: { x: false, y: false }, points: { show: false } },
   });
@@ -52,7 +58,7 @@ const draws = [...document.querySelectorAll("[data-chart]")].map((el) => {
   const draw = () => {
     plot?.destroy();
     el.innerHTML = "";
-    plot = new uPlot(opts(), [chart.x, ...chart.series.map((s) => s.values)], el);
+    plot = new uPlot(opts(), [chart.x, ...ys], el);
   };
   draw();
   new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: height() })).observe(el);

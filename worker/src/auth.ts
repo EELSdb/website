@@ -13,7 +13,8 @@ export type User = { id: number; display_name: string; role: string; slug: strin
   /** No confirmed address: `id` and `address` are the best unconfirmed one, null when the account has none. */
   email_prompt?: { id: number | null; address: string | null };
 };
-export type AppEnv = { Bindings: Env; Variables: { user: User | null } };
+/** `spectrumId`: the published spectrum a page shows, for the page view count. */
+export type AppEnv = { Bindings: Env; Variables: { user: User | null; spectrumId?: number } };
 type C = Context<AppEnv>;
 
 const SESSION_COOKIE = "eelsdb_session";

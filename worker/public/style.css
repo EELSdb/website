@@ -757,6 +757,13 @@ ul.mod-list { list-style: none; padding: 0; margin: 1.5rem 0 0; border-top: 1px 
 .stats-bars .bar-n { text-align: right; }
 .stats-elements { columns: 3 18rem; column-gap: 3rem; }
 .stats-elements li { grid-template-columns: 8.5rem minmax(0, 1fr) 3rem; }
+.stats-wide li { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) 3.5rem; }
+.stats-wide .bar-label { overflow-wrap: anywhere; }
+.stats-more { margin-top: 2.25rem; border-block: 1px solid var(--rule); padding: 0.75rem 0; }
+.stats-more > summary { cursor: pointer; width: fit-content; }
+.stats-more > summary::marker { color: var(--muted); }
+.stats-more > summary h2 { display: inline; margin: 0; }
+#usage-body h3 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
 
 @media (max-width: 860px) {
   .browse, .spectrum-cols, .spectrum-intro, .stats-grid { grid-template-columns: minmax(0, 1fr); }
