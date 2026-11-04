@@ -7,7 +7,7 @@ import { isModerator } from "./instruments";
 import { DEFAULT_LICENCE, licenceOf } from "./api/metadata";
 import { DECISIONS, PROCESSED_ROLES, QUEUE_SQL, decide, reviewInput, storeProcessed, submissionDetail, type Decision, type ProcessingRecord } from "./moderation";
 import { Layout, TypeBadge } from "./pages/layout";
-import { MessagesPage } from "./contact";
+import { MessagesPage, deleteMessage } from "./contact";
 import { adminUsers } from "./admin-users";
 import { SIGN_IN_METHODS, TWO_STEP_GROUPS, getSettings, setSetting, type SettingKey, type SwitchableMethod } from "./settings";
 import { MAX_FILE_BYTES } from "./submit/form";
@@ -101,7 +101,16 @@ admin.use("/admin/messages/*", async (c, next) => {
   if (c.get("user")!.role !== "admin") return c.text("Only admins can read contact messages.", 403);
   await next();
 });
-admin.get("/admin/messages/", async (c) => c.html(await MessagesPage({ c, user: c.get("user")! })));
+admin.get("/admin/messages/", async (c) => {
+  const q = (c.req.query("q") ?? "").trim().slice(0, 100);
+  const page = Math.max(1, Math.floor(Number(c.req.query("page"))) || 1);
+  return c.html(await MessagesPage({ c, user: c.get("user")!, q, page }));
+});
+admin.post("/admin/messages/:id/delete/", async (c) => {
+  await deleteMessage(c.env, Number(c.req.param("id")));
+  const back = String((await c.req.parseBody()).back ?? "");
+  return c.redirect(back.startsWith("/admin/messages/") ? back : "/admin/messages/", 303);
+});
 
 // ---- Site settings (admins only) -----------------------------------------------------------
 

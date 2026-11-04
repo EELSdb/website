@@ -15,6 +15,9 @@ export const FOOTER = `You received this email because this address was used on 
 export const EMAILS_PER_DAY = 1000;
 export const EMAILS_PER_30_DAYS = 3000;
 
+/** True when emails only go to the Worker log, as in local development and on test copies. */
+export const emailIsLogOnly = (env: Env) => (env.EMAIL_PROVIDER || "log") === "log";
+
 /** False, and nothing sent, when a cap is reached; callers carry on either way. */
 export async function sendEmail(env: Env, { footer = FOOTER, ...email }: Email) {
   const message = { ...email, text: `${email.text}\n\n-- \nEELS Data Base, ${SITE}\n${footer}` };

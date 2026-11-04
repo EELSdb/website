@@ -1,6 +1,6 @@
 import { Hono } from "hono";
 import { type AppEnv, type User } from "./auth";
-import { sendEmail } from "./email";
+import { emailIsLogOnly, sendEmail } from "./email";
 import { getSettings, twoStepRequired } from "./settings";
 import { Layout } from "./pages/layout";
 import { turnstileOk } from "./turnstile";
@@ -45,7 +45,7 @@ async function prefill(c: { env: Env }, user: User | null): Promise<Partial<Valu
   return { name: user.display_name, email: email ?? "" };
 }
 
-function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Record<string, string>; siteKey?: string; status?: number }) {
+function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Record<string, string>; siteKey?: string; status?: number; logOnly?: boolean }) {
   const { v, errors } = props;
   const Err = (p: { name: string }) => (errors[p.name] ? <p class="error" id={`e-${p.name}`}>{errors[p.name]}</p> : null);
   const cls = (n: string) => `field${errors[n] ? " has-error" : ""}`;
@@ -63,6 +63,9 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
         <p class="hint">
           To report a bug in public or ask for a feature, <a href="https://github.com/EELSdb/website/issues">open an issue on GitHub</a> instead, so others can follow it.
         </p>
+        {props.logOnly && (
+          <p class="notice warning">This copy of the site does not send email. Your message is saved for the administrators to read on the site, but nobody receives it by email.</p>
+        )}
         {Object.keys(errors).length > 0 && <p class="notice error-summary" role="alert">{errors.form ?? "Please fix the fields marked below."}</p>}
         <form method="post" action="/contact/" novalidate>
           <input type="hidden" name="page" value={v.page ?? ""} />
@@ -94,7 +97,7 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
             <label for="f-website">Leave this empty</label>
             <input type="text" id="f-website" name="website" tabindex={-1} autocomplete="off" />
           </div>
-          {props.siteKey && <div class="cf-turnstile" data-sitekey={props.siteKey}></div>}
+          {props.siteKey && <div class="cf-turnstile" data-sitekey={props.siteKey} data-appearance="interaction-only"></div>}
           <Err name="turnstile" />
           <p><button class="button" type="submit">Send message</button></p>
         </form>
@@ -113,7 +116,7 @@ contact.get("/contact/", async (c) => {
       if (u && u.origin === new URL(c.req.url).origin && !u.pathname.startsWith("/contact/")) page = safePath(u.pathname);
     } catch {}
   }
-  return c.html(<ContactPage user={user} v={{ ...(await prefill(c, user)), page }} errors={{}} siteKey={c.env.TURNSTILE_SITE_KEY} />);
+  return c.html(<ContactPage user={user} v={{ ...(await prefill(c, user)), page }} errors={{}} siteKey={c.env.TURNSTILE_SITE_KEY} logOnly={emailIsLogOnly(c.env)} />);
 });
 
 contact.get("/contact/sent/", (c) =>
@@ -139,7 +142,7 @@ contact.post("/contact/", async (c) => {
     message: typeof body.message === "string" ? body.message.replace(/\r\n/g, "\n").trim() : "",
     page: safePath(body.page),
   };
-  const show = (errors: Record<string, string>, status: 422 | 429) => c.html(<ContactPage user={user} v={v} errors={errors} siteKey={c.env.TURNSTILE_SITE_KEY} />, status);
+  const show = (errors: Record<string, string>, status: 422 | 429) => c.html(<ContactPage user={user} v={v} errors={errors} siteKey={c.env.TURNSTILE_SITE_KEY} logOnly={emailIsLogOnly(c.env)} />, status);
 
   // A bot that fills the hidden field is told it worked; nothing is stored or sent.
   if (typeof body.website === "string" && body.website !== "") return c.redirect("/contact/sent/", 303);
@@ -197,25 +200,45 @@ contact.post("/contact/", async (c) => {
 export const deleteOldMessages = (env: Env) =>
   env.DB.prepare(`DELETE FROM contact_messages WHERE created_at < datetime('now', '-${KEEP_DAYS} days')`).run();
 
-const STATUS_LABELS: Record<string, string> = {
-  sent: "Emailed",
-  partial: "Emailed to some",
-  failed: "Email failed",
-  no_recipient: "No one to email",
-  unsent: "Not sent",
-};
+const MESSAGES_PER_PAGE = 50;
+const plural = (n: number) => `${n} recipient${n === 1 ? "" : "s"}`;
 
-export async function MessagesPage(props: { c: { env: Env }; user: User }) {
-  const { results } = await props.c.env.DB.prepare(
-    "SELECT id, name, email, topic, message, user_id, page, status, recipients, delivered, created_at FROM contact_messages ORDER BY id DESC LIMIT 100",
-  ).all<any>();
+function delivery(m: { status: string; recipients: number; delivered: number }, logOnly: boolean) {
+  if (logOnly) return "Logged only: this copy of the site does not send email";
+  if (m.status === "sent") return `Emailed to ${plural(m.delivered)}`;
+  if (m.status === "partial") return `Emailed to ${m.delivered} of ${plural(m.recipients)}`;
+  if (m.status === "failed") return `Email to ${plural(m.recipients)} failed`;
+  if (m.status === "no_recipient") return "No one to email";
+  return "Not sent";
+}
+
+export async function MessagesPage(props: { c: { env: Env }; user: User; q: string; page: number }) {
+  const { q, page } = props;
+  const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
+  const where = q ? "WHERE name LIKE ?1 ESCAPE '\\' OR email LIKE ?1 ESCAPE '\\' OR message LIKE ?1 ESCAPE '\\'" : "";
+  const args = q ? [like] : [];
+  const db = props.c.env.DB;
+  const [total, { results }] = await Promise.all([
+    db.prepare(`SELECT COUNT(*) AS n FROM contact_messages ${where}`).bind(...args).first<number>("n"),
+    db.prepare(
+      `SELECT id, name, email, topic, message, user_id, page, status, recipients, delivered, created_at FROM contact_messages ${where}
+       ORDER BY id DESC LIMIT ${MESSAGES_PER_PAGE} OFFSET ${(page - 1) * MESSAGES_PER_PAGE}`,
+    ).bind(...args).all<any>(),
+  ]);
+  const pages = Math.max(1, Math.ceil((total ?? 0) / MESSAGES_PER_PAGE));
+  const href = (n: number) => `/admin/messages/?${new URLSearchParams({ ...(q ? { q } : {}), ...(n > 1 ? { page: String(n) } : {}) })}`;
+  const logOnly = emailIsLogOnly(props.c.env);
   return (
     <Layout title="Contact messages" path="/admin/" user={props.user}>
       <h1>Contact messages</h1>
       <p class="hint prose">
-        Messages from the <a href="/contact/">contact form</a>, newest first, last 100. They are also emailed to every administrator with two-step sign-in, and deleted after a year.
+        Messages from the <a href="/contact/">contact form</a>, newest first. They are also emailed to every administrator with two-step sign-in, and deleted after a year.
         Reply to the sender's address.
       </p>
+      <form method="get" action="/admin/messages/" class="inline-form" role="search">
+        <input type="search" name="q" value={q} aria-label="Name, email address or text" placeholder="Name, email address or text" size={40} />
+        <button class="button secondary" type="submit">Search</button>
+      </form>
       {results.length ? (
         <ul class="messages">
           {results.map((m) => (
@@ -225,17 +248,29 @@ export async function MessagesPage(props: { c: { env: Env }; user: User }) {
                 {m.user_id && <> · <a href={`/admin/users/${m.user_id}/`}>account</a></>}
               </p>
               <p class="muted small">
-                {String(m.created_at).slice(0, 16)} UTC · {TOPICS[m.topic] ?? m.topic} · {STATUS_LABELS[m.status] ?? m.status}
-                {m.recipients > 0 && ` (${m.delivered} of ${m.recipients})`}
-                {m.page && <> · from {m.page}</>}
+                {String(m.created_at).slice(0, 16)} UTC · {TOPICS[m.topic] ?? m.topic} · {delivery(m, logOnly)}
+                {m.page && <> · Previous page was <a href={m.page}>{m.page}</a></>}
               </p>
               <p class="message-text">{m.message}</p>
+              <form method="post" action={`/admin/messages/${m.id}/delete/`} onsubmit="return confirm('Delete this message for good?')">
+                <input type="hidden" name="back" value={href(page)} />
+                <button class="link-button" type="submit">Delete</button>
+              </form>
             </li>
           ))}
         </ul>
       ) : (
-        <p class="muted">No messages yet.</p>
+        <p class="muted">{q ? "No messages match." : "No messages yet."}</p>
+      )}
+      {pages > 1 && (
+        <nav class="pager" aria-label="Pages">
+          {page > 1 && <a href={href(page - 1)} rel="prev">Previous</a>}
+          <span aria-current="page">Page {page} of {pages}</span>
+          {page < pages && <a href={href(page + 1)} rel="next">Next</a>}
+        </nav>
       )}
     </Layout>
   );
 }
+
+export const deleteMessage = (env: Env, id: number) => env.DB.prepare("DELETE FROM contact_messages WHERE id = ?").bind(id).run();

@@ -716,6 +716,7 @@ dialog h2 { margin-top: 0; }
 .snippet h2 { font-size: 0.95rem; margin: 0 0 0.5rem; }
 .snippet .hint { margin: 0.5rem 0 0; }
 .notice { border: 1px solid var(--line); background: var(--sunken); border-radius: 8px; padding: 1rem 1.25rem; }
+.notice.warning { border-color: var(--note); background: color-mix(in oklab, var(--note) 13%, var(--bg)); }
 
 
 /* Content pages: downloads, news */

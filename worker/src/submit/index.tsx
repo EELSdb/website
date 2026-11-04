@@ -459,7 +459,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 {errors.agreement && <p class="error">{errors.agreement}</p>}
               </div>
             )}
-            {siteKey && !props.edit && <div class="cf-turnstile" data-sitekey={siteKey}></div>}
+            {siteKey && !props.edit && <div class="cf-turnstile" data-sitekey={siteKey} data-appearance="interaction-only"></div>}
             {errors.turnstile && <p class="error">{errors.turnstile}</p>}
             <p class="error" id="submit-error" role="alert" hidden></p>
             <div class="step-nav">

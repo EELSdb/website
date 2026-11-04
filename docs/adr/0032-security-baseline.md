@@ -58,7 +58,7 @@ This record lists the rules that the code must follow. The rules come from secur
 
 - The repository holds no secrets. Secrets go in `worker/.env`, which git ignores. The committed `.env.example` lists only the names.
 - Personal data never enters the repository ([ADR 0011](/docs/adr/0011-migrating-accounts/)).
-- Sign-up, submit and contact use Turnstile.
+- Sign-up, submit and contact use Turnstile. The widget stays hidden unless Cloudflare asks the person to click (`data-appearance="interaction-only"`).
 - The site does not accept anonymous submissions. A submission must include a readable file.
 
 ## Checked and found sound

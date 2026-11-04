@@ -27,7 +27,7 @@ Several features send email: email links, address confirmation, account-change n
 - The Worker never emails the address that the person typed. It sends no copy to the sender, so nobody can use the form to send mail to other people.
 - The subject is `[EELSdb contact] {topic label}`. It contains no user text, which prevents header injection. The Reply-To header is the typed address. The Worker lowercases it and checks that it is one address.
 - The form uses Turnstile, a hidden honeypot, a rate limit and length limits. If a bot fills in the honeypot, the form shows the normal "sent" page but stores and sends nothing. The rate limit is 5 messages an hour per IP and per address.
-- The Worker stores each message in `contact_messages` with its delivery status. Admins see the list at `/admin/messages/`. The daily cron deletes messages older than a year. The Worker does not store the IP of the sender.
+- The Worker stores each message in `contact_messages` with its delivery status. Admins see the list at `/admin/messages/`, with search, pages of 50 and a delete button. The daily cron deletes messages older than a year. The Worker does not store the IP of the sender.
 - The docs page `/docs/about/contact/` stays as a reference. It links to the form and to GitHub issues for public bug reports.
 
 ## Consequences

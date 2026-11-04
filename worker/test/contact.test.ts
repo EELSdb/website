@@ -43,6 +43,7 @@ describe("contact form", () => {
     expect(html).toContain('name="topic"');
     expect(html).toContain("https://github.com/EELSdb/website/issues");
     expect(html).not.toContain("Signed in as");
+    expect(html).toContain("This copy of the site does not send email.");
     expect((await go("/contact/")).status).toBe(200);
   });
 
@@ -158,6 +159,28 @@ describe("contact form", () => {
     expect((await send({ ...good(9), email: "ip-other@example.invalid" }, "", { "CF-Connecting-IP": "203.0.113.10" })).status).toBe(303);
   });
 
+  it("lets admins search, page through and delete messages", async () => {
+    const admin = await staff("admin");
+    const mod = await staff("moderator");
+    const insert = env.DB.prepare("INSERT INTO contact_messages (name, email, topic, message, page, status) VALUES ('Pager', ?, 'other', ?, '/', 'sent')");
+    await env.DB.batch(Array.from({ length: 55 }, (_, i) => insert.bind(`pager${i}@example.invalid`, i === 3 ? "needle in a haystack" : "hay")));
+    const found = await (await go("/admin/messages/?q=needle", admin.cookie)).text();
+    expect(found).toContain("pager3@example.invalid");
+    expect(found).not.toContain("pager4@example.invalid");
+    expect(await (await go("/admin/messages/", admin.cookie)).text()).toMatch(/Page 1 of \d+/);
+    expect(await (await go("/admin/messages/?page=2", admin.cookie)).text()).toContain('rel="prev"');
+
+    const id = await env.DB.prepare("SELECT id FROM contact_messages WHERE email = 'pager3@example.invalid'").first<number>("id");
+    const del = (cookie: string, back: string) =>
+      go(`/admin/messages/${id}/delete/`, cookie, { method: "POST", headers: { Origin: SITE, "Content-Type": "application/x-www-form-urlencoded" }, body: new URLSearchParams({ back }).toString() });
+    expect((await del(mod.cookie, "/admin/messages/")).status).toBe(403);
+    const res = await del(admin.cookie, "/admin/messages/?q=needle");
+    expect(res.status).toBe(303);
+    expect(res.headers.get("Location")).toBe("/admin/messages/?q=needle");
+    expect(await count("SELECT 1 FROM contact_messages WHERE email = 'pager3@example.invalid'")).toBe(0);
+    expect((await del(admin.cookie, "https://evil.example/")).headers.get("Location")).toBe("/admin/messages/");
+  });
+
   it("lists messages for admins only, and deletes those older than a year", async () => {
     const admin = await staff("admin");
     const mod = await staff("moderator");
@@ -172,6 +195,9 @@ describe("contact form", () => {
     expect((await go("/admin/messages/", user.cookie)).status).toBe(403);
     expect((await go("/admin/messages/")).status).not.toBe(200);
     expect(await (await go("/admin/", admin.cookie)).text()).toContain('href="/admin/messages/"');
+
+    expect(html).toContain('Previous page was <a href="/spectra/x/">');
+    expect(html).toContain("Logged only: this copy of the site does not send email");
 
     await env.DB.prepare("UPDATE contact_messages SET created_at = datetime('now', '-366 days') WHERE email = 'listed@example.invalid'").run();
     await deleteOldMessages(env);
