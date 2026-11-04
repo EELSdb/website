@@ -3,7 +3,7 @@ import { routePath } from "hono/route";
 import type { AppEnv } from "../auth";
 import { API_HOST, SITE, formatV1, loadBundle, loadMany } from "./format";
 import { localise } from "../site";
-import { v2 } from "./v2";
+import { V2_INDEX, v2 } from "./v2";
 import { oai } from "./oai";
 import { dcat } from "./dcat";
 import { ORDER_META_KEYS, buildSpectraQuery, firstUnknownArg, parseParams, sortAndPage, type SpectrumRow } from "./query";
@@ -62,6 +62,8 @@ const INDEX = {
   spectrum: { url: `${API_HOST}/spectra/{spectrum}` },
 };
 
+// The v2 router matches its root only without the slash.
+api.get("/v2/", (c) => c.json(V2_INDEX));
 api.route("/v2", v2);
 api.route("/oai", oai);
 api.route("/dcat", dcat);

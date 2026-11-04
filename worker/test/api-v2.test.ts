@@ -60,11 +60,19 @@ describe("API v2", () => {
     for (const id of [22236, 21751]) Spectrum.parse(await json(`/spectra/${id}`));
   });
 
+  it("lists the endpoints at its root", async () => {
+    for (const path of ["", "/"]) {
+      const index = await json(path);
+      expect(index.spectra_url).toMatch(/^https:\/\/api\.eelsdb\.eu\/v2\/spectra\{\?type,.*,per_page\}$/);
+      expect((await exports.default.fetch(index.spectrum_url.replace("{id}", "21751"))).status).toBe(200);
+    }
+  });
+
   it("serves the OpenAPI file generated from the routes", async () => {
     const res = await exports.default.fetch("https://eelsdb.eu/api/openapi-v2.json");
     const doc = await res.json<any>();
     expect(doc).toEqual(JSON.parse(JSON.stringify(openapiV2())));
-    expect(Object.keys(doc.paths)).toEqual(["/spectra", "/spectra/{id}", "/drafts"]);
+    expect(Object.keys(doc.paths)).toEqual(["/", "/spectra", "/spectra/{id}", "/drafts"]);
     const params = doc.paths["/spectra"].get.parameters.map((p: any) => p.name);
     expect(params).toContain("covers_ev");
     expect(doc.components.schemas.Spectrum.properties.acquisition).toBeDefined();

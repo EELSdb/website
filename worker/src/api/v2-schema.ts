@@ -214,6 +214,29 @@ export const ApiError = z
 
 const json = <T extends z.ZodType>(schema: T, description: string) => ({ description, content: { "application/json": { schema } } });
 
+const url = (description: string) => z.string().openapi({ description });
+
+export const ApiIndex = z
+  .strictObject({
+    spectra_url: url("List and search spectra. The query parameters are those of `GET /spectra`."),
+    spectrum_url: url("One spectrum, by numeric id or slug."),
+    drafts_url: url("`POST` a draft with an API token."),
+    openapi_url: url("This API's OpenAPI file."),
+    documentation_url: url("This API's documentation."),
+    oai_pmh_url: url("The OAI-PMH endpoint for metadata harvesting."),
+    dcat_catalog_url: url("The DCAT catalogue (JSON-LD)."),
+  })
+  .openapi("Index");
+
+export const indexRoute = createRoute({
+  method: "get",
+  path: "/",
+  operationId: "getIndex",
+  summary: "List the endpoints",
+  description: "The address of every endpoint, as URL templates (RFC 6570).",
+  responses: { 200: json(ApiIndex, "The endpoints.") },
+});
+
 export const listRoute = createRoute({
   method: "get",
   path: "/spectra",

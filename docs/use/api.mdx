@@ -6,6 +6,7 @@ description: Query EELSdb spectra as JSON with API v2, including filters, paging
 import { CardGrid, LinkCard } from '@astrojs/starlight/components';
 
 The EELSdb API is a JSON API at `https://api.eelsdb.eu/v2/`.
+That address lists every endpoint as a URL template.
 Reading needs no key and no account, and every response allows cross-origin requests (`Access-Control-Allow-Origin: *`), so it also works from a web page.
 Numbers are numbers, units are in the field names, and each acquisition value says where it came from.
 

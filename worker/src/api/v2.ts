@@ -5,7 +5,9 @@ import type { Context } from "hono";
 import type { AppEnv } from "../auth";
 import { variantUnits } from "../submit/form";
 import { API_HOST, SITE, loadMany, type SpectrumBundle } from "./format";
-import { DOCUMENT, ListQuery, draftRoute, listRoute, oneRoute, type Spectrum } from "./v2-schema";
+import { DOCUMENT, ListQuery, draftRoute, indexRoute, listRoute, oneRoute, type Spectrum } from "./v2-schema";
+import { OAI_BASE } from "./oai";
+import { DCAT_CATALOG } from "./dcat";
 import { createDraft } from "../submit/drafts";
 import { MODIFIED_SQL, modifiedAt } from "./dates";
 import type { z } from "@hono/zod-openapi";
@@ -214,6 +216,17 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
     processing: b.processing as z.infer<typeof Spectrum>["processing"],
   };
 }
+
+export const V2_INDEX = {
+  spectra_url: `${API_HOST}/v2/spectra{?${Object.keys(ListQuery.shape).join(",")}}`,
+  spectrum_url: `${API_HOST}/v2/spectra/{id}`,
+  drafts_url: `${API_HOST}/v2/drafts`,
+  openapi_url: `${SITE}/api/openapi-v2.json`,
+  documentation_url: API_REFERENCE,
+  oai_pmh_url: OAI_BASE,
+  dcat_catalog_url: DCAT_CATALOG,
+};
+v2.openapi(indexRoute, (c) => c.json(V2_INDEX, 200));
 
 v2.openapi(listRoute, async (c) => {
   const q = c.req.valid("query");
