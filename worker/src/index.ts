@@ -29,7 +29,7 @@ export default {
   async scheduled(_controller, env, ctx) {
     ctx.waitUntil(deleteOldDrafts(env));
     ctx.waitUntil(deleteOldMessages(env));
-    // Must outlast the longest window any rate limit counts over.
-    ctx.waitUntil(env.DB.prepare("DELETE FROM rate_events WHERE at < datetime('now', '-1 day')").run());
+    // Each kind must outlast the longest window counted over it.
+    ctx.waitUntil(env.DB.prepare("DELETE FROM rate_events WHERE at < datetime('now', CASE kind WHEN 'email_sent' THEN '-30 days' ELSE '-1 day' END)").run());
   },
 } satisfies ExportedHandler<Env>;

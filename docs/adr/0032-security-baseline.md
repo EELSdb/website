@@ -49,7 +49,7 @@ This record lists the rules that the code must follow. The rules come from secur
 
 - Tokens are random, and the database stores them as SHA-256 hashes. Tokens include sessions, sign-in links, challenges and drafts tokens.
 - Every sign-in path and every form that sends email has a rate limit (`rate_events`).
-- All email goes through `sendEmail`, which sends at most 100 emails a day in total ([ADR 0022](/docs/adr/0022-email-and-contact/)). Each request may use at most 2 s of CPU (`limits.cpu_ms`). Workers Paid has no spending cap, so these caps limit what bots can cost.
+- All email goes through `sendEmail`, which sends at most 3,000 emails in 30 days and 1,000 in one day ([ADR 0022](/docs/adr/0022-email-and-contact/)). Each request may use at most 2 s of CPU (`limits.cpu_ms`). Workers Paid has no spending cap, so these caps limit what bots can cost.
 - Sensitive changes need a sign-in in the last 15 minutes ([ADR 0018](/docs/adr/0018-sign-in/), [0019](/docs/adr/0019-two-step-and-passkeys/), [0021](/docs/adr/0021-admin-account-tools/)).
 - Admins cannot mark an address as confirmed ([ADR 0021](/docs/adr/0021-admin-account-tools/)).
 - Error details never reach public responses. On the old site, PHP warnings leaked into the API JSON.
