@@ -61,7 +61,7 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
 
 1. Make the WordPress site read-only. Record the API and run the imports one final time.
 2. Copy `wp-content/uploads` from the host.
-3. Create the Cloudflare resources and deploy. Move DNS for both hostnames. Then turn on Cloudflare Web Analytics for `eelsdb.eu` in the dashboard (automatic setup, no code; [ADR 0037](/docs/adr/0037-usage-analytics/)).
+3. Create the Cloudflare resources in the EU jurisdiction ([ADR 0001](/docs/adr/0001-cloudflare-workers-d1-r2/)): `npx wrangler d1 create eelsdb --jurisdiction eu` and `npx wrangler r2 bucket create eelsdb-files --jurisdiction eu`. Put the new database ID in `wrangler.jsonc`, and add `"jurisdiction": "eu"` to the `eelsdb-files` binding, or the Worker cannot find the bucket. Then deploy. Move DNS for both hostnames. Then turn on Cloudflare Web Analytics for `eelsdb.eu` in the dashboard (automatic setup, no code; [ADR 0037](/docs/adr/0037-usage-analytics/)).
 4. Set up the redirects. `/forum/…`, `/jobs/…` and `/registered-users/` return 410. `/wp-login.php` redirects to the new sign-in.
 5. Before you deploy, set up these items:
    - A Cloudflare email sending domain, `EMAIL_PROVIDER` and `EMAIL_FROM`.
