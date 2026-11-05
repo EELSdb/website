@@ -23,8 +23,8 @@
   ],
   "r2_buckets": [{ "binding": "FILES", "bucket_name": "eelsdb-files" }],
   "analytics_engine_datasets": [{ "binding": "API_USAGE", "dataset": "eelsdb_api" }],
-  // Simulated locally (wrangler dev and the tests). Before deploying, onboard a sending domain in the
-  // Cloudflare account (Email Sending) and set EMAIL_PROVIDER=cloudflare and EMAIL_FROM on that domain.
+  // Simulated locally (wrangler dev and the tests). eelsdb.eu is onboarded for Email Sending; production sets
+  // EMAIL_PROVIDER=cloudflare and EMAIL_FROM=info@eelsdb.eu at the cut-over, as env.dev does.
   "send_email": [{ "name": "EMAIL" }],
   // Daily: delete old drafts, contact messages and rate-limit events, and copy usage counts into D1.
   "triggers": { "crons": ["17 3 * * *"] },
@@ -36,9 +36,19 @@
   // other hosts. Bindings are not inherited from the top level, so each environment lists them all.
   "env": {
     "dev": {
-      // workers.dev has no api. host, so the API is under /_api. Once eelsdb.eu is on Cloudflare, move to dev.eelsdb.eu,
-      // drop API_URL and add "routes": [{ "pattern": "dev.eelsdb.eu", "custom_domain": true }, and the same for api.dev.eelsdb.eu].
-      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev", "API_URL": "https://eelsdb-dev.eelsdb.workers.dev/_api", "API_USAGE_DATASET": "eelsdb_dev_api", "ENVIRONMENT": "development" },
+      "routes": [
+        { "pattern": "dev.eelsdb.eu", "custom_domain": true },
+        { "pattern": "api.dev.eelsdb.eu", "custom_domain": true }
+      ],
+      // Off: without API_URL, a workers.dev copy would have no API and send sign-ins to the other host.
+      "workers_dev": false,
+      "vars": {
+        "SITE_URL": "https://dev.eelsdb.eu",
+        "API_USAGE_DATASET": "eelsdb_dev_api",
+        "ENVIRONMENT": "development",
+        "EMAIL_PROVIDER": "cloudflare",
+        "EMAIL_FROM": "info@eelsdb.eu"
+      },
       "d1_databases": [
         {
           "binding": "DB",

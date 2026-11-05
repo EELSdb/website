@@ -61,14 +61,13 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
 
 1. Make the WordPress site read-only. Record the API and run the imports one final time.
 2. Copy `wp-content/uploads` from the host.
-3. Create the Cloudflare resources in the EU jurisdiction ([ADR 0001](/docs/adr/0001-cloudflare-workers-d1-r2/)): `npx wrangler d1 create eelsdb --jurisdiction eu` and `npx wrangler r2 bucket create eelsdb-files --jurisdiction eu`. Put the new database ID in `wrangler.jsonc`, and add `"jurisdiction": "eu"` to the `eelsdb-files` binding, or the Worker cannot find the bucket. Then deploy. Move DNS for both hostnames. Then turn on Cloudflare Web Analytics for `eelsdb.eu` in the dashboard (automatic setup, no code; [ADR 0037](/docs/adr/0037-usage-analytics/)).
+3. Create the Cloudflare resources in the EU jurisdiction ([ADR 0001](/docs/adr/0001-cloudflare-workers-d1-r2/)): `npx wrangler d1 create eelsdb --jurisdiction eu` and `npx wrangler r2 bucket create eelsdb-files --jurisdiction eu`. Put the new database ID in `wrangler.jsonc`, and add `"jurisdiction": "eu"` to the `eelsdb-files` binding, or the Worker cannot find the bucket. Then deploy. DNS for `eelsdb.eu` is already on Cloudflare (moved on 2026-11-05, still pointing at the old host): replace the `eelsdb.eu`, `www` and `api` records with the Worker's custom domains. Then turn on Cloudflare Web Analytics for `eelsdb.eu` in the dashboard (automatic setup, no code; [ADR 0037](/docs/adr/0037-usage-analytics/)).
 4. Set up the redirects. `/forum/…`, `/jobs/…` and `/registered-users/` return 410. `/wp-login.php` redirects to the new sign-in.
 5. Before you deploy, set up these items:
-   - A Cloudflare email sending domain, `EMAIL_PROVIDER` and `EMAIL_FROM`.
-   - Workers Paid on the Cloudflare account, which email sending needs.
+   - `EMAIL_PROVIDER=cloudflare` and `EMAIL_FROM=info@eelsdb.eu`, as `env.dev` sets them. `eelsdb.eu` is already onboarded for Email Sending, and the account has Workers Paid, which email sending needs.
    - Real Turnstile keys.
    - OAuth client IDs.
    - A Cloudflare API token with only the Account Analytics Read permission. Set it and the account ID as the secrets `ANALYTICS_API_TOKEN` and `ANALYTICS_ACCOUNT_ID`, so the daily cron copies usage counts into D1 ([ADR 0037](/docs/adr/0037-usage-analytics/)).
    - Two-step sign-in on the admin account of the owner. With the defaults, an admin without two-step sign-in has no powers, and contact messages reach nobody.
 6. Watch 404s and failed sign-ins for a few weeks. Email the kept accounts. Announce the new site on HyperSpy channels.
-7. Decommission the old host and rotate its credentials.
+7. Decommission the old host and rotate its credentials. DNS and `info@eelsdb.eu` mail no longer go through it. The domain stays registered at 123-reg, because Cloudflare Registrar does not offer `.eu`; only its nameservers point at Cloudflare.

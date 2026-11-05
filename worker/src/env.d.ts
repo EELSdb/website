@@ -18,6 +18,14 @@ interface Env {
   ENVIRONMENT?: string;
 }
 
+// API_URL serves the API under a path, for a copy on a host with no "api." name (workers.dev). No Wrangler
+// environment sets it now, so `wrangler types` leaves it out.
+declare namespace Cloudflare {
+  interface Env {
+    API_URL?: string;
+  }
+}
+
 declare module "@resvg/resvg-wasm/index_bg.wasm" {
   const module: WebAssembly.Module;
   export default module;

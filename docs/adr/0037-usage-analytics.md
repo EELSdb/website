@@ -146,7 +146,7 @@ Send it to `https://api.cloudflare.com/client/v4/accounts/{account_id}/analytics
 - A page that the browser prerenders, for example from the address bar, sends `Sec-Purpose` and counts as `other`, even when the person then looks at it. A prefetch by another site counts as `other` too.
 - Search engines and other bots that follow download links count as downloads. Most of them send a `Mozilla/5.0` User-Agent, like browsers.
 - Workers Logs keep the request URL and other request details for 7 days. Only people with access to the Cloudflare account can read them.
-- `env.dev` runs on workers.dev, which has no `api.` host. `eelsdb_dev_api` gets no API requests until the dev deployment moves to `dev.eelsdb.eu`. It does get downloads, page views and agent files.
+- `env.dev` runs on `dev.eelsdb.eu` and `api.dev.eelsdb.eu`, so `eelsdb_dev_api` counts the same surfaces as production.
 - Web Analytics injects its script into HTML at the edge. After the domain switch, check that a page loads `static.cloudflareinsights.com/beacon.min.js`. A response with `Cache-Control: no-transform` gets no script.
 
 ## Alternatives considered

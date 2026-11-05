@@ -1,0 +1,9 @@
+// info@eelsdb.eu: Cloudflare Email Routing sends it to this Worker, which forwards it on.
+// Deploy: npx wrangler deploy -c info-forward/wrangler.jsonc (from worker/). Set FORWARD_TO with `wrangler secret put`.
+{
+  "name": "eelsdb-info",
+  "main": "index.js",
+  "compatibility_date": "2026-10-19",
+  "workers_dev": false,
+  "observability": { "enabled": true }
+}
