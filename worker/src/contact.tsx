@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { type AppEnv, type User } from "./auth";
 import { emailIsLogOnly, sendEmail } from "./email";
 import { getSettings, twoStepRequired } from "./settings";
-import { AccountLayout, Layout } from "./pages/layout";
+import { AccountLayout, Avatar, Layout } from "./pages/layout";
 import { turnstileOk } from "./turnstile";
 
 export const contact = new Hono<AppEnv>();
@@ -212,6 +212,19 @@ function delivery(m: { status: string; recipients: number; delivered: number }, 
   return "Not sent";
 }
 
+/** "5 Nov, 09:12" (UTC), with the year when it is not this year. */
+function when(t: string) {
+  const d = new Date(`${String(t).replace(" ", "T")}Z`);
+  const year = d.getUTCFullYear() === new Date().getUTCFullYear() ? {} : { year: "numeric" as const };
+  return d.toLocaleString("en-GB", { day: "numeric", month: "short", ...year, hour: "2-digit", minute: "2-digit", timeZone: "UTC" });
+}
+
+const TRASH = (
+  <svg viewBox="0 0 24 24" width="17" height="17" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <path d="M4 7h16M10 11v6M14 11v6M6 7l1 12a2 2 0 0 0 2 2h6a2 2 0 0 0 2-2l1-12M9 7V4h6v3" />
+  </svg>
+);
+
 export async function MessagesPage(props: { c: { env: Env }; user: User; q: string; page: number }) {
   const { q, page } = props;
   const like = `%${q.replace(/[\\%_]/g, "\\$&")}%`;
@@ -232,32 +245,47 @@ export async function MessagesPage(props: { c: { env: Env }; user: User; q: stri
     <AccountLayout title="Contact messages" current="/admin/messages/" user={props.user}>
       <h1>Contact messages</h1>
       <p class="hint prose">
-        Messages from the <a href="/contact/">contact form</a>, newest first. They are also emailed to every administrator with two-step sign-in, and deleted after a year.
-        Reply to the sender's address.
+        From the <a href="/contact/">contact form</a>, newest first. Each message is also emailed to every administrator with two-step sign-in. Messages are
+        deleted after a year.
       </p>
-      <form method="get" action="/admin/messages/" class="inline-form" role="search">
-        <input type="search" name="q" value={q} aria-label="Name, email address or text" placeholder="Name, email address or text" size={40} />
-        <button class="button secondary" type="submit">Search</button>
-      </form>
+      <div class="inbox-toolbar">
+        <form method="get" action="/admin/messages/" class="inline-form" role="search">
+          <input type="search" name="q" value={q} aria-label="Name, email address or text" placeholder="Name, email address or text" size={32} />
+          <button class="button secondary" type="submit">Search</button>
+        </form>
+        <span class="muted small">{(total ?? 0).toLocaleString("en")} {total === 1 ? "message" : "messages"}{q && " found"}</span>
+      </div>
       {results.length ? (
-        <ul class="messages">
-          {results.map((m) => (
-            <li>
-              <p>
-                <strong>{m.name}</strong> <a href={`mailto:${m.email}`}>{m.email}</a>
-                {m.user_id && <> · <a href={`/admin/users/${m.user_id}/`}>account</a></>}
-              </p>
-              <p class="muted small">
-                {String(m.created_at).slice(0, 16)} UTC · {TOPICS[m.topic] ?? m.topic} · {delivery(m, logOnly)}
-                {m.page && <> · Previous page was <a href={m.page}>{m.page}</a></>}
-              </p>
-              <p class="message-text">{m.message}</p>
-              <form method="post" action={`/admin/messages/${m.id}/delete/`} onsubmit="return confirm('Delete this message for good?')">
-                <input type="hidden" name="back" value={href(page)} />
-                <button class="link-button" type="submit">Delete</button>
-              </form>
-            </li>
-          ))}
+        <ul class="inbox">
+          {results.map((m) => {
+            const topic = TOPICS[m.topic] ?? m.topic;
+            return (
+              <li>
+                <details name="message">
+                  <summary>
+                    <Avatar name={m.name} seed={m.email} />
+                    <span class="inbox-from"><strong>{m.name}</strong><span>{m.email}</span></span>
+                    <span class="inbox-subject"><span class="chip">{topic}</span> {m.message}</span>
+                    <time datetime={`${String(m.created_at).replace(" ", "T")}Z`} title={`${m.created_at} UTC`}>{when(m.created_at)}</time>
+                  </summary>
+                  <div class="inbox-body">
+                    <p class="message-text">{m.message}</p>
+                    <p class="muted small">
+                      <a href={`mailto:${m.email}`}>{m.email}</a>
+                      {m.user_id && <> · <a href={`/admin/users/${m.user_id}/`}>Their account</a></>}
+                      {m.page && <> · Previous page was <a href={m.page}>{m.page}</a></>}
+                      {" · "}{delivery(m, logOnly)}
+                    </p>
+                    <a class="button" href={`mailto:${m.email}?subject=${encodeURIComponent(`Re: ${topic}`)}`}>Reply</a>
+                  </div>
+                </details>
+                <form class="inbox-delete" method="post" action={`/admin/messages/${m.id}/delete/`} onsubmit="return confirm('Delete this message for good?')">
+                  <input type="hidden" name="back" value={href(page)} />
+                  <button class="icon-button" type="submit" title="Delete" aria-label={`Delete the message from ${m.name}`}>{TRASH}</button>
+                </form>
+              </li>
+            );
+          })}
         </ul>
       ) : (
         <p class="muted">{q ? "No messages match." : "No messages yet."}</p>

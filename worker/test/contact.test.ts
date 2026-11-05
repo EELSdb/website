@@ -198,6 +198,8 @@ describe("contact form", () => {
 
     expect(html).toContain('Previous page was <a href="/spectra/x/">');
     expect(html).toContain("Logged only: this copy of the site does not send email");
+    expect(html).toContain('href="mailto:listed@example.invalid?subject=Re%3A%20');
+    expect(html).toMatch(/<button class="icon-button" type="submit" title="Delete" aria-label="Delete the message from Ada Test">/);
 
     await env.DB.prepare("UPDATE contact_messages SET created_at = datetime('now', '-366 days') WHERE email = 'listed@example.invalid'").run();
     await deleteOldMessages(env);

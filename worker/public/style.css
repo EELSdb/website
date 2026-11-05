@@ -1265,7 +1265,28 @@ html:not(.js) .picture-file label { display: none; }
 .contact .field :is(input, select, textarea) { width: 100%; }
 .contact .field :is(input, textarea)[aria-invalid="true"] { border-color: var(--danger); }
 .hp { position: absolute; left: -10000px; width: 1px; height: 1px; overflow: hidden; }
-.messages { list-style: none; padding: 0; display: grid; gap: 1rem; }
-.messages li { border: 1px solid var(--line); border-radius: 8px; padding: 0.9rem 1.1rem; background: var(--surface); }
-.messages p { margin: 0 0 0.3rem; }
-.message-text { white-space: pre-wrap; overflow-wrap: anywhere; margin-top: 0.6rem !important; }
+.inbox-toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.5rem 1rem; margin-top: 1.25rem; }
+.inbox { list-style: none; margin: 1rem 0 0; padding: 0; border-top: 1px solid var(--line); }
+.inbox > li { position: relative; border-bottom: 1px solid var(--line); }
+/* The delete button sits over the end of the row, outside the summary, so pressing it never opens the message. */
+.inbox summary { display: grid; grid-template-columns: 2rem minmax(8rem, 14rem) minmax(0, 1fr) auto; gap: 0 1rem; align-items: center; padding: 0.65rem 3rem 0.65rem 0.5rem; cursor: pointer; list-style: none; }
+.inbox summary::-webkit-details-marker { display: none; }
+.inbox summary:hover, .inbox details[open] summary { background: var(--sunken); }
+.inbox .av { width: 2rem; height: 2rem; font-size: 0.75rem; }
+.inbox-from { display: grid; min-width: 0; line-height: 1.3; }
+.inbox-from > * { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.inbox-from > span { font-size: 0.8rem; color: var(--muted); }
+.inbox-subject { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--muted); font-size: 0.92rem; }
+.inbox-subject .chip { margin-right: 0.35rem; background: none; box-shadow: inset 0 0 0 1px var(--line); }
+.inbox summary time { font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.inbox-body { padding: 0.75rem 1rem 1.25rem 3.5rem; }
+.inbox-body p { margin: 0 0 0.75rem; }
+.message-text { white-space: pre-wrap; overflow-wrap: anywhere; max-width: 72ch; }
+.inbox-delete { position: absolute; top: 0.7rem; right: 0.4rem; margin: 0; }
+.inbox-delete .icon-button:hover { color: var(--danger); background: color-mix(in oklab, var(--danger) 12%, transparent); }
+@media (max-width: 700px) {
+  .inbox summary { grid-template-columns: 2rem minmax(0, 1fr) auto; }
+  .inbox summary time { grid-area: 1 / 3; }
+  .inbox-subject { grid-area: 2 / 2 / auto / -1; }
+  .inbox-body { padding-left: 0.5rem; }
+}
