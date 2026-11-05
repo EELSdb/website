@@ -36,6 +36,23 @@ export const BOTS: [string, Kind][] = [
   ["Applebot", "search"],
 ];
 
+const SYSTEMS: [RegExp, string][] = [[/Windows/, "Windows"], [/iPhone|iPad|iPod/, "iOS"], [/Android/, "Android"], [/Macintosh|Mac OS X/, "macOS"], [/Linux/, "Linux"]];
+// Order matters: Edge, Opera and Samsung Internet also say "Chrome", and Chrome also says "Safari".
+const BROWSERS: [RegExp, string][] = [
+  [/Edg(A|iOS)?\//, "Edge"],
+  [/OPR\/|Opera/, "Opera"],
+  [/SamsungBrowser/, "Samsung Internet"],
+  [/Firefox\/|FxiOS/, "Firefox"],
+  [/Chrome\/|CriOS/, "Chrome"],
+  [/Safari\//, "Safari"],
+];
+
+/** The operating system and browser of a browser's User-Agent, by family only: no versions or devices. */
+export function platform(ua: string): [string, string] {
+  const first = (list: [RegExp, string][]) => list.find(([re]) => re.test(ua))?.[1] ?? "Other";
+  return [first(SYSTEMS), first(BROWSERS)];
+}
+
 /** One Analytics Engine data point for this request. Never changes the response. */
 export function recordUsage(c: Context<AppEnv>, surface: string, status: number, extra: string[] = []) {
   try {
@@ -103,7 +120,8 @@ export function recordPage(c: Context<AppEnv>) {
   const [kind, bot] = requestKind(c);
   if (resource) return recordUsage(c, "agent", status, ["", "", "", "", kind, bot, resource]);
   if (PRIVATE.test(c.req.path) || !c.res.headers.get("Content-Type")?.startsWith("text/html")) return;
-  recordUsage(c, "view", status, [String(c.get("spectrumId") ?? ""), "", "", referrerHost(c), kind, bot]);
+  const [os, browser] = kind === "browser" ? platform(c.req.header("User-Agent") ?? "") : ["", ""];
+  recordUsage(c, "view", status, [String(c.get("spectrumId") ?? ""), "", "", referrerHost(c), kind, bot, "", os, browser]);
 }
 
 type Row = {
@@ -119,6 +137,8 @@ type Row = {
   kind: string;
   bot: string;
   resource: string;
+  os: string;
+  browser: string;
   n: number | string;
 };
 
@@ -129,9 +149,10 @@ export async function rollupUsage(env: Env, now: number) {
   const [start, end] = [day(7), day(0)];
   const sql = `SELECT formatDateTime(timestamp, '%Y-%m-%d') AS day, blob1 AS surface, blob2 AS route, blob4 AS client, blob5 AS country,
     blob6 AS spectrum, blob7 AS format, blob8 AS via, blob9 AS referrer, blob10 AS kind, blob11 AS bot, blob12 AS resource,
+    blob13 AS os, blob14 AS browser,
     SUM(_sample_interval) AS n FROM ${env.API_USAGE_DATASET}
     WHERE timestamp >= toDateTime('${start} 00:00:00') AND timestamp < toDateTime('${end} 00:00:00')
-    GROUP BY day, surface, route, client, country, spectrum, format, via, referrer, kind, bot, resource FORMAT JSON`;
+    GROUP BY day, surface, route, client, country, spectrum, format, via, referrer, kind, bot, resource, os, browser FORMAT JSON`;
   const res = await fetch(`https://api.cloudflare.com/client/v4/accounts/${env.ANALYTICS_ACCOUNT_ID}/analytics_engine/sql`, {
     method: "POST",
     headers: { Authorization: `Bearer ${env.ANALYTICS_API_TOKEN}` },
@@ -162,6 +183,8 @@ export async function rollupUsage(env: Env, now: number) {
       if (r.surface === "agent" || r.kind !== "browser") continue;
       add(n, "section", r.surface, r.route, r.day);
       add(n, "country", r.surface, country(r.country), r.day);
+      add(n, "os", r.surface, r.os || "unknown", r.day);
+      add(n, "browser", r.surface, r.browser || "unknown", r.day);
       if (r.referrer) add(n, "referrer", r.surface, referrer(r.referrer), r.day);
       if (r.spectrum) add(n, "spectrum", r.surface, r.spectrum, r.day);
       continue;

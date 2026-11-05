@@ -646,6 +646,13 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .plot .u-series > * { padding: 0; border: 0; }
 .plot .u-series th { cursor: default; pointer-events: none; font-size: inherit; font-weight: 400; color: var(--muted) !important; }
 .plot .u-legend .u-label { color: var(--muted) !important; }
+/* The date speaks for itself. */
+.plot .u-legend .u-series:first-child th { display: none; }
+.plot-tip { position: absolute; z-index: 2; pointer-events: none; display: grid; grid-template-columns: auto auto; gap: 0.1rem 1.25rem; padding: 0.5rem 0.65rem; font-size: 0.8rem; line-height: 1.4; white-space: nowrap; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); }
+.plot-tip b { grid-column: 1 / -1; font-weight: 600; margin-bottom: 0.15rem; }
+.plot-tip span { display: flex; align-items: center; gap: 0.4rem; }
+.plot-tip span:nth-of-type(even) { justify-content: flex-end; }
+.plot-tip i { width: 0.65rem; height: 0.65rem; border: 1.5px solid; border-radius: 2px; }
 .plot .u-legend .u-value { color: var(--ink); margin-left: 0.35rem; }
 .plot .u-cursor-x { border-right-color: var(--muted) !important; }
 .plot .u-select { background: color-mix(in oklab, var(--accent) 12%, transparent); }
@@ -759,10 +766,36 @@ ul.mod-list { list-style: none; padding: 0; margin: 1.5rem 0 0; border-top: 1px 
 .stats-elements li { grid-template-columns: 8.5rem minmax(0, 1fr) 3rem; }
 .stats-wide li { grid-template-columns: minmax(0, 3fr) minmax(0, 2fr) 3.5rem; }
 .stats-wide .bar-label { overflow-wrap: anywhere; }
-.stats-more { margin-top: 2.25rem; border-block: 1px solid var(--rule); padding: 0.75rem 0; }
-.stats-more > summary { cursor: pointer; width: fit-content; }
-.stats-more > summary::marker { color: var(--muted); }
-.stats-more > summary h2 { display: inline; margin: 0; }
+/* The table of contents comes first, so on narrow screens it is a row of links above the page. */
+.lede time { white-space: nowrap; }
+.stats-layout { display: grid; grid-template-columns: minmax(0, 1fr) 11rem; gap: 0 4rem; align-items: start; }
+.stats-main { grid-area: 1 / 1; }
+.stats-main h2 { scroll-margin-top: 5.5rem; margin-top: 3.5rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+.stats-main h2 + .stats-about { margin-top: 0; }
+.stats-toc { grid-area: 1 / 2; position: sticky; top: 5.5rem; margin-top: 1.5rem; font-size: 0.875rem; }
+.stats-toc p { margin: 0 0 0.5rem; font-weight: 600; }
+.stats-toc ul { list-style: none; margin: 0; padding: 0; border-left: 1px solid var(--rule); }
+.stats-toc a { display: block; margin-left: -1px; padding: 0.25rem 0 0.25rem 0.9rem; border-left: 2px solid transparent; color: var(--muted); text-decoration: none; }
+.stats-toc a:hover { color: var(--ink); }
+.stats-toc a[aria-current] { color: var(--accent-ink); border-left-color: var(--accent); }
+.stats-tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 1rem 2rem; margin: 1.5rem 0 0; }
+.stats-tiles div { padding-top: 0.6rem; border-top: 2px solid var(--line); }
+.stats-tiles dt { font-size: 0.875rem; color: var(--muted); }
+.stats-tiles dd { margin: 0.2rem 0 0; font-size: 1.9rem; font-weight: 650; letter-spacing: -0.02em; line-height: 1.15; }
+.stats-chart-head { display: flex; flex-wrap: wrap; align-items: baseline; justify-content: space-between; gap: 0.25rem 1.5rem; margin: 2.25rem 0 0.75rem; }
+.stats-chart-head h3 { margin: 0; }
+.stats-toggle { display: inline-flex; gap: 0.45rem; align-items: center; font-size: 0.875rem; color: var(--muted); cursor: pointer; }
+.stats-toggle input { accent-color: var(--accent); margin: 0; }
+.cell-bar { display: grid; grid-template-columns: minmax(2rem, 1fr) 4.5rem; gap: 0.75rem; align-items: center; }
+.cell-bar .bar { display: block; min-width: 2px; height: 0.6rem; border-radius: 2px; background: color-mix(in oklab, var(--plot) 55%, transparent); }
+@media (max-width: 560px) {
+  .cell-bar { display: block; }
+  .cell-bar .bar { display: none; }
+  table:has(.cell-bar) :is(th, td) { padding-inline: 0.35rem; }
+}
+.stats-notes { max-width: 72ch; font-size: 0.95rem; }
+.stats-notes dt { font-weight: 600; }
+.stats-notes dd { margin: 0.15rem 0 1rem; color: var(--muted); }
 #usage-body h3 { font-size: 1rem; margin: 1.5rem 0 0.5rem; }
 
 @media (max-width: 860px) {
@@ -1138,6 +1171,13 @@ html:not(.js) .picture-file label { display: none; }
 /* Below 860px the rail becomes one row of links above the page, underlined like the main nav. */
 @media (max-width: 860px) {
   .account-layout { grid-template-columns: minmax(0, 1fr); margin-top: 1.25rem; }
+  .stats-layout { grid-template-columns: minmax(0, 1fr); }
+  .stats-main, .stats-toc { grid-area: auto; }
+  .stats-toc { position: static; margin-top: 1rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--rule); }
+  .stats-toc p { display: none; }
+  .stats-toc ul { display: flex; flex-wrap: wrap; gap: 0.15rem 1.1rem; border: 0; }
+  .stats-toc a { margin: 0; padding: 0.2rem 0; border: 0; }
+  .stats-tiles { grid-template-columns: repeat(2, minmax(0, 1fr)); }
   .account-nav, .account-nav div { position: static; display: flex; flex-wrap: wrap; align-items: center; gap: 0.15rem 1.1rem; }
   .account-nav { padding-bottom: 0.4rem; border-bottom: 1px solid var(--rule); }
   .account-nav ul { display: flex; flex-wrap: wrap; gap: 0.15rem 1.1rem; border: 0; }

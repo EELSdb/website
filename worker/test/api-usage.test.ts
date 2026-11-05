@@ -1,5 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { expect, it, vi } from "vitest";
+import { platform } from "../src/usage";
 
 it("counts API v1 requests by route and client, and never stores the full User-Agent", async () => {
   const write = vi.spyOn(env.API_USAGE, "writeDataPoint");
@@ -62,15 +63,15 @@ it("counts public page loads by kind of client, with only the host of another si
   await get("/login/", browser);
   await get("/spectra/no-such-spectrum/", browser);
   await get("/", browser, "HEAD");
-  const point = (route: string, client: string, spectrum: string, referrer: string, kind: string, bot: string) => ({
+  const point = (route: string, client: string, spectrum: string, referrer: string, kind: string, bot: string, os = "", browser = "") => ({
     indexes: ["view"],
-    blobs: ["view", route, "GET", client, expect.any(String), spectrum, "", "", referrer, kind, bot],
+    blobs: ["view", route, "GET", client, expect.any(String), spectrum, "", "", referrer, kind, bot, "", os, browser],
     doubles: [200],
   });
   const calls = write.mock.calls.map(([p]) => p);
   expect(calls).toEqual([
-    point("/spectra/:slug/", "Mozilla/5.0", "22236", "www.google.com", "browser", ""),
-    point("/", "Mozilla/5.0", "", "", "browser", ""),
+    point("/spectra/:slug/", "Mozilla/5.0", "22236", "www.google.com", "browser", "", "macOS", "Firefox"),
+    point("/", "Mozilla/5.0", "", "", "browser", "", "macOS", "Firefox"),
     point("/spectra/:slug/", "Mozilla/5.0", "22236", "", "ai", "GPTBot"),
     point("/", "Mozilla/5.0", "", "", "search", "Googlebot"),
     point("/", "FancyCrawler/1.0", "", "", "bot", ""),
@@ -100,4 +101,20 @@ it("counts requests for the files for AI agents by file and kind of client", asy
     point("/llms.txt", "curl/8.7.1", "other", "", "llms.txt", 304),
   ]);
   write.mockRestore();
+});
+
+it("keeps only the family of a browser's operating system and browser", () => {
+  const cases: [string, string, string][] = [
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 Edg/141.0.0.0", "Windows", "Edge"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36", "macOS", "Chrome"],
+    ["Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/26.0 Safari/605.1.15", "macOS", "Safari"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/18.6 Mobile/15E148 Safari/604.1", "iOS", "Safari"],
+    ["Mozilla/5.0 (iPhone; CPU iPhone OS 18_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) CriOS/141.0.0.0 Mobile/15E148 Safari/604.1", "iOS", "Chrome"],
+    ["Mozilla/5.0 (Linux; Android 15; SM-S921B) AppleWebKit/537.36 (KHTML, like Gecko) SamsungBrowser/28.0 Chrome/130.0.0.0 Mobile Safari/537.36", "Android", "Samsung Internet"],
+    ["Mozilla/5.0 (X11; Linux x86_64; rv:144.0) Gecko/20100101 Firefox/144.0", "Linux", "Firefox"],
+    ["Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36 OPR/124.0.0.0", "Windows", "Opera"],
+    ["Mozilla/5.0 (X11; CrOS x86_64 16328.65.0) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Safari/537.36", "Other", "Chrome"],
+    ["", "Other", "Other"],
+  ];
+  for (const [ua, os, browser] of cases) expect(platform(ua), ua).toEqual([os, browser]);
 });

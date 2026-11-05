@@ -36,16 +36,18 @@ EELSdb uses three Cloudflare features. None adds a vendor or a cookie.
   2. `bot`: any other User-Agent that contains `bot`, `crawl`, `spider`, `scrap`, `slurp` or `headless`.
   3. `browser`: `Sec-Fetch-Mode: navigate`, `Sec-Fetch-Dest: document` and no `Sec-Purpose` header. Browsers send these when a person loads a page. Most bots and scripts do not.
   4. `other`: everything else, such as scripts, `curl` and prefetches.
+  - For a `browser` request, `platform` in `worker/src/usage.ts` also stores the family of the operating system (`Windows`, `macOS`, `Linux`, `iOS`, `Android` or `Other`) and of the browser (`Chrome`, `Safari`, `Firefox`, `Edge`, `Opera`, `Samsung Internet` or `Other`). It never stores a version or a device model. The order of the checks matters: an iPhone also says "Mac OS X", Android also says "Linux", Edge, Opera and Samsung Internet also say "Chrome", and Chrome also says "Safari".
   - Only `browser` requests are **page views**. The website numbers on the statistics page and the numbers on a spectrum page count page views only.
 - **A daily copy into D1.** The daily cron (`rollupUsage` in `worker/src/usage.ts`) sends one query to the Analytics Engine SQL API. It gets the counts of the last 7 complete days (UTC), grouped by all the fields below. It replaces those 7 days in the D1 table `usage_daily` in one transaction. So a missed run leaves no gap, and a run again gives the same rows. D1 keeps the rows for good, after Analytics Engine has dropped the data points.
-- **A public statistics page.** `/stats/` (`worker/src/pages/stats.tsx`, in the About menu) reads only D1, so a visit never calls the Cloudflare API. It starts with the totals: page views, API requests and downloads. Then it has these sections:
-  - **Website:** page views per day, the most visited sections, the most viewed spectra, referring sites and countries. It says that page views are page loads by browsers, counted without cookies, so they are not unique visitors.
-  - **Bots and crawlers**, in a closed `<details>`: requests for pages per day, stacked by kind, the share that bots sent, and the top AI crawlers and agents and search engines by name.
+- **A public statistics page.** `/stats/` (`worker/src/pages/stats.tsx`, in the About menu) reads only D1, so a visit never calls the Cloudflare API. A table of contents is beside the page, or above it on narrow screens, and marks the section on screen. The page starts with four totals: page views, API requests, downloads and published spectra. Each section has one chart across the page, then lists and tables.
+  - **Website:** page views per day, stacked by operating system. A "Show bot traffic" checkbox above the chart stacks the other requests for pages on top, as AI crawlers and agents, search engine crawlers, and other bots and scripts. The label gives their share of all requests for pages. Then the browsers, the most visited sections, the most viewed spectra, the referring sites, and the AI crawlers and agents and the search engine crawlers by name.
   - **For AI agents:** requests for the agent files per day, stacked by resource, the kinds of client that fetch them, and the AI crawlers and agents by name.
-  - **API:** requests per API, requests per day by API, the clients with a column for each API (so the users of v1 are easy to see), and the endpoints of each API.
-  - **Downloads:** downloads per day, by format, and from the website or direct.
+  - **API:** requests per day by API, one table of the endpoints of all APIs, with a column for the API, and the clients, with a column for each API, so the users of v1 are easy to see.
+  - **Downloads:** downloads per day, stacked by format, the most downloaded spectra, and from the website or direct.
+  - **Countries:** page views, API requests and downloads by country.
   - **Spectra:** spectra per type and per element, and the published spectra over time.
-  - uPlot draws the charts (`worker/public/stats.js`). A stacked chart draws running totals, and each band fills down to the series below it.
+  - **How we count:** what each number counts and what is kept.
+  - uPlot draws the charts (`worker/public/stats.js`). A stacked chart draws running totals, and each band fills down to the series below it. With the cursor off a chart, the legend shows the dates and each series' total for all of them. A stacked chart also has a "Total" entry. With the cursor on a day, the legend shows that day.
 - **Counts on the spectrum page.** The spectrum page shows "Page views" and "Downloads" for that spectrum, as numbers, and hides a row while its number is 0. The last row ends with "Details". It opens a dialog, like "History". The dialog fetches `/spectra/{slug}/usage/` when it first opens and shows that page's content. So the spectrum page itself runs only one more small query. The same page works without JavaScript. It shows the totals, the downloads over time stacked by format, and the page views over time. It uses one point per day, or one point per week when the counts cover more than 90 days. Weeks end on the last counted day, so only the first week can be partial.
 - **Cloudflare Web Analytics for visitors.** An admin turns it on in the Cloudflare dashboard (automatic setup) after DNS for `eelsdb.eu` moves to Cloudflare ([ADR 0010](/docs/adr/0010-migrating-public-data/#cut-over-human-tasks)). It needs no code. It adds visitor numbers, which the page views above cannot give. This part is not done yet.
 
@@ -66,6 +68,8 @@ Each data point has these fields. A field that does not apply to a surface is em
 | `blob10` | `view` and `agent`: the kind of client: `browser`, `ai`, `ai-user`, `search`, `bot` or `other`. |
 | `blob11` | `view` and `agent`: the bot's name from `BOTS`, for the kinds `ai`, `ai-user` and `search`. |
 | `blob12` | `agent`: the resource: `llms.txt`, `markdown`, `skill` or `openapi`. |
+| `blob13` | `view`, page views only: the family of the operating system. |
+| `blob14` | `view`, page views only: the family of the browser. |
 | `double1` | The response status. |
 
 - The Worker never stores IP addresses, full User-Agents, full referrers or query strings in Analytics Engine. The API sets no cookies.
@@ -91,8 +95,10 @@ Each data point has these fields. A field that does not apply to a surface is em
 | `kind` | `view`, `agent` | The kind of client. |
 | `bot` | `view`, `agent` | The bot's name. |
 | `resource` | `agent` | The resource. |
+| `os` | `view` | The family of the operating system, or `unknown` for page views recorded before it was. Page views only. |
+| `browser` | `view` | The family of the browser, or `unknown`. Page views only. |
 
-Only aggregates go into D1, never a single request. Requests by bots and scripts get no `country`, `referrer`, `section` or `spectrum` rows, and `view` and `agent` get no `client` rows: browsers all send `Mozilla/5.0`.
+Only aggregates go into D1, never a single request. Requests by bots and scripts get no `country`, `referrer`, `section`, `spectrum`, `os` or `browser` rows, and `view` and `agent` get no `client` rows: browsers all send `Mozilla/5.0`.
 
 ### Rare clients, countries and referring sites
 

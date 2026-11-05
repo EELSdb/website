@@ -9,29 +9,47 @@ import { visibleSpectrumId } from "./spectrum";
 const ELEMENT_NAMES: Record<string, string> = NAMES;
 /** Label and plot colour of each stored value; values with the same label are added up. */
 type Names = Record<string, readonly [string, string]>;
-const APIS: Names = { v1: ["API v1", "--plot"], v2: ["API v2", "--compare-2"], oai: ["OAI-PMH", "--compare-1"], dcat: ["DCAT", "--compare-3"] };
+const APIS: Names = { v1: ["API v1", "--series-1"], v2: ["API v2", "--series-2"], oai: ["OAI-PMH", "--series-3"], dcat: ["DCAT", "--series-4"] };
 const KINDS: Names = {
-  browser: ["Browsers", "--plot"],
-  ai: ["AI crawlers", "--compare-1"],
-  "ai-user": ["AI agents for a user", "--compare-3"],
-  search: ["Search engines", "--compare-2"],
-  bot: ["Other bots", "--edge"],
+  browser: ["Browsers", "--series-1"],
+  ai: ["AI crawlers", "--series-2"],
+  search: ["Search engine crawlers", "--series-3"],
+  bot: ["Other bots", "--series-4"],
+  "ai-user": ["AI agents for a user", "--series-5"],
   other: ["Scripts and prefetches", "--muted"],
 };
-const RESOURCES: Names = { "llms.txt": ["llms.txt", "--plot"], markdown: ["Markdown pages", "--compare-2"], skill: ["Agent skill", "--compare-1"], openapi: ["OpenAPI files", "--compare-3"] };
+/** Requests for pages by everything but browsers, stacked on the page views by operating system. */
+const BOT_SERIES: Names = {
+  ai: ["AI crawlers and agents", "--bot-1"],
+  "ai-user": ["AI crawlers and agents", "--bot-1"],
+  search: ["Search engine crawlers", "--bot-2"],
+  bot: ["Other bots and scripts", "--bot-3"],
+  other: ["Other bots and scripts", "--bot-3"],
+};
+const RESOURCES: Names = { "llms.txt": ["llms.txt", "--series-1"], markdown: ["Markdown pages", "--series-2"], skill: ["Agent skill", "--series-3"], openapi: ["OpenAPI files", "--series-4"] };
 const FORMATS: Names = {
-  msa: ["MSA", "--plot"],
-  csv: ["CSV", "--compare-2"],
-  json: ["JSON", "--compare-3"],
-  hspy: ["HyperSpy", "--compare-1"],
-  original: ["Original file", "--edge"],
+  msa: ["MSA", "--series-1"],
+  csv: ["CSV", "--series-2"],
+  json: ["JSON", "--series-3"],
+  hspy: ["HyperSpy", "--series-4"],
+  original: ["Original file", "--series-5"],
   // The original file of a spectrum from the old site.
-  legacy: ["Original file", "--edge"],
-  variant: ["Processed version", "--compare-4"],
-  lowloss: ["Low-loss file", "--compare-4"],
-  companion: ["Companion file", "--compare-4"],
-  metadata: ["File metadata", "--compare-4"],
+  legacy: ["Original file", "--series-5"],
+  variant: ["Processed version", "--series-6"],
+  lowloss: ["Low-loss file", "--series-6"],
+  companion: ["Companion file", "--series-6"],
+  metadata: ["File metadata", "--series-6"],
   unknown: ["Not recorded", "--muted"],
+};
+const SYSTEMS: Names = {
+  Windows: ["Windows", "--series-1"],
+  macOS: ["macOS", "--series-2"],
+  Linux: ["Linux", "--series-3"],
+  iOS: ["iOS", "--series-4"],
+  Android: ["Android", "--series-5"],
+  // Not grey: grey is for bot traffic in the same chart.
+  Other: ["Other", "--series-6"],
+  unknown: ["Not recorded", "--line"],
 };
 const VIA: Names = { site: ["From the website", ""], direct: ["Direct (scripts, links from elsewhere)", ""], unknown: ["Not recorded", ""] };
 const SECTIONS: Record<string, string> = {
@@ -59,7 +77,7 @@ const fmt = (n: number) => n.toLocaleString("en");
 const seconds = (date: string) => Date.parse(date) / 1000;
 const labelOf = (names: Names) => (v: string) => names[v]?.[0] ?? v;
 
-type Chart = { x: number[]; step?: boolean; week?: boolean; stack?: boolean; series: { label: string; colour: string; values: number[] }[] };
+type Chart = { x: number[]; step?: boolean; week?: boolean; stack?: boolean; series: { label: string; colour: string; values: number[]; extra?: boolean }[] };
 type Daily = { key: string; day: string; n: number };
 
 /**
@@ -76,7 +94,7 @@ function chart(rows: Daily[], names: Names, opts: { stack?: boolean; week?: bool
   const x = Array.from({ length: (bucket(opts.to ?? rows.at(-1)!.day) - first) / step + 1 }, (_, i) => first + i * step);
   const series = new Map<string, Chart["series"][number]>();
   for (const r of rows) {
-    const [label, colour] = names[r.key] ?? [r.key, "--compare-4"];
+    const [label, colour] = names[r.key] ?? [r.key, "--muted"];
     if (!series.has(label)) series.set(label, { label, colour, values: x.map(() => 0) });
     series.get(label)!.values[(bucket(r.day) - first) / step] += r.n;
   }
@@ -110,11 +128,15 @@ function ranked(rows: { value: string; column: string; n: number }[], label: (v:
   return rest.length ? [...shown, other] : shown;
 }
 
+/** The flag emoji: the two letters of the code as regional indicator symbols. */
+const flag = (code: string) => String.fromCodePoint(...[...code].map((ch) => 0x1f1a5 + ch.charCodeAt(0)));
+
 const country = (code: string) => {
   if (!code || code === "XX") return "Unknown";
   if (code === "T1") return "Tor";
   try {
-    return REGIONS.of(code) ?? code;
+    const name = REGIONS.of(code) ?? code;
+    return /^[A-Z]{2}$/.test(code) ? `${flag(code)}\u00a0${name}` : name;
   } catch {
     return code;
   }
@@ -127,8 +149,16 @@ const Plot = (props: { chart: Chart | null; label: string }) =>
     <p class="muted">No data yet.</p>
   );
 
-function RankTable(props: { head: string; columns: [string, string][]; rows: Ranked[] }) {
+/** With `bars`, each number has a bar, scaled to the largest number in its column. */
+function RankTable(props: { head: string; columns: [string, string][]; rows: Ranked[]; bars?: boolean }) {
   if (!props.rows.length) return <p class="muted">No data yet.</p>;
+  const max = (k: string) => Math.max(1, ...props.rows.map((r) => r.n[k] ?? 0));
+  const cell = (k: string, n = 0) =>
+    props.bars ? (
+      <span class="cell-bar"><span class="bar" style={`width: ${((100 * n) / max(k)).toFixed(1)}%`}></span><span>{fmt(n)}</span></span>
+    ) : (
+      fmt(n)
+    );
   return (
     <div class="table-scroll">
       <table>
@@ -137,7 +167,7 @@ function RankTable(props: { head: string; columns: [string, string][]; rows: Ran
         </thead>
         <tbody>
           {props.rows.map((r) => (
-            <tr><td>{r.label}</td>{props.columns.map(([k]) => <td class="num">{fmt(r.n[k] ?? 0)}</td>)}</tr>
+            <tr><td>{r.label}</td>{props.columns.map(([k]) => <td class="num">{cell(k, r.n[k])}</td>)}</tr>
           ))}
         </tbody>
       </table>
@@ -163,27 +193,42 @@ function Bars(props: { rows: [Child, number][]; class?: string }) {
 
 const percent = (n: number, of: number) => `${Math.round((100 * n) / of)}%`;
 
+const SECTION_IDS = [
+  ["website", "Website"],
+  ["agents", "For AI agents"],
+  ["api", "API"],
+  ["downloads", "Downloads"],
+  ["countries", "Countries"],
+  ["spectra", "Spectra"],
+  ["counting", "How we count"],
+] as const;
+const H2 = (props: { id: (typeof SECTION_IDS)[number][0] }) => <h2 id={props.id}>{SECTION_IDS.find(([id]) => id === props.id)![1]}</h2>;
+
 export async function statsPage(c: Context<AppEnv>) {
   const db = c.env.DB;
   const published = "status = 'published'";
-  const [{ results: daily }, { results: dims }, { results: viewed }, { results: byType }, { results: byElement }, { results: byMonth }] = await db.batch<any>([
-    db.prepare("SELECT dimension, surface, value, day, n FROM usage_daily WHERE dimension IN ('total', 'kind', 'resource') ORDER BY day"),
-    db.prepare(
-      `SELECT dimension, surface, value, SUM(n) AS n FROM usage_daily
-       WHERE dimension IN ('client', 'country', 'endpoint', 'format', 'via', 'section', 'referrer', 'kind', 'bot', 'resource')
-       GROUP BY dimension, surface, value ORDER BY n DESC`,
-    ),
+  const mostUsed = (surface: string) =>
     db.prepare(
       `SELECT s.slug, s.title, SUM(u.n) AS n FROM usage_daily u JOIN spectra s ON s.id = u.value
-       WHERE u.dimension = 'spectrum' AND u.surface = 'view' AND s.${published} GROUP BY s.id ORDER BY n DESC LIMIT 10`,
-    ),
-    db.prepare(`SELECT type, COUNT(*) AS n FROM spectra WHERE ${published} GROUP BY type ORDER BY n DESC`),
-    db.prepare(
-      `SELECT e.element, COUNT(DISTINCT s.id) AS n FROM spectrum_elements e JOIN spectra s ON s.id = e.spectrum_id
-       WHERE s.${published} GROUP BY e.element ORDER BY n DESC, e.element`,
-    ),
-    db.prepare(`SELECT substr(published_at, 1, 7) AS month, COUNT(*) AS n FROM spectra WHERE ${published} AND published_at IS NOT NULL GROUP BY month ORDER BY month`),
-  ]);
+       WHERE u.dimension = 'spectrum' AND u.surface = ? AND s.${published} GROUP BY s.id ORDER BY n DESC LIMIT 10`,
+    ).bind(surface);
+  const [{ results: daily }, { results: dims }, { results: viewed }, { results: downloaded }, { results: byType }, { results: byElement }, { results: byMonth }] =
+    await db.batch<any>([
+      db.prepare("SELECT dimension, surface, value, day, n FROM usage_daily WHERE dimension IN ('total', 'kind', 'resource', 'os', 'format') ORDER BY day"),
+      db.prepare(
+        `SELECT dimension, surface, value, SUM(n) AS n FROM usage_daily
+         WHERE dimension IN ('client', 'country', 'endpoint', 'via', 'section', 'referrer', 'kind', 'bot', 'browser')
+         GROUP BY dimension, surface, value ORDER BY n DESC`,
+      ),
+      mostUsed("view"),
+      mostUsed("download"),
+      db.prepare(`SELECT type, COUNT(*) AS n FROM spectra WHERE ${published} GROUP BY type ORDER BY n DESC`),
+      db.prepare(
+        `SELECT e.element, COUNT(DISTINCT s.id) AS n FROM spectrum_elements e JOIN spectra s ON s.id = e.spectrum_id
+         WHERE s.${published} GROUP BY e.element ORDER BY n DESC, e.element`,
+      ),
+      db.prepare(`SELECT substr(published_at, 1, 7) AS month, COUNT(*) AS n FROM spectra WHERE ${published} AND published_at IS NOT NULL GROUP BY month ORDER BY month`),
+    ]);
 
   /** Daily rows of one dimension and surface, keyed by value (or by surface for totals). */
   const days = (dimension: string, surface?: string, value?: string): Daily[] =>
@@ -195,169 +240,210 @@ export async function statsPage(c: Context<AppEnv>) {
   const total = (rows: { n: number }[]) => rows.reduce((s, r) => s + r.n, 0);
 
   const start: string | undefined = days("total")[0]?.day;
-  const apiTotals = Object.keys(APIS).map((s) => [s, total(days("total", s))] as const).filter(([, n]) => n);
+  const apiDays = days("total").filter((r) => r.key in APIS);
   const views = total(days("kind", "view", "browser"));
-  const downloads = total(days("total", "download"));
   const requests = total(days("total", "view"));
-  const bots = total(dim("kind", "view").filter((r) => ["ai", "ai-user", "search", "bot"].includes(r.value)));
+  const range = { stack: true, from: days("total", "view")[0]?.day, to: days("total", "view").at(-1)?.day };
+  const byOs = chart(days("os", "view"), SYSTEMS, range);
+  const byBot = chart(days("kind", "view").filter((r) => r.key !== "browser"), BOT_SERIES, range);
+  const visitors = byOs && { ...byOs, series: [...byOs.series, ...(byBot?.series ?? []).map((s) => ({ ...s, extra: true }))] };
   const botNames = (...kinds: string[]) => byLabel(dim("bot", "view").filter((r) => kinds.includes(BOT_KINDS.get(r.value)!)), String);
   const columns = (rows: { value: string; surface: string; n: number }[], column: (surface: string) => string) => rows.map((r) => ({ ...r, column: column(r.surface) }));
+  const usedApis = Object.keys(APIS).filter((s) => apiDays.some((r) => r.key === s));
   const clients = ranked(columns(dim("client"), String), (v) => (v === "" ? "No name given" : v));
   const countries = ranked(columns(dim("country"), (s) => (s === "view" || s === "download" ? s : "api")), country);
   const referrers = ranked(columns(dim("referrer", "view"), String), String).map((r): [string, number] => [r.label, sum(r.n)]);
+  const endpoints = dim("endpoint").filter((r) => r.surface in APIS);
   const spectra = byType.reduce((s: number, r: any) => s + r.n, 0);
+  const spectrumBars = (rows: any[]) => rows.map((r): [Child, number] => [<a href={`/spectra/${encodeURIComponent(r.slug)}/`}>{r.title}</a>, r.n]);
   let running = 0;
   const growth: Chart = {
     x: [...byMonth.map((r: any) => seconds(`${r.month}-01`)), Math.floor(Date.now() / 1000)],
     step: true,
     series: [{ label: "Published spectra", colour: "--plot", values: [...byMonth.map((r: any) => (running += r.n)), spectra] }],
   };
+  const tiles: [string, number][] = [
+    ["Page views", views],
+    ["API requests", total(apiDays)],
+    ["Downloads", total(days("total", "download"))],
+    ["Published spectra", spectra],
+  ];
 
   return c.html(
     <Layout user={c.get("user")} title="Statistics" path="/stats/" card="page/stats" head={<link rel="stylesheet" href="/vendor/uPlot.min.css" />}>
       <h1>Statistics</h1>
       <p class="lede">
-        {start && `Since ${start}: ${fmt(views)} page views, ${fmt(total(apiTotals.map(([, n]) => ({ n }))))} API requests and ${fmt(downloads)} downloads. `}
-        {fmt(spectra)} published spectra.
+        {start ? <>How EELSdb is used, counted since <time>{start}</time> without cookies or IP addresses. </> : "Nothing counted yet. "}
+        <a href="#counting">How we count</a>.
       </p>
-      <p class="stats-about muted">
-        {start ? `Counted since ${start}. ` : "Nothing counted yet. "}
-        EELSdb counts page loads, requests to the API and downloads of spectrum files. It keeps the day and the country, and for the API and
-        downloads the client's name: the first word of its User-Agent, such as <code>exSpy/0.4</code>. It never stores IP addresses, full
-        User-Agents, full referrer addresses or cookies. Countries, clients and referring sites with fewer than {MIN_COUNT} requests are shown
-        as "Other".
-      </p>
+      <div class="stats-layout">
+        <nav class="stats-toc" aria-label="On this page">
+          <p>On this page</p>
+          <ul>
+            {SECTION_IDS.map(([id, title]) => <li><a href={`#${id}`}>{title}</a></li>)}
+          </ul>
+        </nav>
+        <div class="stats-main">
+          <dl class="stats-tiles">
+            {tiles.map(([label, n]) => <div><dt>{label}</dt><dd>{fmt(n)}</dd></div>)}
+          </dl>
 
-      <h2>Website</h2>
-      <p class="stats-about muted">
-        A page view is a page load by a browser. It is counted without cookies, so page views are not unique visitors. Bots, scripts and
-        prefetches are left out; they are under "Bots and crawlers". Cloudflare Web Analytics will add visitor numbers after the domain moves
-        to Cloudflare.
-      </p>
-      <div class="stats-grid">
-        <section>
-          <h3>Page views per day</h3>
-          <Plot chart={chart(days("kind", "view", "browser"), { browser: ["Page views", "--plot"] })} label="Page views per day" />
-        </section>
-        <section>
-          <h3>Most visited sections</h3>
-          <Bars class="stats-wide" rows={byLabel(dim("section", "view"), (v) => SECTIONS[v] ?? v)} />
-        </section>
-        <section>
-          <h3>Most viewed spectra</h3>
-          <Bars class="stats-wide" rows={viewed.map((r: any) => [<a href={`/spectra/${encodeURIComponent(r.slug)}/`}>{r.title}</a>, r.n])} />
-        </section>
-        <section>
-          <h3>Referring sites</h3>
-          <Bars class="stats-wide" rows={referrers} />
-        </section>
-        <section>
-          <h3>Countries</h3>
-          <RankTable head="Country" columns={[["view", "Page views"], ["api", "API requests"], ["download", "Downloads"]]} rows={countries} />
-        </section>
-      </div>
-
-      <details class="stats-more">
-        <summary><h2>Bots and crawlers</h2></summary>
-        <p class="stats-about muted">
-          Each request for a page is sorted by its User-Agent. AI crawlers, AI agents that fetch a page for a user, and search engines come
-          from a fixed list of names; other bots say "bot", "crawler" or "spider". Browsers send <code>Sec-Fetch</code> headers when they load
-          a page, and the rest are scripts and prefetches. A bot can pretend to be a browser, so some bots count as page views.
-        </p>
-        {requests > 0 && <p>Bots and crawlers sent {fmt(bots)} of the {fmt(requests)} requests for pages ({percent(bots, requests)}).</p>}
-        <div class="stats-grid">
-          <section>
-            <h3>Requests for pages per day</h3>
-            <Plot chart={chart(days("kind", "view"), KINDS, { stack: true })} label="Requests for pages per day, by kind of client" />
-          </section>
-          <section>
-            <h3>AI crawlers and agents</h3>
-            <Bars class="stats-wide" rows={botNames("ai", "ai-user")} />
-            <h3>Search engines</h3>
-            <Bars class="stats-wide" rows={botNames("search")} />
-          </section>
-        </div>
-      </details>
-
-      <h2>For AI agents</h2>
-      <p class="stats-about muted">
-        AI agents and tools can read EELSdb as plain text: <code>llms.txt</code>, a Markdown version of each page, an agent skill and the
-        OpenAPI files. The <a href="/docs/use/agents/">guide for agents</a> explains them.
-      </p>
-      <div class="stats-grid">
-        <section>
-          <h3>Requests per day</h3>
-          <Plot chart={chart(days("resource", "agent"), RESOURCES, { stack: true })} label="Requests for the files for AI agents per day, by file" />
-        </section>
-        <section>
-          <h3>Who fetches them</h3>
-          <Bars class="stats-wide" rows={byLabel(dim("kind", "agent"), labelOf(KINDS))} />
-          <h3>AI agents and crawlers</h3>
-          <Bars class="stats-wide" rows={byLabel(dim("bot", "agent"), String)} />
-        </section>
-      </div>
-
-      <h2>API</h2>
-      {start && apiTotals.length > 0 && <p>{apiTotals.map(([s, n]) => `${APIS[s][0]}: ${fmt(n)}`).join(" · ")}</p>}
-      <div class="stats-grid">
-        <section>
-          <h3>API requests per day</h3>
-          <Plot chart={chart(Object.keys(APIS).flatMap((s) => days("total", s)), APIS)} label="API requests per day, by API" />
-        </section>
-        <section>
-          <h3>Clients</h3>
-          <RankTable head="Client" columns={[...apiTotals.map(([s]): [string, string] => [s, APIS[s][0]]), ["download", "Downloads"]]} rows={clients} />
-        </section>
-        {apiTotals.length ? (
-          apiTotals.map(([s]) => (
+          <H2 id="website" />
+          <p class="stats-about muted">Page loads by a browser. Without cookies, page views are not unique visitors.</p>
+          <div class="stats-chart-head">
+            <h3 data-extra-title="Requests for pages per day, by operating system or kind of bot">Page views per day, by operating system</h3>
+            {requests > views && (
+              <label class="stats-toggle">
+                <input type="checkbox" data-extra /> Show bot traffic ({percent(requests - views, requests)} of requests for pages)
+              </label>
+            )}
+          </div>
+          <Plot chart={visitors} label="Page views per day, by operating system, with requests for pages by bots and scripts on request" />
+          <div class="stats-grid">
             <section>
-              <h3>{APIS[s][0]} endpoints</h3>
-              <Bars class="stats-wide" rows={dim("endpoint", s).map((r) => [<code>{r.value}</code>, r.n])} />
+              <h3>Browsers</h3>
+              <Bars class="stats-wide" rows={byLabel(dim("browser", "view"), labelOf(SYSTEMS))} />
             </section>
-          ))
-        ) : (
-          <section>
-            <h3>Endpoints</h3>
-            <p class="muted">No data yet.</p>
-          </section>
-        )}
-      </div>
+            <section>
+              <h3>Most visited sections</h3>
+              <Bars class="stats-wide" rows={byLabel(dim("section", "view"), (v) => SECTIONS[v] ?? v)} />
+            </section>
+            <section>
+              <h3>Most viewed spectra</h3>
+              <Bars class="stats-wide" rows={spectrumBars(viewed)} />
+            </section>
+            <section>
+              <h3>Referring sites</h3>
+              <Bars class="stats-wide" rows={referrers} />
+            </section>
+            <section>
+              <h3>AI crawlers and agents</h3>
+              <Bars class="stats-wide" rows={botNames("ai", "ai-user")} />
+            </section>
+            <section>
+              <h3>Search engine crawlers</h3>
+              <Bars class="stats-wide" rows={botNames("search")} />
+            </section>
+          </div>
 
-      <h2>Downloads</h2>
-      <div class="stats-grid">
-        <section>
-          <h3>Downloads per day</h3>
-          <Plot chart={chart(days("total", "download"), { download: ["Downloads", "--plot"] })} label="Spectrum downloads per day" />
-        </section>
-        <section>
-          <h3>By format</h3>
-          <Bars class="stats-wide" rows={byLabel(dim("format", "download"), labelOf(FORMATS))} />
-          <h3>From the website or direct</h3>
-          <Bars class="stats-wide" rows={byLabel(dim("via", "download"), labelOf(VIA))} />
-        </section>
-      </div>
+          <H2 id="agents" />
+          <p class="stats-about muted">
+            AI agents and tools can read EELSdb as plain text: <code>llms.txt</code>, a Markdown version of each page, an agent skill and the OpenAPI
+            files. The <a href="/docs/use/agents/">guide for agents</a> explains them.
+          </p>
+          <h3>Requests per day, by file</h3>
+          <Plot chart={chart(days("resource", "agent"), RESOURCES, { stack: true })} label="Requests for the files for AI agents per day, by file" />
+          <div class="stats-grid">
+            <section>
+              <h3>Who fetches them</h3>
+              <Bars class="stats-wide" rows={byLabel(dim("kind", "agent"), labelOf(KINDS))} />
+            </section>
+            <section>
+              <h3>AI agents and crawlers</h3>
+              <Bars class="stats-wide" rows={byLabel(dim("bot", "agent"), String)} />
+            </section>
+          </div>
 
-      <h2>Spectra</h2>
-      <div class="stats-grid">
-        <section>
-          <h3>By type</h3>
-          <Bars rows={byType.map((r: any) => [<a href={`/spectra/?type=${r.type}`}><TypeBadge type={r.type} /></a>, r.n])} />
-        </section>
-        <section>
-          <h3>Published over time</h3>
-          <Plot chart={growth} label={`Published spectra over time, ${fmt(spectra)} in total`} />
-        </section>
+          <H2 id="api" />
+          <p class="stats-about muted">
+            Requests from scripts and tools to the <a href="/docs/use/api/">API</a>, and from harvesters to OAI-PMH and DCAT.
+          </p>
+          <h3>Requests per day</h3>
+          <Plot chart={chart(apiDays, APIS)} label="API requests per day, by API" />
+          <div class="stats-grid">
+            <section>
+              <h3>Endpoints</h3>
+              {endpoints.length ? (
+                <div class="table-scroll">
+                  <table>
+                    <thead>
+                      <tr><th>Endpoint</th><th>API</th><th class="num">Requests</th></tr>
+                    </thead>
+                    <tbody>
+                      {endpoints.map((r) => (
+                        <tr><td><code>{r.value}</code></td><td>{APIS[r.surface][0]}</td><td class="num">{fmt(r.n)}</td></tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              ) : (
+                <p class="muted">No data yet.</p>
+              )}
+            </section>
+            <section>
+              <h3>Clients</h3>
+              <RankTable head="Client" columns={[...usedApis.map((s): [string, string] => [s, APIS[s][0]]), ["download", "Downloads"]]} rows={clients} />
+            </section>
+          </div>
+
+          <H2 id="downloads" />
+          <p class="stats-about muted">Spectrum files, fetched from the website, by scripts or from links on other sites.</p>
+          <h3>Downloads per day, by format</h3>
+          <Plot chart={chart(days("format", "download"), FORMATS, { stack: true })} label="Spectrum downloads per day, by format" />
+          <div class="stats-grid">
+            <section>
+              <h3>Most downloaded spectra</h3>
+              <Bars class="stats-wide" rows={spectrumBars(downloaded)} />
+            </section>
+            <section>
+              <h3>From the website or direct</h3>
+              <Bars class="stats-wide" rows={byLabel(dim("via", "download"), labelOf(VIA))} />
+            </section>
+          </div>
+
+          <H2 id="countries" />
+          <p class="stats-about muted">Page views, API requests and downloads by country.</p>
+          <RankTable head="Country" columns={[["view", "Page views"], ["api", "API requests"], ["download", "Downloads"]]} rows={countries} bars />
+
+          <H2 id="spectra" />
+          <div class="stats-grid">
+            <section>
+              <h3>By type</h3>
+              <Bars rows={byType.map((r: any) => [<a href={`/spectra/?type=${r.type}`}><TypeBadge type={r.type} /></a>, r.n])} />
+            </section>
+            <section>
+              <h3>Published over time</h3>
+              <Plot chart={growth} label={`Published spectra over time, ${fmt(spectra)} in total`} />
+            </section>
+          </div>
+          <h3>By element</h3>
+          <Bars
+            class="stats-elements"
+            rows={byElement.map((r: any) => [
+              <a href={`/spectra/?element=${r.element}`}>
+                <b>{r.element}</b> <span class="muted">{ELEMENT_NAMES[r.element] ?? ""}</span>
+              </a>,
+              r.n,
+            ])}
+          />
+
+          <H2 id="counting" />
+          <dl class="stats-notes">
+            <dt>Page views</dt>
+            <dd>
+              A page view is a page load by a browser, including a browser that shows its saved copy of the page. Cloudflare Web Analytics will
+              add visitor numbers after the domain moves to Cloudflare.
+            </dd>
+            <dt>Bots and crawlers</dt>
+            <dd>
+              Each request for a page is sorted by its User-Agent. AI crawlers, AI agents that fetch a page for a user, and search engines come
+              from a fixed list of names. Other bots say "bot", "crawler" or "spider". Browsers send <code>Sec-Fetch</code> headers when they load
+              a page, and the rest are scripts and prefetches. A bot can pretend to be a browser, so some bots count as page views.
+            </dd>
+            <dt>Downloads</dt>
+            <dd>A download is a fetch of a spectrum file. When the website shows a file on the spectrum page, that fetch does not count.</dd>
+            <dt>What is kept</dt>
+            <dd>
+              The day and the country of each request. For browsers, the family of the operating system and of the browser, such as "macOS" and
+              "Firefox". For the API and downloads, the client's name: the first word of its User-Agent, such as <code>exSpy/0.4</code>. EELSdb
+              never stores IP addresses, full User-Agents, full referrer addresses or cookies. Countries, clients and referring sites with fewer
+              than {MIN_COUNT} requests are shown as "Other".
+            </dd>
+            <dt>When</dt>
+            <dd>Counts are per day (UTC) and appear on this page the next morning.</dd>
+          </dl>
+        </div>
       </div>
-      <h3>By element</h3>
-      <Bars
-        class="stats-elements"
-        rows={byElement.map((r: any) => [
-          <a href={`/spectra/?element=${r.element}`}>
-            <b>{r.element}</b> <span class="muted">{ELEMENT_NAMES[r.element] ?? ""}</span>
-          </a>,
-          r.n,
-        ])}
-      />
       <script src="/vendor/uPlot.iife.min.js" defer></script>
       <script type="module" src="/stats.js"></script>
     </Layout>,
