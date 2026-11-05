@@ -3,7 +3,7 @@ import { FRESH_SIGN_IN_MINUTES, PROVIDERS, methodOn, signOutEverywhere, signedIn
 import { EmailList, PictureChoice, ProfileFields, addEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, type EmailRow } from "./account-edit";
 import { sendEmail } from "./email";
 import { accountFacts, mergeAccounts, mergePlan, outranks, type Facts } from "./merge";
-import { Avatar, Layout } from "./pages/layout";
+import { AccountLayout, Avatar } from "./pages/layout";
 import { sendLoginLink } from "./pages/account";
 import { HAS_PAGE_SQL } from "./pages/profile";
 import { authorSlug } from "./submit/store";
@@ -128,8 +128,7 @@ adminUsers.get("/admin/users/", async (c) => {
   const pages = Math.max(1, Math.ceil((total ?? 0) / PAGE_SIZE));
   const href = (n: number) => `/admin/users/?${new URLSearchParams({ ...(q ? { q } : {}), ...(n > 1 ? { page: String(n) } : {}) })}`;
   return c.html(
-    <Layout title="Accounts" path="/admin/" user={c.get("user")}>
-      <p class="small back-link"><a href="/admin/">← Moderation</a></p>
+    <AccountLayout title="Accounts" current="/admin/users/" user={c.get("user")!}>
       <h1>Accounts</h1>
       <form method="get" action="/admin/users/" class="inline-form" role="search">
         <input type="search" name="q" value={q} aria-label="Name, username, email address or ORCID iD" placeholder="Name, username, email address or ORCID iD" size={40} />
@@ -161,7 +160,7 @@ adminUsers.get("/admin/users/", async (c) => {
           {page < pages && <a href={href(page + 1)} rel="next">Next</a>}
         </nav>
       )}
-    </Layout>,
+    </AccountLayout>,
   );
 });
 
@@ -205,7 +204,7 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
   const origin = new URL(c.req.url).origin;
   const staff = u.role !== "user";
   return (
-    <Layout title={`Account: ${u.display_name}`} path="/admin/" user={c.get("user")}>
+    <AccountLayout title={`Account: ${u.display_name}`} current="/admin/users/" user={c.get("user")!}>
       <div class="settings">
         <p class="small back-link"><a href="/admin/users/">← Accounts</a></p>
         <div class="profile-head">
@@ -349,7 +348,7 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
           ) : <p class="muted">No changes yet.</p>}
         </section>
       </div>
-    </Layout>
+    </AccountLayout>
   );
 }
 
@@ -374,7 +373,7 @@ adminUsers.get("/admin/users/:id/merge/", async (c) => {
     `SELECT u.id, u.display_name, u.slug, u.role FROM users u ${where || "WHERE 1"} AND u.id NOT IN (${id}, ${adminId}) ORDER BY u.display_name COLLATE NOCASE, u.id LIMIT 20`,
   ).bind(...args).all<Person>();
   return c.html(
-    <Layout title="Merge an account" path="/admin/" user={c.get("user")}>
+    <AccountLayout title="Merge an account" current="/admin/users/" user={c.get("user")!}>
       <p class="small back-link"><a href={pageUrl(id)}>← {kept.display_name}</a></p>
       <h1>Merge an account into {kept.display_name}</h1>
       <form method="get" action={`/admin/users/${id}/merge/`} class="inline-form" role="search">
@@ -386,7 +385,7 @@ adminUsers.get("/admin/users/:id/merge/", async (c) => {
           {results.map((u) => <li><a href={`/admin/users/${id}/merge/${u.id}/`}>{u.display_name}</a> (account {u.id}{u.slug ? `, ${u.slug}` : ""}{u.role !== "user" ? `, ${u.role}` : ""})</li>)}
         </ul>
       ) : <p class="muted">No other accounts found. You cannot merge your own account.</p>}
-    </Layout>,
+    </AccountLayout>,
   );
 });
 
@@ -410,7 +409,7 @@ function renderMerge(c: C, kept: Facts, gone: Facts, error?: string) {
   const addresses = (x: Facts) => (x.emails.length ? <ul class="plain">{x.emails.map((e) => <li>{e.email}{e.verified ? "" : " (unconfirmed)"}{e.is_primary ? ", primary" : ""}</li>)}</ul> : "None");
   const bothAdmins = kept.role === "admin" && gone.role === "admin";
   return (
-    <Layout title="Merge accounts" path="/admin/" user={c.get("user")}>
+    <AccountLayout title="Merge accounts" current="/admin/users/" user={c.get("user")!}>
       <p class="small back-link"><a href={pageUrl(kept.id)}>← {kept.display_name}</a></p>
       <h1>Merge {gone.display_name} into {kept.display_name}</h1>
       <p>
@@ -460,7 +459,7 @@ function renderMerge(c: C, kept: Facts, gone: Facts, error?: string) {
         <button class="button danger" type="submit">Merge the accounts</button>{" "}
         <a href={pageUrl(kept.id)}>Cancel</a>
       </form>
-    </Layout>
+    </AccountLayout>
   );
 }
 

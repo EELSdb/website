@@ -29,7 +29,7 @@ npm run seed     # build the local D1 database and R2 bucket from data/fixtures 
 npm run dev      # wrangler dev: pages on http://localhost:8787, API on http://api.localhost:8787
 ```
 
-Copy `worker/.env.example` to `worker/.env` for OAuth, Turnstile and other keys. The site works without them. With the default `EMAIL_PROVIDER=log`, the site writes emails to the `wrangler dev` log and sends nothing.
+Copy `worker/.env.example` to `worker/.env` for OAuth, Turnstile and other keys. The site works without them. With the default `EMAIL_PROVIDER=log`, the site writes emails to the `wrangler dev` log and sends nothing. `npm run dev` sets `ENVIRONMENT=development`, which puts a red "DEVELOPMENT SITE" banner on every page, as on the dev deployment.
 
 ## Where things are
 

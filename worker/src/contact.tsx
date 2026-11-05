@@ -2,7 +2,7 @@ import { Hono } from "hono";
 import { type AppEnv, type User } from "./auth";
 import { emailIsLogOnly, sendEmail } from "./email";
 import { getSettings, twoStepRequired } from "./settings";
-import { Layout } from "./pages/layout";
+import { AccountLayout, Layout } from "./pages/layout";
 import { turnstileOk } from "./turnstile";
 
 export const contact = new Hono<AppEnv>();
@@ -229,7 +229,7 @@ export async function MessagesPage(props: { c: { env: Env }; user: User; q: stri
   const href = (n: number) => `/admin/messages/?${new URLSearchParams({ ...(q ? { q } : {}), ...(n > 1 ? { page: String(n) } : {}) })}`;
   const logOnly = emailIsLogOnly(props.c.env);
   return (
-    <Layout title="Contact messages" path="/admin/" user={props.user}>
+    <AccountLayout title="Contact messages" current="/admin/messages/" user={props.user}>
       <h1>Contact messages</h1>
       <p class="hint prose">
         Messages from the <a href="/contact/">contact form</a>, newest first. They are also emailed to every administrator with two-step sign-in, and deleted after a year.
@@ -269,7 +269,7 @@ export async function MessagesPage(props: { c: { env: Env }; user: User; q: stri
           {page < pages && <a href={href(page + 1)} rel="next">Next</a>}
         </nav>
       )}
-    </Layout>
+    </AccountLayout>
   );
 }
 

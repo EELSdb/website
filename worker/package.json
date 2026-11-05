@@ -4,7 +4,7 @@
   "type": "module",
   "scripts": {
     "predev": "test -d public/docs || npm run docs",
-    "dev": "wrangler dev",
+    "dev": "wrangler dev --var ENVIRONMENT:development",
     "test": "vitest run",
     "typecheck": "tsc --noEmit",
     "seed": "node scripts/seed.mjs",

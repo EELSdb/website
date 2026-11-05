@@ -6,7 +6,7 @@ import { EXPORT_KEY, fileHeaders } from "./files";
 import { isModerator } from "./instruments";
 import { DEFAULT_LICENCE, licenceOf } from "./api/metadata";
 import { DECISIONS, PROCESSED_ROLES, QUEUE_SQL, decide, reviewInput, storeProcessed, submissionDetail, type Decision, type ProcessingRecord } from "./moderation";
-import { Layout, TypeBadge } from "./pages/layout";
+import { AccountLayout, Layout, TypeBadge } from "./pages/layout";
 import { MessagesPage, deleteMessage } from "./contact";
 import { adminUsers } from "./admin-users";
 import { SIGN_IN_METHODS, TWO_STEP_GROUPS, getSettings, setSetting, type SettingKey, type SwitchableMethod } from "./settings";
@@ -39,9 +39,8 @@ admin.get("/admin/", async (c) => {
   ]);
   const user = c.get("user")!;
   return c.html(
-    <Layout title="Moderation" path="/admin/" user={user}>
+    <AccountLayout title="Moderation" current="/admin/" user={user}>
       <h1>Moderation</h1>
-      {user.role === "admin" && <p><a href="/admin/users/">Accounts</a> · <a href="/admin/settings/">Site settings</a> · <a href="/admin/messages/">Messages</a></p>}
       <h2>Submissions waiting ({queue.length})</h2>
       {queue.length ? (
         <div class="table-scroll">
@@ -93,7 +92,7 @@ admin.get("/admin/", async (c) => {
           </ul>
         </>
       )}
-    </Layout>,
+    </AccountLayout>,
   );
 });
 
@@ -196,9 +195,8 @@ async function settingsPage(c: Context<AppEnv>, opts: { error?: string; proposed
       .all<{ changed_at: string; changes_json: string; details_json: string | null; display_name: string | null }>(),
   ]);
   return c.html(
-    <Layout title="Site settings" path="/admin/" user={c.get("user")}>
+    <AccountLayout title="Site settings" current="/admin/settings/" user={c.get("user")!}>
       <div class="settings">
-        <p class="small back-link"><a href="/admin/">← Moderation</a></p>
         <h1>Site settings</h1>
         {notice && <p class="notice" role="status">{notice}</p>}
         <h2>Submitting</h2>
@@ -275,7 +273,7 @@ async function settingsPage(c: Context<AppEnv>, opts: { error?: string; proposed
           </>
         )}
       </div>
-    </Layout>,
+    </AccountLayout>,
     opts.error || opts.twoStepError ? 422 : 200,
   );
 }
@@ -464,7 +462,7 @@ admin.get("/admin/submissions/:id/", async (c) => {
   const open = ["pending", "changes_requested"].includes(d.status);
   const input = open ? await reviewInput(c.env.DB, d) : null;
   return c.html(
-    <Layout title={`Review: ${d.title}`} path="/admin/" user={c.get("user")} head={input?.file && <link rel="stylesheet" href="/vendor/uPlot.min.css" />}>
+    <AccountLayout title={`Review: ${d.title}`} current="/admin/" user={c.get("user")!} head={input?.file && <link rel="stylesheet" href="/vendor/uPlot.min.css" />}>
       <p class="small back-link"><a href="/admin/">← Moderation</a></p>
       <h1>{d.title}</h1>
       <p class="muted">
@@ -546,7 +544,7 @@ admin.get("/admin/submissions/:id/", async (c) => {
           <script src="/review.js" type="module"></script>
         </>
       )}
-    </Layout>,
+    </AccountLayout>,
   );
 });
 

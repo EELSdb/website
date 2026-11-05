@@ -6,11 +6,11 @@ import openapiV1 from "../api/openapi-v1.json";
 import { openapiV2 } from "../api/v2";
 import { MODIFIED_SQL, isoTime } from "../api/dates";
 import { SITE } from "../api/format";
-import { IS_PRODUCTION, localise } from "../site";
+import { IS_DEVELOPMENT, IS_PRODUCTION, localise } from "../site";
 import { xml } from "../api/metadata";
 import { EXPORT_KEY, serveFile } from "../files";
 import { browsePage } from "./browse";
-import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge } from "./layout";
+import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge, devBanner, staffPages } from "./layout";
 import { homePage } from "./home";
 import { admin } from "../admin";
 import { contact } from "../contact";
@@ -137,11 +137,14 @@ pages.get("/robots.txt", async (c) => (IS_PRODUCTION ? c.env.ASSETS.fetch(c.req.
 pages.on("GET", ["/llms.txt", "/docs/*"], async (c) => {
   const res = await c.env.ASSETS.fetch(c.req.raw);
   if (res.status === 404) return c.notFound();
-  if (IS_PRODUCTION || !/^text\/|json|xml/.test(res.headers.get("Content-Type") ?? "")) return res;
+  const banner = IS_DEVELOPMENT && res.headers.get("Content-Type")?.startsWith("text/html");
+  if ((IS_PRODUCTION && !banner) || !/^text\/|json|xml/.test(res.headers.get("Content-Type") ?? "")) return res;
   const headers = new Headers(res.headers);
   headers.delete("Content-Length");
   headers.delete("ETag");
-  return new Response(localise(await res.text()), { status: res.status, headers });
+  let text = localise(await res.text());
+  if (banner) text = text.replace(/<body[^>]*>/, (body) => body + devBanner(true));
+  return new Response(text, { status: res.status, headers });
 });
 
 pages.get("/sitemap.xml", async (c) => {
@@ -174,6 +177,7 @@ pages.get("/moderators/", async (c) => {
       avatar: await avatarUrl(u.avatar_key, u.email, u.use_gravatar),
     })),
   );
+  const staff = staffPages(c.get("user")?.role);
   return c.html(
     <Layout user={c.get("user")} title="Moderators" path="/moderators/" card="page/moderators">
       <div class="prose">
@@ -181,6 +185,12 @@ pages.get("/moderators/", async (c) => {
         <p class="lede">
           The people who look after the EELS Data Base. To reach them, see <a href="/contact/">Contact</a>.
         </p>
+        {staff.length > 0 && (
+          <p class="notice staff-links">
+            Your staff pages:{" "}
+            {staff.map(([href, label], i) => <>{i > 0 && " · "}<a href={href}>{label}</a></>)}
+          </p>
+        )}
         {people.length ? (
           STAFF_GROUPS.map((g) => {
             const members = people.filter((u) => u.role === g.role);

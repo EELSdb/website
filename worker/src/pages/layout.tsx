@@ -4,6 +4,19 @@ import { LAST_METHOD_COOKIE, type User } from "../auth";
 import { ABOUT_NAV, NAV, currentAbout } from "../nav";
 import { SITE } from "../api/format";
 import { LOGO_SVG } from "./logo";
+import { IS_DEVELOPMENT } from "../site";
+
+// Ignores the pointer, so the page under it still works.
+const RIBBON = "position:fixed;z-index:1000;top:69px;left:-85px;width:340px;transform:rotate(-45deg);pointer-events:none;padding:0.45rem 0;box-shadow:0 2px 6px rgb(0 0 0/0.3)";
+
+/**
+ * On a development deployment (ENVIRONMENT=development): a ribbon across the top-left corner on wide screens, and a strip above the
+ * header on narrow ones. `corner` keeps the ribbon at every width, for the docs, whose fixed header would hide a strip.
+ * The logo's red in both themes, so the white text stays readable.
+ */
+export const devBanner = (corner = false) =>
+  `<style>.dev-banner{background:#a21e16;color:#fff;font-weight:700;font-size:0.85rem;line-height:1.3;letter-spacing:0.14em;text-align:center;padding:0.4rem 1rem}` +
+  `@media (min-width:1000px){.dev-banner{${RIBBON}}}${corner ? `.dev-banner{${RIBBON}}` : ""}</style><div class="dev-banner">DEVELOPMENT SITE</div>`;
 
 // Runs before paint so a saved theme does not flash. A signed-in user's saved theme arrives as data-theme and wins.
 const THEME_SCRIPT = `document.documentElement.classList.add("js");try{var r=document.documentElement,t=localStorage.getItem("theme");if(t&&!r.dataset.theme)r.dataset.theme=t}catch(e){}`;
@@ -100,6 +113,7 @@ export function Layout(props: {
         </head>
         <body class={props.home ? "home" : undefined}>
           <a class="skip" href="#main">Skip to content</a>
+          {IS_DEVELOPMENT && raw(devBanner())}
           {props.user?.needs_2fa && props.path !== "/account/settings/two-step/" && (
             <div class="two-step-banner" role="alert">
               <div class="wrap">
@@ -242,17 +256,20 @@ export const SETTINGS_PAGES = [
 ] as const;
 export type AccountPage = (typeof ACCOUNT_PAGES)[number][0] | (typeof SETTINGS_PAGES)[number][0];
 
-const STAFF_PAGES: [string, string, string][] = [
+const STAFF_PAGES = [
   ["/admin/", "Moderation", "moderator"],
   ["/admin/users/", "Accounts", "admin"],
   ["/admin/settings/", "Site settings", "admin"],
   ["/admin/messages/", "Messages", "admin"],
-];
+] as const;
+export type StaffPage = (typeof STAFF_PAGES)[number][0];
 
-/** Every page under /account/: the site layout with the account nav beside the content. */
-export function AccountLayout(props: { title: string; current: AccountPage; user: User; head?: Child; children: Child }) {
-  const { role } = props.user;
-  const staff = STAFF_PAGES.filter(([, , needs]) => role === "admin" || role === needs);
+/** The staff pages this role can open, as [href, label]. */
+export const staffPages = (role: string | undefined) => STAFF_PAGES.filter(([, , needs]) => role === "admin" || role === needs);
+
+/** Every page under /account/ and the staff pages: the site layout with the account nav beside the content. */
+export function AccountLayout(props: { title: string; current: AccountPage | StaffPage; user: User; head?: Child; children: Child }) {
+  const staff = staffPages(props.user.role);
   return (
     <Layout title={props.title} path={props.current} user={props.user} head={props.head}>
       <div class="account-layout">
@@ -272,7 +289,7 @@ export function AccountLayout(props: { title: string; current: AccountPage; user
             <div>
               <p class="account-nav-label" id="account-staff">Staff</p>
               <ul aria-labelledby="account-staff">
-                {staff.map(([href, label]) => <li><a href={href}>{label}</a></li>)}
+                {staff.map(([href, label]) => <li><a href={href} aria-current={href === props.current ? "page" : undefined}>{label}</a></li>)}
               </ul>
             </div>
           )}

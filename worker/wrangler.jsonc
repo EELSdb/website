@@ -38,7 +38,7 @@
     "dev": {
       // workers.dev has no api. host, so the API is under /_api. Once eelsdb.eu is on Cloudflare, move to dev.eelsdb.eu,
       // drop API_URL and add "routes": [{ "pattern": "dev.eelsdb.eu", "custom_domain": true }, and the same for api.dev.eelsdb.eu].
-      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev", "API_URL": "https://eelsdb-dev.eelsdb.workers.dev/_api", "API_USAGE_DATASET": "eelsdb_dev_api" },
+      "vars": { "SITE_URL": "https://eelsdb-dev.eelsdb.workers.dev", "API_URL": "https://eelsdb-dev.eelsdb.workers.dev/_api", "API_USAGE_DATASET": "eelsdb_dev_api", "ENVIRONMENT": "development" },
       "d1_databases": [
         {
           "binding": "DB",

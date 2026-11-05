@@ -22,6 +22,7 @@ export default defineConfig({
           EMAIL_PROVIDER: "log",
           ORCID_BASE: "https://orcid.org",
           SITE_URL: "https://eelsdb.eu",
+          ENVIRONMENT: "",
         },
       },
     })),

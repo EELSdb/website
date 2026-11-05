@@ -15,6 +15,7 @@ interface Env {
   TURNSTILE_SECRET_KEY?: string;
   ANALYTICS_ACCOUNT_ID?: string;
   ANALYTICS_API_TOKEN?: string;
+  ENVIRONMENT?: string;
 }
 
 declare module "@resvg/resvg-wasm/index_bg.wasm" {

@@ -8,6 +8,8 @@ export const SITE = (env.SITE_URL || PRODUCTION).replace(/\/+$/, "");
 export const API_HOST = apiUrl(SITE, env.API_URL);
 export const SITE_HOST = new URL(SITE).host;
 export const IS_PRODUCTION = SITE === PRODUCTION;
+/** ENVIRONMENT=development: every page says so in a red banner, so nobody mistakes it for the live site. */
+export const IS_DEVELOPMENT = env.ENVIRONMENT === "development";
 
 function apiUrl(site: string, setting?: string) {
   return (setting || site.replace("://", "://api.")).replace(/\/+$/, "");
