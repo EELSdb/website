@@ -90,7 +90,7 @@ it("copies the last 7 days from Analytics Engine into D1, with rare clients, cou
 
   const spectrum = await (await exports.default.fetch("https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/")).text();
   expect(spectrum).toContain(
-    '<dt>Page views</dt><dd>31</dd><dt>Downloads</dt><dd>5 · <a href="/spectra/mlc-nanotube-ylas-tas2/usage/" data-open="usage-dialog">Details</a></dd>',
+    '<dt>Usage</dt><dd>31 views · 5 downloads · <a href="/spectra/mlc-nanotube-ylas-tas2/usage/" data-open="usage-dialog">Details</a></dd>',
   );
   expect(spectrum).toContain('<dialog id="usage-dialog"');
 

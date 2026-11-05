@@ -211,6 +211,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
   ]);
   const viewCount = usage.find((u) => u.surface === "view")?.n ?? 0;
   const downloadCount = usage.find((u) => u.surface === "download")?.n ?? 0;
+  const plural = (n: number, word: string) => `${n.toLocaleString("en")} ${word}${n === 1 ? "" : "s"}`;
   const details = <>{" · "}<a href={`/spectra/${encodeURIComponent(s.slug)}/usage/`} data-open="usage-dialog">Details</a></>;
   const avatar = owner ? await avatarUrl(owner.avatar_key, owner.email, owner.use_gravatar) : null;
   const uploaderEmail = published ? await unclaimedUploaderEmail(c.env.DB, s.owner_id) : null;
@@ -439,8 +440,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </>
                 ),
               ],
-              ["Page views", viewCount ? <>{viewCount.toLocaleString("en")}{!downloadCount && details}</> : null],
-              ["Downloads", downloadCount ? <>{downloadCount.toLocaleString("en")}{details}</> : null],
+              ["Usage", viewCount || downloadCount ? <>{plural(viewCount, "view")} · {plural(downloadCount, "download")}{details}</> : null],
             ]}
           />
           {uploaderEmail && (
