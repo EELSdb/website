@@ -9,7 +9,8 @@ import { DECISIONS, PROCESSED_ROLES, QUEUE_SQL, decide, reviewInput, storeProces
 import { AccountLayout, Layout, TypeBadge } from "./pages/layout";
 import { MessagesPage, deleteMessage } from "./contact";
 import { adminUsers } from "./admin-users";
-import { SIGN_IN_METHODS, TWO_STEP_GROUPS, getSettings, setSetting, type SettingKey, type SwitchableMethod } from "./settings";
+import { SIGN_IN_METHODS, TWO_STEP_GROUPS, getSettings, logChange, setSetting, type SettingKey, type SwitchableMethod } from "./settings";
+import { digestAdmin } from "./digest/routes";
 import { MAX_FILE_BYTES } from "./submit/form";
 import { newsAdmin } from "./news";
 
@@ -29,6 +30,7 @@ admin.use("/admin/*", requireUser, async (c, next) => {
   await next();
 });
 admin.route("/", newsAdmin);
+admin.route("/", digestAdmin);
 
 admin.get("/admin/", async (c) => {
   const db = c.env.DB;
@@ -144,10 +146,6 @@ async function usage(env: Env) {
   return Object.fromEntries(SIGN_IN_METHODS.map((m, i) => [m, rows[i].results[0].n])) as Record<SwitchableMethod, number>;
 }
 
-const logChange = (db: D1Database, userId: number, changes: Record<string, string>, details?: object) =>
-  db.prepare("INSERT INTO site_settings_log (changed_by, changes_json, details_json) VALUES (?, ?, ?)")
-    .bind(userId, JSON.stringify(changes), details ? JSON.stringify(details) : null).run();
-
 const GROUP_LABELS: Record<string, string> = { admin: "admins", moderator: "moderators", user: "all other users" };
 const NO_2FA_SQL = `NOT EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id AND t.enabled_at IS NOT NULL) AND NOT EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)`;
 
@@ -168,6 +166,7 @@ function describeChange(changes: Record<string, string>, details: any) {
       return `${value === "1" ? "required" : "stopped requiring"} two-step sign-in for ${GROUP_LABELS[group.role]}${value === "1" && n !== undefined ? ` (${accounts(n)} had none)` : ""}`;
     }
     if (key === "require_orcid") return value === "1" ? "required an ORCID iD to submit" : "stopped requiring an ORCID iD to submit";
+    if (key === "digest_enabled") return `switched the monthly digest ${value === "1" ? "on" : "off"}`;
     const m = key.replace(/^signin_/, "") as SwitchableMethod;
     const used = details?.using?.[m];
     return `switched ${METHOD_LABELS[m] ?? m} ${value === "1" ? "on" : "off"}${value === "0" && used !== undefined ? ` (${accounts(used)} could sign in with it)` : ""}`;

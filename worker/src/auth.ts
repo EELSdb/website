@@ -2,6 +2,7 @@ import type { Context, MiddlewareHandler } from "hono";
 import { deleteCookie, getCookie, setCookie } from "hono/cookie";
 import { SIGN_IN_METHODS, getSettings, twoStepRequired, type Settings, type SwitchableMethod } from "./settings";
 import { hasTwoStep } from "./totp";
+import { DIGEST_ADDRESS } from "./digest/subscription";
 
 export type User = { id: number; display_name: string; role: string; slug: string | null; orcid: string | null; licence: string | null; avatar: string | null; avatar_key?: string | null; theme: "system" | "light" | "dark"; needs_2fa?: boolean;
   /** An ordinary user (or a staff member acting as one) with no two-step sign-in while "all other users" must have it: every account page sends them to settings. */
@@ -12,6 +13,9 @@ export type User = { id: number; display_name: string; role: string; slug: strin
   orcid_only?: boolean;
   /** No confirmed address: `id` and `address` are the best unconfirmed one, null when the account has none. */
   email_prompt?: { id: number | null; address: string | null };
+  digest?: number;
+  /** The confirmed address the monthly digest goes to, if any. */
+  digest_address?: string | null;
 };
 /** `spectrumId`: the published spectrum a page shows, for the page view count. */
 export type AppEnv = { Bindings: Env; Variables: { user: User | null; spectrumId?: number } };
@@ -200,7 +204,8 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
   let user: User | null = null;
   if (token) {
     const row = await c.env.DB.prepare(
-      `SELECT u.id, u.display_name, u.role, u.slug, u.orcid, u.licence, u.theme, u.avatar_key, u.use_gravatar,
+      `SELECT u.id, u.display_name, u.role, u.slug, u.orcid, u.licence, u.theme, u.avatar_key, u.use_gravatar, u.digest,
+              (${DIGEST_ADDRESS}) AS digest_address,
               (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email,
               (EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id AND t.enabled_at IS NOT NULL) OR EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)) AS has_2fa,
               (SELECT e.id FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email_id,
@@ -211,7 +216,7 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
        WHERE s.id = ? AND s.expires_at > ?`,
     )
       .bind(await sha256(token), new Date().toISOString())
-      .first<Omit<User, "avatar"> & { use_gravatar: number; email: string | null; gravatar_email: string | null; has_2fa: number; orcid_linked: number; email_id: number | null; email_confirmed: number }>();
+      .first<Omit<User, "avatar"> & { use_gravatar: number; email: string | null; digest_address: string | null; gravatar_email: string | null; has_2fa: number; orcid_linked: number; email_id: number | null; email_confirmed: number }>();
     if (row) {
       const { email, email_id, email_confirmed, gravatar_email, has_2fa, orcid_linked, use_gravatar, ...rest } = row;
       user = { ...rest, avatar: await avatarUrl(rest.avatar_key ?? null, gravatar_email, use_gravatar) };

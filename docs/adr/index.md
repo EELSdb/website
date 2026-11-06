@@ -68,6 +68,7 @@ These records explain the main design decisions in EELSdb. Each record gives the
 | [0033. Visual design](/docs/adr/0033-visual-design/) | The colour, type, logo and layout choices that the code depends on. |
 | [0036. Share cards](/docs/adr/0036-share-cards/) | The Worker draws each public page's share image from the page's own data, as SVG turned into PNG with resvg. |
 | [0038. News written on the site](/docs/adr/0038-news-on-the-site/) | Moderators write news in the browser with Tiptap, and the site stores it as Markdown with directives for notes and videos. |
+| [0039. Monthly digest email](/docs/adr/0039-monthly-digest-email/) | People who ask for it get one email a month with the new news articles and spectra; months with nothing new send nothing. |
 
 ## Quality
 

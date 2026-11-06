@@ -59,7 +59,7 @@ news.get("/news/", async (c) => {
           <h1>News</h1>
           {isModerator(user) && <a class="button secondary" href="/admin/news/">Write or edit news</a>}
         </div>
-        <p class="lede">News from the EELS Data Base.</p>
+        <p class="lede">News from the EELS Data Base. The <a href="/digest/">monthly digest</a> sends it by email, with the new spectra.</p>
         {posts.length === 0 && <p class="muted">No news yet.</p>}
         {[...years].map(([year, list]) => (
           <section class="news-year" aria-labelledby={`y${year}`}>
@@ -224,7 +224,7 @@ function EditorPage(p: { user: User; post: Row | null; v: Values; errors: Record
             )}
           </div>
           <p class="hint" id="ne-msg" role="status">{published ? "Changes appear on the site as soon as you save." : ""}</p>
-          <Field id="f-summary" label="Summary" error={p.errors.summary} hint="One or two sentences. Shown in the news list and when someone shares the link.">
+          <Field id="f-summary" label="Summary" error={p.errors.summary} hint="One or two sentences. Shown in the news list, in the monthly digest email and when someone shares the link.">
             <textarea id="f-summary" name="summary" rows={3} maxlength={400}>{p.v.summary}</textarea>
           </Field>
           <div class={`field authors${p.errors.authors ? " has-error" : ""}`}>

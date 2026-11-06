@@ -1,9 +1,20 @@
 import { SITE, SITE_HOST } from "./site";
 
-export type Email = { to: string; subject: string; text: string; replyTo?: string; footer?: string };
+export type Email = {
+  to: string;
+  subject: string;
+  text: string;
+  html?: string;
+  headers?: Record<string, string>;
+  replyTo?: string;
+  /** null sends `text` as it is, for emails that carry their own footer. */
+  footer?: string | null;
+  /** Emails a day and in 30 days that this send must leave for others, so bulk mail cannot use up the caps. */
+  reserve?: { day: number; days30: number };
+};
 
 /**
- * Sends a plain-text email with a standard footer. EMAIL_PROVIDER "log" (default) writes it to the Worker log
+ * Sends an email, with a standard footer under the text unless `footer` is null. EMAIL_PROVIDER "log" (default) writes it to the Worker log
  * and keeps it in `sent` for tests; "cloudflare" sends through the EMAIL binding from EMAIL_FROM.
  */
 export const sent: Email[] = [];
@@ -19,8 +30,8 @@ export const EMAILS_PER_30_DAYS = 3000;
 export const emailIsLogOnly = (env: Env) => (env.EMAIL_PROVIDER || "log") === "log";
 
 /** False, and nothing sent, when a cap is reached; callers carry on either way. */
-export async function sendEmail(env: Env, { footer = FOOTER, ...email }: Email) {
-  const message = { ...email, text: `${email.text}\n\n-- \nEELS Data Base, ${SITE}\n${footer}` };
+export async function sendEmail(env: Env, { footer = FOOTER, reserve = { day: 0, days30: 0 }, ...email }: Email) {
+  const message = { ...email, text: footer === null ? email.text : `${email.text}\n\n-- \nEELS Data Base, ${SITE}\n${footer}` };
   const provider = env.EMAIL_PROVIDER || "log";
   if (provider === "cloudflare") {
     if (!env.EMAIL_FROM) throw new Error("EMAIL_FROM is not set");
@@ -29,12 +40,20 @@ export async function sendEmail(env: Env, { footer = FOOTER, ...email }: Email) 
       `INSERT INTO rate_events (kind, key) SELECT 'email_sent', 'all'
        WHERE (SELECT COUNT(*) FROM rate_events WHERE kind = 'email_sent' AND key = 'all' AND at > datetime('now', '-1 day')) < ?
          AND (SELECT COUNT(*) FROM rate_events WHERE kind = 'email_sent' AND key = 'all' AND at > datetime('now', '-30 days')) < ?`,
-    ).bind(EMAILS_PER_DAY, EMAILS_PER_30_DAYS).run();
+    ).bind(EMAILS_PER_DAY - reserve.day, EMAILS_PER_30_DAYS - reserve.days30).run();
     if (!meta.changes) {
       console.error(`[email] cap of ${EMAILS_PER_DAY} a day or ${EMAILS_PER_30_DAYS} in 30 days reached, not sent: ${JSON.stringify(message.subject)}`);
       return false;
     }
-    await env.EMAIL.send({ from: { email: env.EMAIL_FROM, name: "EELSdb" }, to: message.to, subject: message.subject, text: message.text, ...(message.replyTo && { replyTo: message.replyTo }) });
+    await env.EMAIL.send({
+      from: { email: env.EMAIL_FROM, name: "EELSdb" },
+      to: message.to,
+      subject: message.subject,
+      text: message.text,
+      ...(message.html && { html: message.html }),
+      ...(message.headers && { headers: message.headers }),
+      ...(message.replyTo && { replyTo: message.replyTo }),
+    });
     return true;
   }
   if (provider !== "log") throw new Error(`Email provider '${provider}' is not implemented`);

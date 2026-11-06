@@ -60,6 +60,7 @@ const NOTICES: Record<string, string> = {
   "password-off": "Password sign-in is switched off on this site, so a password cannot be set.",
   "link-failed": "The sign-in service did not confirm who you are, so nothing was linked. Please try again.",
   "token-revoked": "Token revoked.",
+  digest: "Saved.",
   "keep-primary": "Make another confirmed address primary before removing this one.",
 };
 
@@ -85,6 +86,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
   const hasPassword = !!pw[0].has;
   const recent = await signedInRecently(c);
   const confirmed = emails.some((e: any) => e.verified);
+  const digestAddress: string | null = user.digest_address ?? null;
   const v = form?.values ?? (await storedProfile(db, user.id));
   const errors = form?.errors ?? {};
   const orcidId: string | null = identities.find((i: any) => i.provider === "orcid")?.subject ?? null;
@@ -136,7 +138,9 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
         )}
 
         {page === "emails" && (
-        <section class="settings-section lone">
+<>
+        <section class="settings-section" aria-labelledby="h-addr">
+          <h2 id="h-addr">Addresses</h2>
           <p class="hint">The primary address is used for your avatar and for messages about your submissions. Addresses are never shown on the site.</p>
           {emails.length > 0 && <EmailList emails={emails as EmailRow[]} base="/account/settings/emails" />}
           {recent ? (
@@ -148,6 +152,21 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
             <p class="hint"><a href={signInAgainUrl(pageUrl("emails"))}>Sign in again</a> to add an address or change the primary one.</p>
           )}
         </section>
+        <section class="settings-section" aria-labelledby="h-digest" id="digest">
+          <h2 id="h-digest">Monthly digest</h2>
+          {digestAddress ? (
+            <form method="post" action="/account/digest/" class="settings-form">
+              <input type="hidden" name="next" value={`${pageUrl("emails")}?notice=digest#digest`} />
+              <input type="hidden" name="on" value="0" />
+              <label class="check"><input type="checkbox" name="on" value="1" checked={!!user.digest} /> Email me a monthly digest of new spectra and news</label>
+              <p class="hint">At most one email a month, sent to your primary address ({digestAddress}) and only when something new was published. Every digest has a one-click unsubscribe link.</p>
+              <div><button class="button secondary" type="submit">Save</button></div>
+            </form>
+          ) : (
+            <p class="hint">The monthly digest of new spectra and news needs a confirmed email address. Confirm one above to turn it on.</p>
+          )}
+        </section>
+</>
         )}
 
         {page === "sign-in" && (

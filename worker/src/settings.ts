@@ -13,6 +13,7 @@ const DEFAULTS = {
   require_2fa_admin: "1",
   require_2fa_moderator: "1",
   require_2fa_user: "0",
+  digest_enabled: "1",
 } as const;
 export type SettingKey = keyof typeof DEFAULTS;
 export type Settings = Record<SettingKey, string>;
@@ -24,6 +25,11 @@ export async function getSettings(db: D1Database): Promise<Settings> {
   for (const r of results) if (r.key in DEFAULTS) settings[r.key as SettingKey] = r.value;
   return settings;
 }
+
+/** Records who changed which settings, for the list on the site settings page. */
+export const logChange = (db: D1Database, userId: number, changes: Record<string, string>, details?: object) =>
+  db.prepare("INSERT INTO site_settings_log (changed_by, changes_json, details_json) VALUES (?, ?, ?)")
+    .bind(userId, JSON.stringify(changes), details ? JSON.stringify(details) : null).run();
 
 export const setSetting = (db: D1Database, key: SettingKey, value: string, userId: number) =>
   db.prepare(

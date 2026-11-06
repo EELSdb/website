@@ -1,6 +1,7 @@
 import { Hono, type Context } from "hono";
 import type { AppEnv } from "../auth";
 import { parseSpectrum } from "../preview";
+import { digestPlot, type DigestKind } from "./digest";
 import { authorCard, siteCard, spectrumCard, textCard, type Mini } from "./cards";
 import { svgToPng } from "./render";
 import { SITE_HOST } from "../site";
@@ -24,9 +25,9 @@ export const PAGE_CARDS: Record<string, { title: string; description: string; ur
   contact: { title: "Contact", description: "Questions about the EELS Data Base, a spectrum or your account.", url: `${SITE_HOST}/contact/` },
 };
 
-async function cached(c: C, draw: () => Promise<string | null>) {
+async function cached(c: C, draw: () => Promise<string | null>, version = VERSION) {
   const cache = caches.default;
-  const key = new Request(new URL(`${c.req.path}?v=${VERSION}`, c.req.url));
+  const key = new Request(new URL(`${c.req.path}?v=${version}`, c.req.url));
   const hit = await cache.match(key);
   if (hit) return hit;
   const svg = await draw();
@@ -94,6 +95,25 @@ og.get("/spectra/:file{.+\\.png}", (c) =>
       data: await readSpectrum(c, s.file),
     });
   }),
+);
+
+// Bump when the digest plots change.
+const DIGEST_VERSION = "1";
+
+og.get("/digest/:kind{plot|tile}/:file{.+\\.png}", (c) =>
+  cached(
+    c,
+    async () => {
+      const s = await c.env.DB.prepare(
+        `SELECT s.type, ${SPECTRUM_FILE} AS file,
+                (SELECT json_group_array(e.element) FROM spectrum_elements e WHERE e.spectrum_id = s.id) AS elements
+         FROM spectra s WHERE s.slug = ? AND s.${PUBLISHED}`,
+      ).bind(c.req.param("file").slice(0, -4)).first<any>();
+      const data = s && (await readSpectrum(c, s.file));
+      return data ? digestPlot(c.req.param("kind") as DigestKind, s.type, JSON.parse(s.elements ?? "[]"), data) : null;
+    },
+    DIGEST_VERSION,
+  ),
 );
 
 og.get("/author/:file{.+\\.png}", (c) =>

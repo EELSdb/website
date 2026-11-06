@@ -5,6 +5,7 @@ import { deleteOldDrafts } from "./submit/drafts";
 import { deleteUnusedNewsImages } from "./news";
 import { deleteExpiredPasswordChanges } from "./pages/settings";
 import { rollupUsage } from "./usage";
+import { runDigest } from "./digest/send";
 import { IS_PRODUCTION, apiPath } from "./site";
 
 // No full Content-Security-Policy yet: Pyodide (wasm) and Turnstile need careful allowances.
@@ -37,5 +38,6 @@ export default {
     // Each kind must outlast the longest window counted over it.
     ctx.waitUntil(env.DB.prepare("DELETE FROM rate_events WHERE at < datetime('now', CASE kind WHEN 'email_sent' THEN '-30 days' ELSE '-1 day' END)").run());
     ctx.waitUntil(rollupUsage(env, controller.scheduledTime));
+    ctx.waitUntil(runDigest(env, new Date(controller.scheduledTime)));
   },
 } satisfies ExportedHandler<Env>;

@@ -47,6 +47,12 @@ const EMAIL_BANNER_SCRIPT = `(function(){var b=document.querySelector(".email-ba
 // Not shown where the person is already adding or confirming an address, or where the submit page asks for it in place of the form.
 const NO_EMAIL_BANNER = /^\/(?:login|account\/welcome\/email\/|account\/settings\/emails\/|submit-data\/$)/;
 
+// Right after the banner. The button posts in the background and the strip turns into its "done" state, so the page stays where it is; without script the form posts and returns to the page.
+const DIGEST_BANNER_SCRIPT = `(function(){var b=document.querySelector(".digest-banner"),k="digest-banner-hidden",f=b.querySelector("form"),n=f.querySelector("input[name=next]");n.value=location.pathname+location.search;try{if(Number(localStorage.getItem(k))>Date.now())b.hidden=true}catch(e){}b.querySelector("button[type=button]").addEventListener("click",function(){b.hidden=true;try{localStorage.setItem(k,Date.now()+90*864e5)}catch(e){}});f.onsubmit=function(e){e.preventDefault();f.querySelector("button").disabled=true;fetch(f.action,{method:"POST",body:new FormData(f),headers:{Accept:"application/json"}}).then(function(r){if(!r.ok)throw 0;var p=b.querySelector("p"),a=document.createElement("a");p.textContent="Done. The next digest goes to "+b.dataset.address+".";p.setAttribute("aria-live","polite");a.className="button secondary";a.href="/account/settings/emails/#digest";a.textContent="Email settings";f.replaceWith(a)}).catch(function(){f.submit()})}})()`;
+
+// Not shown where the person is signing in or already dealing with their addresses.
+const NO_DIGEST_BANNER = /^\/(?:login|account\/welcome\/email\/|account\/settings\/emails\/|digest\/)/;
+
 // Flips light and dark, remembers it in this browser, and saves it to the account when signed in.
 const TOGGLE_SCRIPT = `document.querySelectorAll(".theme-toggle").forEach(function(b){b.addEventListener("click",function(){var r=document.documentElement,d=r.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"),n=d==="dark"?"light":"dark";r.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}if(this.dataset.save)fetch("/account/settings/theme/",{method:"POST",body:new URLSearchParams({theme:n})})})})`;
 
@@ -87,6 +93,8 @@ export function Layout(props: {
   children: Child;
 }) {
   const emailBanner = props.user?.email_prompt && !props.user.setup_required && !NO_EMAIL_BANNER.test(props.path) ? props.user.email_prompt : null;
+  const orcidBanner = !emailBanner && !!props.user?.orcid_prompt && !props.path.startsWith("/login") && !(props.user.orcid_prompt === "required" && props.path === "/submit-data/");
+  const digestAddress = !emailBanner && !orcidBanner && props.user && !props.user.digest && !props.user.setup_required && !NO_DIGEST_BANNER.test(props.path) ? props.user.digest_address : null;
   const wrap = props.wide ? "wrap wide" : "wrap";
   const title = props.title ? `${props.title} · EELS Data Base` : "EELS Data Base";
   const description = props.description ?? "Open database of electron energy-loss (EELS) and X-ray absorption (XAS) spectra.";
@@ -150,7 +158,7 @@ export function Layout(props: {
               <script>{raw(EMAIL_BANNER_SCRIPT)}</script>
             </>
           )}
-          {!emailBanner && props.user?.orcid_prompt && !props.path.startsWith("/login") && !(props.user.orcid_prompt === "required" && props.path === "/submit-data/") && (
+          {orcidBanner && props.user?.orcid_prompt && (
             <>
               <div class="orcid-banner" role="region" aria-label="Link your ORCID iD">
                 <div class="wrap">
@@ -164,6 +172,22 @@ export function Layout(props: {
                 </div>
               </div>
               <script>{raw(ORCID_BANNER_SCRIPT)}</script>
+            </>
+          )}
+          {digestAddress && (
+            <>
+              <div class="email-banner digest-banner" role="region" aria-label="Monthly digest" data-address={digestAddress}>
+                <div class="wrap">
+                  <p>Get one email a month with the new spectra and news from EELSdb.</p>
+                  <form method="post" action="/account/digest/">
+                    <input type="hidden" name="on" value="1" />
+                    <input type="hidden" name="next" value={props.path || "/account/"} />
+                    <button class="button" type="submit">Send me the digest</button>
+                  </form>
+                  <button class="banner-close" type="button" aria-label="Hide this message for 3 months" title="Hide for 3 months"><svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true"><path d="M5.5 5.5l9 9M14.5 5.5l-9 9" /></svg></button>
+                </div>
+              </div>
+              <script>{raw(DIGEST_BANNER_SCRIPT)}</script>
             </>
           )}
           <header class={props.home ? "site-header" : "site-header stuck"}>
@@ -265,6 +289,7 @@ const STAFF_PAGES = [
   ["/admin/news/", "News", "moderator"],
   ["/admin/messages/", "Messages", "admin"],
   ["/admin/users/", "Accounts", "admin"],
+  ["/admin/digest/", "Monthly digest", "admin"],
   ["/admin/settings/", "Site settings", "admin"],
 ] as const;
 export type StaffPage = (typeof STAFF_PAGES)[number][0];

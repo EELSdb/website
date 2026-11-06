@@ -33,6 +33,8 @@ import { authorMarkdown, authorNews, markdownHeaders, spectrumMarkdown } from ".
 import { GRAVATAR_EMAIL_SQL, avatarUrl } from "../auth";
 import { drafts } from "../submit/drafts";
 import { og } from "../og/index";
+import { unsubscribe } from "../digest/unsubscribe";
+import { digestPages } from "../digest/archive";
 
 export const pages = new Hono<AppEnv>();
 type C = Context<AppEnv>;
@@ -42,6 +44,7 @@ pages.use(async (c, next) => {
   recordPage(c);
 });
 pages.route("/og", og);
+pages.route("/digest/unsubscribe", unsubscribe);
 pages.use(csrf());
 pages.use(loadUser);
 pages.route("/", account);
@@ -53,6 +56,7 @@ pages.route("/", drafts);
 pages.route("/", admin);
 pages.route("/", contact);
 pages.route("/", news);
+pages.route("/", digestPages);
 
 const markdown = (render: (db: D1Database, slug: string) => Promise<string | null>) => async (c: C) => {
   const body = await render(c.env.DB, c.req.param("file")!.slice(0, -3));

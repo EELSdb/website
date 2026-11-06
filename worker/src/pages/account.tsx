@@ -5,6 +5,7 @@ import { deleteCookie, getCookie } from "hono/cookie";
 import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, signInAgainUrl, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
 import { addEmail } from "../account-edit";
 import { sendEmail } from "../email";
+import { setDigest } from "../digest/subscription";
 import { authenticationOptions, hasPasskey, verifyPasskey } from "../passkeys";
 import { verifyPassword } from "../password";
 import { spendCode } from "../totp";
@@ -52,6 +53,13 @@ export function AuthPage(props: { title: string; status?: number; children: Chil
     </Layout>
   );
 }
+
+const DigestBox = (props: { form?: string }) => (
+  <>
+    <label class="check"><input type="checkbox" name="digest" value="1" form={props.form} /> Also email me a monthly digest of new spectra and news</label>
+    <p class="hint">At most once a month. You can turn it off at any time.</p>
+  </>
+);
 
 const Or = () => <p class="auth-or" aria-hidden="true">or</p>;
 
@@ -190,6 +198,7 @@ account.get("/login/welcome/", async (c) => {
               <label for="email">Email address</label>
               <input id="email" name="email" type="email" autocomplete="email" required aria-describedby="welcome-hint" />
             </div>
+            <DigestBox />
             <button class="button" type="submit">Email me a link</button>
             <p class="hint" id="welcome-hint">
               If an EELSdb account uses this address, the link signs you in to it and adds {label}. If not, it makes your account. Open the link in this browser.
@@ -204,9 +213,10 @@ account.get("/login/welcome/", async (c) => {
       ) : others.length ? (
         <>
           <p class="auth-lede">{said}Have you signed in here before, with {listOr(others)}?</p>
+          <div class="auth-form auth-digest"><DigestBox form="create-account" /></div>
           <div class="auth-alt">
             <a class="button" href="/login/?notice=link">Yes, sign in to my account</a>
-            <form method="post" action="/login/welcome/">
+            <form method="post" action="/login/welcome/" id="create-account">
               <button class="button secondary" type="submit">No, create a new account</button>
             </form>
           </div>
@@ -217,7 +227,8 @@ account.get("/login/welcome/", async (c) => {
           <p class="auth-lede">
             {said}If you used EELSdb before with another sign-in, create this account and <a href="/contact/">ask us to merge them</a>.
           </p>
-          <form method="post" action="/login/welcome/">
+          <form method="post" action="/login/welcome/" class="auth-form">
+            <DigestBox />
             <button class="button auth-wide" type="submit">Create my account</button>
           </form>
         </>
@@ -234,10 +245,18 @@ account.post("/login/welcome/", async (c) => {
   // Another tab may have linked this identity since; then it signs in to that account instead of making a second one.
   const found = await findUserForIdentity(c.env.DB, pending);
   const userId = found ?? (await createUserForIdentity(c.env.DB, pending));
+  if (found === null && (await c.req.parseBody()).digest === "1") await setDigest(c.env.DB, userId, true);
   // A new account whose service shared no confirmed address goes to the email step first, then on; it rides in `next`, so a second step keeps the order.
   const askEmail = found === null && !(pending.email && pending.emailVerified);
   const next = askEmail ? `${EMAIL_STEP}?next=${encodeURIComponent(safeNext(pending.next ?? undefined))}` : pending.next ?? undefined;
   return completeSignIn(c, userId, { method: pending.provider as SignInMethod, next });
+});
+
+account.post("/account/digest/", requireUser, async (c) => {
+  const body = await c.req.parseBody();
+  await setDigest(c.env.DB, c.get("user")!.id, body.on === "1");
+  if (c.req.header("Accept")?.includes("application/json")) return c.json({ ok: true });
+  return c.redirect(safeNext(typeof body.next === "string" ? body.next : undefined));
 });
 
 const EMAIL_STEP = "/account/welcome/email/";
@@ -262,6 +281,7 @@ function EmailStep(props: { user: User; next: string; error?: string; sent?: str
               <label for="email">Email address</label>
               <input id="email" name="email" type="email" autocomplete="email" required aria-invalid={props.error ? "true" : undefined} />
             </div>
+            <DigestBox />
             <button class="button" type="submit">Send confirmation link</button>
           </form>
         </>
@@ -281,14 +301,15 @@ account.post("/account/welcome/email/", requireUser, async (c) => {
   const result = await addEmail(c.env, new URL(c.req.url).origin, user.id, body.email, intro);
   if (result === "email-bad") return c.html(<EmailStep user={user} next={next} error="That does not look like an email address." />, 422);
   if (result === "limit") return c.html(<EmailStep user={user} next={next} error="Too many addresses added today. Please try again tomorrow." />, 429);
+  if (body.digest === "1") await setDigest(c.env.DB, user.id, true);
   return c.html(<EmailStep user={user} next={next} sent={String(body.email).trim().toLowerCase()} />);
 });
 
 /** Makes a one-use link and emails it; the token only ever reaches the address. */
-export async function sendLoginLink(env: Env, origin: string, email: string, next: string | null) {
+export async function sendLoginLink(env: Env, origin: string, email: string, next: string | null, digest = false) {
   const token = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO login_links (token_hash, email, next, expires_at) VALUES (?, ?, ?, ?)")
-    .bind(await sha256(token), email, next, new Date(Date.now() + LINK_MINUTES * 60_000).toISOString()).run();
+  await env.DB.prepare("INSERT INTO login_links (token_hash, email, next, digest, expires_at) VALUES (?, ?, ?, ?, ?)")
+    .bind(await sha256(token), email, next, digest ? 1 : 0, new Date(Date.now() + LINK_MINUTES * 60_000).toISOString()).run();
   await sendEmail(env, {
     to: email,
     subject: "Your EELS Data Base sign-in link",
@@ -312,7 +333,7 @@ account.post("/login/email/", async (c) => {
       c.env.DB.prepare("INSERT INTO rate_events (kind, key) VALUES ('login_email', ?)").bind(email),
       c.env.DB.prepare("INSERT INTO rate_events (kind, key) VALUES ('login_email_ip', ?)").bind(ip),
     ]);
-    await sendLoginLink(c.env, new URL(c.req.url).origin, email, next);
+    await sendLoginLink(c.env, new URL(c.req.url).origin, email, next, body.digest === "1");
   }
   return c.redirect("/login/?notice=sent");
 });
@@ -372,9 +393,9 @@ account.post("/login/email/:token/", async (c) => {
   const now = new Date().toISOString();
   // One statement both checks and spends the link, so two clicks cannot both sign in.
   const link = await db
-    .prepare("UPDATE login_links SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? RETURNING email, next")
+    .prepare("UPDATE login_links SET used_at = ? WHERE token_hash = ? AND used_at IS NULL AND expires_at > ? RETURNING email, next, digest")
     .bind(now, await sha256(c.req.param("token")), now)
-    .first<{ email: string; next: string | null }>();
+    .first<{ email: string; next: string | null; digest: number }>();
   if (!link) return c.redirect(`/login/email/${c.req.param("token")}/`);
   let userId = await accountForEmail(db, link.email);
   let next = link.next ?? undefined;
@@ -391,6 +412,7 @@ account.post("/login/email/:token/", async (c) => {
     .prepare("INSERT INTO user_emails (user_id, email, verified) VALUES (?, ?, 1) ON CONFLICT (user_id, email) DO UPDATE SET verified = 1")
     .bind(userId, link.email)
     .run();
+  if (link.digest) await setDigest(db, userId, true);
   return completeSignIn(c, userId, { method: "email_link", next });
 });
 
