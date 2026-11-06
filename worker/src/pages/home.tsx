@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
-import { avatarUrl, type AppEnv } from "../auth";
+import { GRAVATAR_EMAIL_SQL, avatarUrl, type AppEnv } from "../auth";
 import NAMES from "../element-names.json";
 import { Avatar as SharedAvatar, EdgeName, Formula, Layout, TYPE_NAMES, plainName } from "./layout";
 import { HERO_LOGO_SVG } from "./logo";
@@ -111,14 +111,14 @@ export async function homePage(c: Context<AppEnv>) {
     db.prepare(
       `SELECT s.author_slug AS slug, MIN(s.author_display) AS name, COUNT(*) AS n, MIN(substr(s.published_at, 1, 4)) AS since,
               u.use_gravatar, u.avatar_key,
-              (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email
+              ${GRAVATAR_EMAIL_SQL} AS email
        FROM spectra s LEFT JOIN users u ON u.slug = s.author_slug
        WHERE s.${published} GROUP BY s.author_slug ORDER BY n DESC, name LIMIT 24`,
     ),
     db.prepare(
       `SELECT s.id, s.slug, s.title, s.formula, s.type, s.author_slug AS slug_author, s.author_display,
               u.use_gravatar, u.avatar_key,
-              (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email,
+              ${GRAVATAR_EMAIL_SQL} AS email,
               f.r2_key AS file,
               (SELECT json_group_array(e.element) FROM spectrum_elements e WHERE e.spectrum_id = s.id) AS elements
        FROM spectra s LEFT JOIN users u ON u.slug = s.author_slug

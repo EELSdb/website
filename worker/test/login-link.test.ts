@@ -131,8 +131,8 @@ describe("email sign-in link", () => {
     const cookie = sessionOf(await post(`/login/email/${await requestLink(email)}/`, {}))!;
     const id = (await userIdFor(email))!;
     expect(id).toBeGreaterThan(0);
-    const user = await env.DB.prepare("SELECT display_name FROM users WHERE id = ?").bind(id).first<string>("display_name");
-    expect(user).toBe(email.split("@")[0]);
+    const user = await env.DB.prepare("SELECT display_name, use_gravatar FROM users WHERE id = ?").bind(id).first<{ display_name: string; use_gravatar: number }>();
+    expect(user).toEqual({ display_name: email.split("@")[0], use_gravatar: 1 });
     expect(await env.DB.prepare("SELECT is_primary FROM user_emails WHERE user_id = ? AND email = ?").bind(id, email).first("is_primary")).toBe(1);
     expect((await go("/account/", { headers: { Cookie: cookie } })).status).toBe(200);
   });

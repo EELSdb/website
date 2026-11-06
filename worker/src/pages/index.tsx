@@ -29,7 +29,7 @@ import { LinkIcon } from "./link-icons";
 import { authorSlug } from "../submit/store";
 import { decodeEntities } from "./entities";
 import { authorMarkdown, markdownHeaders, newsMarkdown, spectrumMarkdown } from "./markdown";
-import { avatarUrl } from "../auth";
+import { GRAVATAR_EMAIL_SQL, avatarUrl } from "../auth";
 import { drafts } from "../submit/drafts";
 import { og } from "../og/index";
 
@@ -166,7 +166,7 @@ const STAFF_GROUPS = [
 pages.get("/moderators/", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT u.id, u.display_name, u.slug, u.role, u.use_gravatar, u.avatar_key,
-            CASE WHEN u.use_gravatar THEN (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) END AS email
+            CASE WHEN u.use_gravatar THEN ${GRAVATAR_EMAIL_SQL} END AS email
      FROM users u WHERE u.role IN ('moderator', 'admin') ORDER BY u.display_name`,
   ).all<any>();
   // Staff made before every moderator and admin got a username get one here, once, so their names can link to a page.
@@ -228,7 +228,7 @@ async function authorPage(c: C) {
   const db = c.env.DB;
   const person = await db.prepare(
     `SELECT u.id, u.display_name, u.job_title, u.affiliation, (SELECT i.subject FROM identities i WHERE i.user_id = u.id AND i.provider = 'orcid') AS orcid, u.links_json, u.use_gravatar, u.show_details, u.show_links, u.avatar_key, u.role,
-            CASE WHEN u.use_gravatar THEN (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) END AS email
+            CASE WHEN u.use_gravatar THEN ${GRAVATAR_EMAIL_SQL} END AS email
      FROM users u WHERE u.slug = ?`,
   ).bind(slug).first<any>();
   if (!person) {

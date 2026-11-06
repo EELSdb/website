@@ -72,7 +72,7 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
 6. Give the Corex spectra ([ADR 0024](/docs/adr/0024-scope-gas-phase-and-xas/)) an account their author can take over. Create it with only a display name, the username `adam-hitchcock` and his current address as `legacy_email`, and make it the owner of those spectra:
 
    ```sql
-   INSERT INTO users (display_name, slug, legacy_email) VALUES ('Adam Hitchcock', 'adam-hitchcock', '<his address>');
+   INSERT INTO users (display_name, slug, legacy_email, use_gravatar) VALUES ('Adam Hitchcock', 'adam-hitchcock', '<his address>', 1);
    UPDATE spectra SET owner_id = (SELECT id FROM users WHERE slug = 'adam-hitchcock') WHERE author_slug = 'adam-hitchcock' AND owner_id IS NULL;
    ```
 

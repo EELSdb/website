@@ -1,6 +1,6 @@
 import type { Context } from "hono";
 import { raw } from "hono/html";
-import { avatarUrl, type AppEnv } from "../auth";
+import { GRAVATAR_EMAIL_SQL, avatarUrl, type AppEnv } from "../auth";
 import { API_HOST, SITE, loadBundle, type SpectrumBundle } from "../api/format";
 import { creatorOrcids, jsonLdScript, licenceOf, schemaOrg, toRecord } from "../api/metadata";
 import { EELSDB_BIBTEX, EELSDB_CITATION, referenceText, stripTags } from "./citation";
@@ -201,7 +201,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
   const [owner, history, { results: usage }] = await Promise.all([
     c.env.DB.prepare(
       `SELECT avatar_key, use_gravatar,
-              (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email
+              ${GRAVATAR_EMAIL_SQL} AS email
        FROM users u WHERE id = ?`,
     ).bind(s.owner_id).first<any>(),
     published ? spectrumHistory(c.env.DB, s) : [],

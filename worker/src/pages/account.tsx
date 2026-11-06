@@ -351,7 +351,7 @@ account.post("/login/email/:token/", async (c) => {
   if (!link) return c.redirect(`/login/email/${c.req.param("token")}/`);
   let userId = await accountForEmail(db, link.email);
   if (userId === null) {
-    userId = (await db.prepare("INSERT INTO users (display_name) VALUES (?) RETURNING id").bind(link.email.split("@")[0]).first<number>("id"))!;
+    userId = (await db.prepare("INSERT INTO users (display_name, use_gravatar) VALUES (?, 1) RETURNING id").bind(link.email.split("@")[0]).first<number>("id"))!;
   }
   await db
     .prepare("INSERT INTO user_emails (user_id, email, verified) VALUES (?, ?, 1) ON CONFLICT (user_id, email) DO UPDATE SET verified = 1")

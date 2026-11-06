@@ -145,6 +145,9 @@ const cookieOptions = (c: C) => ({
  * The user's uploaded picture, else their Gravatar if they use it, else none (initials). Gravatar looks pictures up by
  * the SHA-256 of the address, so the address itself never reaches the page; `d=blank` lets the initial show through.
  */
+/** SQL for the address whose Gravatar account `u` shows: a confirmed one only, because anyone can add an unconfirmed address. */
+export const GRAVATAR_EMAIL_SQL = "(SELECT e.email FROM user_emails e WHERE e.user_id = u.id AND e.verified = 1 ORDER BY e.is_primary DESC, e.id LIMIT 1)";
+
 export async function avatarUrl(key: string | null, email: string | null, useGravatar: unknown) {
   if (key) return `/avatars/${key}`;
   return useGravatar && email ? `https://gravatar.com/avatar/${await sha256(email.trim().toLowerCase())}?s=64&d=blank` : null;
@@ -194,16 +197,17 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
               (SELECT e.email FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email,
               (EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id AND t.enabled_at IS NOT NULL) OR EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)) AS has_2fa,
               (SELECT e.id FROM user_emails e WHERE e.user_id = u.id ORDER BY e.is_primary DESC, e.verified DESC, e.id LIMIT 1) AS email_id,
+              ${GRAVATAR_EMAIL_SQL} AS gravatar_email,
               EXISTS (SELECT 1 FROM user_emails e WHERE e.user_id = u.id AND e.verified = 1) AS email_confirmed,
               EXISTS (SELECT 1 FROM identities i WHERE i.user_id = u.id AND i.provider = 'orcid') AS orcid_linked
        FROM sessions s JOIN users u ON u.id = s.user_id
        WHERE s.id = ? AND s.expires_at > ?`,
     )
       .bind(await sha256(token), new Date().toISOString())
-      .first<Omit<User, "avatar"> & { use_gravatar: number; email: string | null; has_2fa: number; orcid_linked: number; email_id: number | null; email_confirmed: number }>();
+      .first<Omit<User, "avatar"> & { use_gravatar: number; email: string | null; gravatar_email: string | null; has_2fa: number; orcid_linked: number; email_id: number | null; email_confirmed: number }>();
     if (row) {
-      const { email, email_id, email_confirmed, has_2fa, orcid_linked, use_gravatar, ...rest } = row;
-      user = { ...rest, avatar: await avatarUrl(rest.avatar_key ?? null, email, use_gravatar) };
+      const { email, email_id, email_confirmed, gravatar_email, has_2fa, orcid_linked, use_gravatar, ...rest } = row;
+      user = { ...rest, avatar: await avatarUrl(rest.avatar_key ?? null, gravatar_email, use_gravatar) };
       if (!email_confirmed) user.email_prompt = { id: email_id, address: email };
       const settings = await getSettings(c.env.DB);
       if (!orcid_linked && PROVIDERS.orcid.configured(c.env)) {
@@ -360,7 +364,7 @@ export async function findUserForIdentity(db: D1Database, id: Identity): Promise
 
 export async function createUserForIdentity(db: D1Database, id: Identity): Promise<number> {
   const userId = (await db
-    .prepare("INSERT INTO users (display_name, orcid) VALUES (?, ?) RETURNING id")
+    .prepare("INSERT INTO users (display_name, orcid, use_gravatar) VALUES (?, ?, 1) RETURNING id")
     .bind(id.name || id.email?.split("@")[0] || "EELSdb user", id.provider === "orcid" ? id.subject : null)
     .first<number>("id"))!;
   await addIdentity(db, userId, id);

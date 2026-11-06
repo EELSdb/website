@@ -157,7 +157,6 @@ export function PictureChoice(props: {
     <fieldset class={`picture-choice${errors.picture ? " has-error" : ""}`}>
       <legend>{props.heading === "h2" ? <h2 id="h-avatar">Picture</h2> : <h3>Picture</h3>}</legend>
       <div class="picture-options">
-        <PictureOption value="initials" label="Initials" picked={v.picture} preview={initials} hint={`From ${who} name.`} />
         <PictureOption
           value="gravatar" label="Gravatar" picked={v.picture} disabled={!state.email}
           preview={<Avatar name={props.name} seed={props.seed} src={state.gravatar} class="av-large" />}
@@ -165,6 +164,7 @@ export function PictureChoice(props: {
             ? <>From gravatar.com for <span class="picture-email">{state.email.split("@")[0]}@<wbr />{state.email.split("@")[1]}</span>. Initials show if it has none.</>
             : `Needs a confirmed primary email address${who === "your" ? ": add one under Email addresses" : ""}.`}
         />
+        <PictureOption value="initials" label="Initials" picked={v.picture} preview={initials} hint={`From ${who} name.`} />
         <PictureOption
           value="upload" label={`${Their} picture`} picked={v.picture} disabled={!props.uploads && !state.key}
           preview={state.key ? <Avatar name={props.name} seed={props.seed} src={`/avatars/${state.key}`} class="av-large" /> : <span class="av av-large picture-empty" aria-hidden="true" />}
@@ -217,7 +217,8 @@ async function checkPicture(body: Record<string, unknown>, current: string, stat
   }
   const choice = typeof body.picture === "string" && body.picture ? body.picture : current;
   if (choice === "initials") return { choice };
-  if (choice === "gravatar") return state.email ? { choice } : { error: "Gravatar needs a confirmed primary email address." };
+  // New accounts start on Gravatar before they have a confirmed address; initials show until they do, and the form must still save.
+  if (choice === "gravatar") return state.email || !body.picture ? { choice } : { error: "Gravatar needs a confirmed primary email address." };
   if (choice === "upload") {
     if (state.key) return { choice };
     return { error: uploads ? "Choose a picture file to upload, or pick Initials or Gravatar." : "There is no uploaded picture to keep." };

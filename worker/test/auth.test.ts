@@ -1,6 +1,6 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { sha256, syncEmails } from "../src/auth";
+import { createUserForIdentity, sha256, syncEmails } from "../src/auth";
 import { sent } from "../src/email";
 import { createIfWelcomed } from "./helpers/welcome";
 
@@ -123,5 +123,22 @@ describe("avatar", () => {
     const html = await (await go("/", { headers: { Cookie: `eelsdb_session=${token}` } })).text();
     expect(html).toContain(`https://gravatar.com/avatar/${await sha256("ada@example.org")}?s=64&amp;d=blank`);
     expect(html.toLowerCase()).not.toContain("ada@example.org");
+  });
+
+  it("makes new accounts from a sign-in service with Gravatar on", async () => {
+    const id = await createUserForIdentity(env.DB, { provider: "github", subject: `new-${crypto.randomUUID()}`, name: "New Person", email: null, emailVerified: false });
+    expect(await env.DB.prepare("SELECT use_gravatar FROM users WHERE id = ?").bind(id).first("use_gravatar")).toBe(1);
+  });
+
+  it("never looks up Gravatar for an address that is not confirmed", async () => {
+    await env.DB.prepare("INSERT INTO users (id, display_name, slug, use_gravatar, show_details) VALUES (9102, 'Una Confirmed', 'una-confirmed', 1, 1)").run();
+    await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (9102, 'someone-else@example.org', 0, 1)").run();
+    const token = crypto.randomUUID();
+    await env.DB.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, 9102, ?)")
+      .bind(await sha256(token), new Date(Date.now() + 86400_000).toISOString())
+      .run();
+    const hash = await sha256("someone-else@example.org");
+    expect(await (await go("/", { headers: { Cookie: `eelsdb_session=${token}` } })).text()).not.toContain(hash);
+    expect(await (await go("/author/una-confirmed/")).text()).not.toContain(hash);
   });
 });

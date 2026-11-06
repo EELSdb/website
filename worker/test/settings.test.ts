@@ -156,6 +156,7 @@ describe("picture choice", () => {
     expect(html).toContain("<legend><h2 id=\"h-avatar\">Picture</h2></legend>");
     for (const value of ["initials", "gravatar", "upload"]) expect(html).toContain(`type="radio" name="picture" id="f-picture-${value}" value="${value}"`);
     expect(html).toContain('id="f-picture-initials" value="initials" checked=""');
+    expect(html.indexOf('id="f-picture-gravatar"')).toBeLessThan(html.indexOf('id="f-picture-initials"'));
     expect(html).toContain('<input type="file" name="avatar" id="f-avatar"');
     expect(profileForm.match(/<button/g)).toHaveLength(1);
     expect(profileForm).toContain('<button class="button" type="submit">Save profile</button>');
@@ -234,5 +235,11 @@ describe("picture choice", () => {
     expect(g.status).toBe(422);
     expect(await g.text()).toContain("Gravatar needs a confirmed primary email address.");
     expect(await state(q.id)).toEqual({ avatar_key: null, use_gravatar: 0 });
+
+    // A new account starts with Gravatar on before it has a confirmed address; its profile must still save.
+    await env.DB.prepare("UPDATE users SET use_gravatar = 1 WHERE id = ?").bind(q.id).run();
+    const saved = await post("/account/settings/profile/", q.cookie, form({}));
+    expect(saved.headers.get("location")).toBe("/account/settings/profile/?notice=profile");
+    expect(await state(q.id)).toEqual({ avatar_key: null, use_gravatar: 1 });
   });
 });

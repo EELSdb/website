@@ -199,6 +199,7 @@ def main():
             "created_at": user["user_registered"],
             "role": "admin" if s["is_admin"] else "user",
             "legacy_email": user["user_email"],
+            "use_gravatar": 1,
             "legacy_presets_json": json.dumps(presets) if presets else None,
         }))
         for sid in s["favourites"]:
