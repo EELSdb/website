@@ -116,7 +116,7 @@ export function LinkFields(props: { v: Profile; errors: Profile; orcid: string |
           </div>
         )}
         {LINK_FIELDS.filter((f) => !f.web).map((f) => (
-          <LinkRow name={f.key} field={`link_${f.key}`} label={f.label} value={v[`link_${f.key}`] ?? ""} placeholder={f.placeholder} errors={errors} />
+          <LinkRow name={f.key} field={`link_${f.key}`} label={f.label} value={v[`link_${f.key}`] ?? ""} placeholder={`${f.label}: ${f.placeholder}`} errors={errors} />
         ))}
       </div>
       <Field name="show_links" label="Public" errors={errors}>
