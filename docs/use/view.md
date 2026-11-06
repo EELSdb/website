@@ -14,7 +14,7 @@ The contributor's comments are in the box below the title.
 
 ## Use the plot
 
-- Drag across the plot to zoom in. Double-click the plot to zoom out again.
+- Drag a box on the plot to zoom in to it. Double-click the plot to zoom out again.
 - **Edge onsets (exSpy)** marks the onset energy of each listed edge, from the exSpy edge table.
 - **Minor edges** adds the weaker edges of the same elements.
 - **Show** switches between the main spectrum and its processed versions, for example oscillator strength, if the contributor added them.

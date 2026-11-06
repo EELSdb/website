@@ -339,74 +339,107 @@ export async function spectrumPage(c: Context<AppEnv>) {
           <label><input type="checkbox" id="show-edges" checked /> Edge onsets (exSpy)</label>
           <label><input type="checkbox" id="show-minor" /> Minor edges</label>
           {fileUrl && <label hidden><input type="checkbox" id="compare-scale" checked /> Scale to match</label>}
-          <span class="plot-hint">Drag to zoom, double-click to reset</span>
+          <span class="plot-hint">Drag a box to zoom, double-click to reset</span>
         </div>
-        {fileUrl && (
-          <details class="plot-process" id="process" hidden>
-            <summary>Process the view</summary>
-            <div class="process-controls">
-              {s.type === "coreloss" && (
-                <>
-                  <label>
-                    Background{" "}
-                    <select id="bg-mode">
-                      <option value="">Off</option>
-                      <option value="fit">Show power-law fit</option>
-                      <option value="subtract">Subtract power law</option>
-                    </select>
-                  </label>
-                  <label>
-                    fitted over <input type="number" id="bg-from" step="any" aria-label="Fit window start (eV)" /> to{" "}
-                    <input type="number" id="bg-to" step="any" aria-label="Fit window end (eV)" /> eV
-                  </label>
-                </>
-              )}
-              <label>
-                Smoothing <input type="range" id="smooth" min="0" max="25" value="0" /> <output id="smooth-out" for="smooth">Off</output>
-              </label>
-              <label>
-                Normalise{" "}
-                <select id="normalise">
-                  <option value="">Off</option>
-                  <option value="max">To maximum</option>
-                  <option value="area">To area</option>
-                </select>
-              </label>
-              <label><input type="checkbox" id="log-y" /> Log scale</label>
-            </div>
-            <p class="hint" id="process-status" aria-live="polite">Applies to compared spectra too. Only the view changes: downloads are the original data.</p>
-          </details>
-        )}
       </div>
 
       <div class="spectrum-intro">
         <div>
           {fileUrl && (
-            <div class="compare" id="compare" hidden>
-              <label class="button secondary compare-pick">
-                <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi" />
-                Compare with your spectra
-              </label>
-              <div class="picker compare-search">
-                <input type="search" id="compare-search" data-slug={s.slug} autocomplete="off" placeholder="Or an EELSdb spectrum" aria-label="Compare with an EELSdb spectrum"
-                  role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="compare-options" />
-                <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
+            <div class="tool-box compare" id="compare" hidden>
+              <h2 class="tool-box-head">Compare spectra</h2>
+              <div class="tool-panel compare-body">
+                <div class="compare-empty">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M2 21.5h20" stroke="var(--line)" />
+                    <path d="M2 18l5-1 2-10 2 5 2-2 3 3 6 1" stroke="var(--plot)" />
+                    <path d="M2 19.5l6-.5 2-8 2 3.5 2-1.5 3 2.5 5 .5" stroke="var(--compare-1)" />
+                  </svg>
+                  <p><strong>Check your data against this reference.</strong> Overlay spectra from your computer or from EELSdb on the plot, each in its own colour.</p>
+                </div>
+                <label class="button secondary compare-pick">
+                  <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi" />
+                  Compare with your spectra
+                </label>
+                <div class="picker compare-search">
+                  <input type="search" id="compare-search" data-slug={s.slug} autocomplete="off" placeholder="Or an EELSdb spectrum" aria-label="Compare with an EELSdb spectrum"
+                    role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="compare-options" />
+                  <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
+                </div>
+                <div class="compare-empty">
+                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="3" y="9" width="18" height="12" rx="2" stroke-dasharray="3 2.5" />
+                    <path d="M12 3v10M8.5 9.5 12 13l3.5-3.5" />
+                  </svg>
+                  <p><strong>Or drop files on the plot.</strong> MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded.</p>
+                </div>
+                <span class="hint" id="compare-status" aria-live="polite"></span>
+                <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>
               </div>
-              <span class="hint" id="compare-status" aria-live="polite">Or drop files on the plot. Your files are read in your browser and not uploaded.</span>
-              <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>
             </div>
           )}
         </div>
-        {s.status === "published" && fileName && PLOTTABLE.test(fileName) && (
-          <section class="snippet" aria-labelledby="snippet-title">
-            <h2 id="snippet-title">Use in HyperSpy</h2>
-            {hspy ? (
-              <HyperSpySnippet url={`${SITE}${href(hspy.r2_key)}`} file="spectrum.hspy" process />
-            ) : (
-              <HyperSpySnippet url={`${SITE}/spectra/${s.slug}/download/msa`} file="spectrum.msa" signalType={s.technique === "eels" ? "EELS" : undefined} process />
+        {fileName && PLOTTABLE.test(fileName) && (
+          <div class="tool-box tool-tabs" id="process" hidden>
+            <div class="tool-tab-bar" role="radiogroup" aria-label="Spectrum tools">
+              <label><input type="radio" name="tool-tab" value="process" checked /><span>Adjust the plot</span></label>
+              {s.status === "published" && <label><input type="radio" name="tool-tab" value="snippet" /><span>Use in HyperSpy</span></label>}
+            </div>
+            <div class="tool-panel process-panel">
+              <div class="process-controls">
+                {s.type === "coreloss" && (
+                  <div class="bg-row">
+                    <label>
+                      Background{" "}
+                      <select id="bg-mode">
+                        <option value="">Off</option>
+                        <option value="fit">Show power-law fit</option>
+                        <option value="subtract">Subtract power law</option>
+                      </select>
+                    </label>
+                    <span class="fit-window">
+                      <span class="fit-range">
+                        <input type="range" id="bg-from" step="0.1" aria-label="Fit window start (eV)" />
+                        <input type="range" id="bg-to" step="0.1" aria-label="Fit window end (eV)" />
+                      </span>
+                      <span class="fit-text">
+                        <input type="number" class="inline-num" id="bg-from-text" step="any" aria-label="Fit window start (eV)" />–<input type="number" class="inline-num" id="bg-to-text" step="any" aria-label="Fit window end (eV)" /> eV
+                      </span>
+                      <button type="button" class="icon-button" id="bg-reset" title="Reset the fit window" aria-label="Reset the fit window">
+                        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                          <path d="M3 12a9 9 0 1 0 9-9 9.75 9.75 0 0 0-6.74 2.74L3 8" />
+                          <path d="M3 3v5h5" />
+                        </svg>
+                      </button>
+                    </span>
+                  </div>
+                )}
+                <label>
+                  Smoothing <input type="range" id="smooth" min="0" max="25" value="0" /> <span><input type="number" class="inline-num" id="smooth-text" min="0" step="2" placeholder="Off" aria-label="Smoothing window (points)" /><span> points</span></span>
+                </label>
+                <label>
+                  Normalise intensity{" "}
+                  <select id="normalise">
+                    <option value="">Off</option>
+                    <option value="max">To maximum</option>
+                    <option value="area">To area</option>
+                  </select>
+                </label>
+                <label><input type="checkbox" id="log-y" /> Log intensity scale</label>
+              </div>
+              <p class="hint" id="process-status" aria-live="polite">Applies to compared spectra too. Only the view changes: downloads are the original data.</p>
+            </div>
+            {s.status === "published" && (
+              <div class="tool-panel snippet-panel">
+                {hspy ? (
+                  <HyperSpySnippet url={`${SITE}${href(hspy.r2_key)}`} file="spectrum.hspy" process />
+                ) : (
+                  <HyperSpySnippet url={`${SITE}/spectra/${s.slug}/download/msa`} file="spectrum.msa" signalType={s.technique === "eels" ? "EELS" : undefined} process />
+                )}
+                <p class="hint">{hspy ? "The HyperSpy file loads with its metadata filled in." : "The MSA file has the beam energy and angles."} More in the <a href="/docs/use/python/">Python guide</a>.</p>
+              </div>
             )}
-            <p class="hint">{hspy ? "The HyperSpy file loads with its metadata filled in." : "The MSA file has the beam energy and angles."} More in the <a href="/docs/use/python/">Python guide</a>.</p>
-          </section>
+          </div>
         )}
       </div>
 

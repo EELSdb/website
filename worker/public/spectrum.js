@@ -121,6 +121,11 @@ async function main() {
   // Colours for drawing; an image export swaps in the chosen theme's while it draws.
   let paint = css;
   let yLabel = versions[0]?.axis ?? (el.dataset.type === "xrayabs" ? "Intensity" : "Counts");
+  const title = document.querySelector("h1")?.textContent ?? "";
+  const unit = () => (normalise?.value ? "Normalised intensity" : yLabel);
+  const seriesName = () => `${title} (${unit()[0].toLowerCase()}${unit().slice(1)})`;
+  // The y axis names the spectrum unless compared spectra share it.
+  const axisName = () => (compares.length && !separate() ? unit() : seriesName());
   let data;
   try {
     await document.fonts.ready;
@@ -152,7 +157,6 @@ async function main() {
   const bgFrom = document.getElementById("bg-from");
   const bgTo = document.getElementById("bg-to");
   const smooth = document.getElementById("smooth");
-  const smoothOut = document.getElementById("smooth-out");
   const normalise = document.getElementById("normalise");
   const logY = document.getElementById("log-y");
   const procStatus = document.getElementById("process-status");
@@ -163,9 +167,32 @@ async function main() {
     const span = xmax - xmin;
     const first = edges.find((e) => e.major)?.energy;
     const to = first && first - 0.02 * span > xmin + 0.05 * span ? first - 0.02 * span : xmin + 0.15 * span;
-    bgFrom.value = +xmin.toFixed(1);
-    bgTo.value = +to.toFixed(1);
+    // min and max first: a range input clamps its value to them.
+    for (const r of [bgFrom, bgTo]) [r.min, r.max] = [Math.floor(xmin * 10) / 10, Math.ceil(xmax * 10) / 10];
+    bgFrom.defaultValue = +xmin.toFixed(1);
+    bgTo.defaultValue = +to.toFixed(1);
+    // Push the other thumb rather than stop: once they meet, only the top one can be grabbed.
+    bgFrom.addEventListener("input", () => { if (+bgFrom.value > +bgTo.value) bgTo.value = bgFrom.value; });
+    bgTo.addEventListener("input", () => { if (+bgTo.value < +bgFrom.value) bgFrom.value = bgTo.value; });
   }
+  const bgText = [document.getElementById("bg-from-text"), document.getElementById("bg-to-text")];
+  const smoothText = document.getElementById("smooth-text");
+  const fitWidth = (t) => (t.style.width = `${(t.value || t.placeholder).length + 0.5}ch`);
+  const showValues = () => {
+    if (bgFrom) {
+      const frac = (r) => (r.value - r.min) / (r.max - r.min);
+      bgFrom.parentElement.style.setProperty("--a", frac(bgFrom));
+      bgFrom.parentElement.style.setProperty("--b", frac(bgTo));
+      [bgFrom, bgTo].forEach((r, i) => {
+        bgText[i].value = (+r.value).toFixed(1);
+        fitWidth(bgText[i]);
+      });
+    }
+    if (smoothText) {
+      smoothText.value = +smooth.value ? 2 * +smooth.value + 1 : "";
+      fitWidth(smoothText);
+    }
+  };
   const log = () => !!logY?.checked;
   const settings = () => ({
     background: bgMode?.value ?? "",
@@ -271,8 +298,7 @@ async function main() {
   const compares = [];
   const scaleBox = document.getElementById("compare-scale");
   // With "Scale to match", each compared spectrum gets its own y scale and right-hand axis, in its colour.
-  // A log axis can't be a linear map of the main one, so log scale shares one axis.
-  const separate = () => scaleBox.checked && !log();
+  const separate = () => scaleBox.checked;
   const scaleOf = (i) => (separate() ? `c${i}` : "y");
   // What is drawn: the data after the processing settings; `fit` only while the fitted background is shown.
   let view;
@@ -287,6 +313,7 @@ async function main() {
     };
     if (procStatus) procStatus.textContent = o.background && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies." : PROC_NOTE;
     if (snippet) snippet.innerHTML = pythonLines(o, main.fit);
+    showValues();
   };
   // Log axes cannot show zero or below.
   const shown = (ys) => (log() ? ys.map((v) => (v > 0 ? v : null)) : ys);
@@ -306,14 +333,21 @@ async function main() {
       }),
     ]);
   };
-  // Each compared spectrum's axis is a linear map of the main one (value = main × k + b), so zooming scales both alike.
-  // Dragging the top half of its axis moves its maximum, the bottom half its minimum; double-click resets it.
+  // Each compared spectrum's axis is a linear map of the main one (value = main × k + b, in log10 on a log axis),
+  // so zooming scales both alike. Dragging the top half of its axis moves its maximum, the bottom half its minimum;
+  // double-click resets it.
   let yRange = null;
+  // Set by a box zoom; the y range function returns it, because uPlot only runs that function when y is not set directly.
+  let zoomY = null;
+  const tf = (v) => (log() ? Math.log10(v) : v);
+  const inv = (v) => (log() ? 10 ** v : v);
+  const autoRange = (lo, hi) => (log() ? uPlot.rangeLog(lo, hi, 10, false) : uPlot.rangeNum(lo, hi, 0.1, true));
   const link = (c, min, max) => {
-    const k = (max - min) / (yRange[1] - yRange[0]);
-    c.map = { k, b: min - yRange[0] * k };
+    const [m0, m1] = yRange.map(tf);
+    const k = (tf(max) - tf(min)) / (m1 - m0);
+    c.map = { k, b: tf(min) - m0 * k };
   };
-  const mapped = (c) => [yRange[0] * c.map.k + c.map.b, yRange[1] * c.map.k + c.map.b];
+  const mapped = (c) => yRange.map((v) => inv(tf(v) * c.map.k + c.map.b));
   const axisDrag = {
     hooks: {
       ready: (u) => {
@@ -330,10 +364,10 @@ async function main() {
             node.setPointerCapture(e.pointerId);
             const box = node.getBoundingClientRect();
             const top = e.clientY < box.top + box.height / 2;
-            const [y0, min, max] = [e.clientY, ...mapped(c)];
+            const [y0, min, max] = [e.clientY, ...mapped(c).map(tf)];
             const move = (m) => {
               const f = Math.exp((m.clientY - y0) / 150);
-              const [lo, hi] = top ? [min, min + (max - min) * f] : [max - (max - min) / f, max];
+              const [lo, hi] = (top ? [min, min + (max - min) * f] : [max - (max - min) / f, max]).map(inv);
               link(c, lo, hi);
               u.setScale(key, { min: lo, max: hi });
             };
@@ -348,7 +382,62 @@ async function main() {
       },
     },
   };
-  // Shade the background fit window under the series.
+  // Drag a box to zoom to it. Setting x re-ranges y, and the compared scales after it.
+  const boxZoom = {
+    hooks: {
+      setSelect: (u) => {
+        const { left, top, width, height } = u.select;
+        if (!width || !height) return;
+        zoomY = [u.posToVal(top + height, "y"), u.posToVal(top, "y")];
+        u.setSelect({ left: 0, top: 0, width: 0, height: 0 }, false);
+        u.setScale("x", { min: u.posToVal(left, "x"), max: u.posToVal(left + width, "x") });
+      },
+    },
+  };
+  // The values at the cursor go in a tooltip; the legend only names the series.
+  const sig = new Intl.NumberFormat("en", { maximumSignificantDigits: 5 });
+  // Compared spectra rarely share energies (uPlot.join leaves gaps), so interpolate each one at x between its own
+  // nearest points; null outside its data.
+  const valueAt = (xs, ys, i, x) => {
+    let [l, r] = [i, i];
+    while (l >= 0 && (ys[l] == null || xs[l] > x)) l--;
+    while (r < xs.length && (ys[r] == null || xs[r] < x)) r++;
+    if (l < 0 || r >= xs.length) return null;
+    return l === r ? ys[l] : ys[l] + ((ys[r] - ys[l]) * (x - xs[l])) / (xs[r] - xs[l]);
+  };
+  const tooltip = {
+    hooks: {
+      init: (u) => u.over.append(Object.assign(document.createElement("div"), { className: "plot-tip", hidden: true })),
+      setCursor: (u) => {
+        const tip = u.over.querySelector(".plot-tip");
+        const i = u.cursor.idx;
+        tip.hidden = i == null;
+        if (i == null) return;
+        const x = u.posToVal(u.cursor.left, "x");
+        const head = document.createElement("b");
+        head.textContent = `${x.toFixed(2)} eV`;
+        const rows = u.series.slice(1).flatMap((s, k) => {
+          const v = valueAt(u.data[0], u.data[k + 1], i, x);
+          if (v == null || !s.show) return [];
+          const name = document.createElement("span");
+          const mark = document.createElement("i");
+          mark.style.borderColor = s._stroke ?? s.stroke;
+          name.append(mark, s.label);
+          const value = document.createElement("span");
+          value.textContent = sig.format(v);
+          return [name, value];
+        });
+        tip.replaceChildren(head, ...rows);
+        const gap = 14;
+        const [w, h] = [tip.offsetWidth, tip.offsetHeight];
+        const left = u.cursor.left + gap + w > u.over.clientWidth ? u.cursor.left - gap - w : u.cursor.left + gap;
+        tip.style.left = `${Math.max(0, left)}px`;
+        tip.style.top = `${Math.min(Math.max(0, u.cursor.top - h / 2), u.over.clientHeight - h)}px`;
+      },
+    },
+  };
+  // Mark the background fit window as a capped range along the bottom of the plot; shade it only while its slider is dragged.
+  let dragging = false;
   const windowPlugin = {
     hooks: {
       drawAxes: (u) => {
@@ -357,11 +446,35 @@ async function main() {
         const left = Math.max(a, u.bbox.left);
         const right = Math.min(b, u.bbox.left + u.bbox.width);
         if (right <= left) return;
-        u.ctx.save();
-        u.ctx.globalAlpha = 0.1;
-        u.ctx.fillStyle = paint("--accent");
-        u.ctx.fillRect(left, u.bbox.top, right - left, u.bbox.height);
-        u.ctx.restore();
+        const { top, height } = u.bbox;
+        const px = devicePixelRatio;
+        const y = top + height - 6 * px;
+        const ctx = u.ctx;
+        ctx.save();
+        if (dragging) {
+          ctx.fillStyle = paint("--accent");
+          ctx.globalAlpha = 0.1;
+          ctx.fillRect(left, top, right - left, height);
+          ctx.globalAlpha = 1;
+        }
+        ctx.strokeStyle = paint("--edge");
+        ctx.globalAlpha = 0.5;
+        ctx.lineWidth = 1.5 * px;
+        ctx.setLineDash([6 * px, 4 * px]);
+        ctx.beginPath();
+        ctx.moveTo(left, y);
+        ctx.lineTo(right, y);
+        ctx.stroke();
+        ctx.setLineDash([]);
+        ctx.beginPath();
+        // No cap where the plot edge cuts the window off.
+        for (const [x, end] of [[left, a], [right, b]]) {
+          if (x !== end) continue;
+          ctx.moveTo(x, y - 4 * px);
+          ctx.lineTo(x, y + 4 * px);
+        }
+        ctx.stroke();
+        ctx.restore();
       },
     },
   };
@@ -381,9 +494,9 @@ async function main() {
     scales: {
       x: { time: false },
       // The main scale is listed first so it is ranged before the compared ones, which follow it.
-      y: { ...distr, range: (u, lo, hi) => (yRange = log() ? uPlot.rangeLog(lo, hi, 10, false) : uPlot.rangeNum(lo, hi, 0.1, true)) },
+      y: { ...distr, range: (u, lo, hi) => (yRange = zoomY ?? autoRange(lo, hi)) },
       ...Object.fromEntries(
-        compares.map((c, i) => [`c${i}`, { range: (u, lo, hi) => (c.map && yRange ? mapped(c) : uPlot.rangeNum(lo, hi, 0.1, true)) }]),
+        compares.map((c, i) => [`c${i}`, { ...distr, range: (u, lo, hi) => (c.map && yRange ? mapped(c) : autoRange(lo, hi)) }]),
       ),
     },
     axes: [
@@ -391,7 +504,7 @@ async function main() {
       {
         ...axis(),
         ...(dual ? { stroke: paint("--plot") } : {}),
-        label: yLabel,
+        label: axisName(),
         size: ySize,
         values: format(view.y),
       },
@@ -401,13 +514,22 @@ async function main() {
     ],
     series: [
       { label: "Energy (eV)" },
-      { label: yLabel, stroke: paint("--plot"), width: 1.5, points: { show: false } },
+      { label: seriesName(), stroke: paint("--plot"), width: 1.5, points: { show: false } },
       ...(view.fit ? [{ label: "Power-law fit", stroke: paint("--edge"), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
       ...compares.map((c, i) => ({ label: c.name, scale: scaleOf(i), stroke: colour(i), width: 1.5, points: { show: false }, spanGaps: true })),
     ],
-    legend: { markers: { show: compares.length > 0 || !!view.fit } },
-    cursor: { drag: { x: true, y: false }, points: { show: false } },
-    plugins: [windowPlugin, edgePlugin, axisDrag],
+    legend: { live: false, markers: { show: compares.length > 0 || !!view.fit } },
+    cursor: {
+      drag: { x: true, y: true, setScale: false },
+      points: { show: false },
+      bind: {
+        dblclick: (u, targ, handler) => (e) => {
+          zoomY = null;
+          return handler(e);
+        },
+      },
+    },
+    plugins: [windowPlugin, edgePlugin, axisDrag, tooltip, boxZoom],
     };
   };
 
@@ -420,6 +542,7 @@ async function main() {
   new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: opts().height })).observe(el);
   // Canvas colours are resolved once, so rebuild when the scheme changes.
   const rebuild = (keepZoom) => {
+    if (keepZoom !== true) zoomY = null;
     const { min, max } = plot.scales.x;
     compute();
     plot.destroy();
@@ -429,12 +552,47 @@ async function main() {
   };
   const proc = document.getElementById("process");
   if (proc) proc.hidden = false;
+  // Normalised spectra share units, so separate axes stop making sense. Bring them back if normalising is turned off.
+  let unscaled = false;
+  normalise?.addEventListener("input", () => {
+    if (normalise.value && scaleBox.checked) [scaleBox.checked, unscaled] = [false, true];
+    else if (!normalise.value && unscaled) [scaleBox.checked, unscaled] = [true, false];
+  });
   for (const control of [bgMode, bgFrom, bgTo, smooth, normalise, logY]) {
     control?.addEventListener("input", () => {
-      if (smoothOut) smoothOut.textContent = +smooth.value ? `${2 * +smooth.value + 1} points` : "Off";
+      // The data or the axis type changed, so the compared axes' maps to the main one no longer hold.
+      compares.forEach((c) => (c.map = null));
+      zoomY = null;
       rebuild(true);
     });
   }
+  for (const r of [bgFrom, bgTo]) r?.addEventListener("pointerdown", () => (dragging = true));
+  for (const type of ["pointerup", "pointercancel"])
+    addEventListener(type, () => {
+      if (!dragging) return;
+      dragging = false;
+      redraw();
+    });
+  bgText.forEach((t, i) =>
+    t?.addEventListener("change", () => {
+      const range = [bgFrom, bgTo][i];
+      if (t.value !== "") {
+        range.value = t.value;
+        range.dispatchEvent(new Event("input"));
+      }
+      showValues();
+    }),
+  );
+  smoothText?.addEventListener("change", () => {
+    smooth.value = Math.round((+smoothText.value - 1) / 2);
+    smooth.dispatchEvent(new Event("input"));
+  });
+  for (const t of [...bgText, smoothText]) t?.addEventListener("input", () => fitWidth(t));
+  document.getElementById("bg-reset")?.addEventListener("click", () => {
+    bgFrom.value = bgFrom.defaultValue;
+    bgTo.value = bgTo.defaultValue;
+    rebuild(true);
+  });
   new MutationObserver(rebuild).observe(document.documentElement, { attributes: true, attributeFilter: ["data-theme"] });
   matchMedia("(prefers-color-scheme: dark)").addEventListener("change", rebuild);
   const box = document.getElementById("compare");
@@ -634,7 +792,6 @@ async function main() {
   const W = 1200;
   const H = 560;
   const HEAD = 64;
-  const title = document.querySelector("h1")?.textContent ?? "";
   const pageUrl = `EELSdb • ${location.origin}${location.pathname}`;
   const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
@@ -722,7 +879,7 @@ async function main() {
       right += a._size;
     });
     text(L + PW / 2, T + PH + 44, "Energy (eV)", `text-anchor="middle" fill="${colours.muted}" font-size="13"`);
-    text(0, 0, yLabel, `transform="translate(18 ${T + PH / 2}) rotate(-90)" text-anchor="middle" fill="${colours.muted}" font-size="13"`);
+    text(0, 0, axisName(), `transform="translate(18 ${T + PH / 2}) rotate(-90)" text-anchor="middle" fill="${colours.muted}" font-size="13"`);
     // Series, clipped to the plot area. undefined is a point only another series has (from uPlot.join) and is skipped;
     // null is a real gap and starts a new path, as on the canvas.
     parts.push(`<clipPath id="area"><rect x="${L}" y="${T}" width="${PW}" height="${PH}"/></clipPath><g clip-path="url(#area)" fill="none" stroke-width="1.5">`);

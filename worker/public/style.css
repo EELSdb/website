@@ -630,13 +630,43 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .plot-tools label { display: inline-flex; gap: 0.45rem; align-items: center; color: var(--ink); cursor: pointer; }
 .plot-tools input { accent-color: var(--accent); margin: 0; }
 .plot-hint { margin-left: auto; }
-.plot-process { font-size: 0.875rem; margin-top: 0.6rem; }
-.plot-process summary { cursor: pointer; color: var(--ink); width: fit-content; }
-.process-controls { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; margin-top: 0.6rem; }
+.tool-box { border: 1px solid var(--line); border-radius: 6px; background: var(--surface); font-size: 0.875rem; }
+/* Same height as a tab in .tool-tab-bar, so side-by-side boxes line up. */
+.tool-box-head { margin: 0; padding: 0.65rem 1rem calc(0.5rem + 1px); border-bottom: 1px solid var(--line); font-size: inherit; font-weight: 600; line-height: inherit; }
+.tool-tab-bar { display: flex; gap: 1.5rem; padding: 0 1rem; border-bottom: 1px solid var(--line); }
+.tool-tab-bar input { position: absolute; opacity: 0; }
+.tool-tab-bar span { display: block; padding: 0.65rem 0 0.5rem; margin-bottom: -1px; border-bottom: 2px solid transparent; color: var(--muted); font-weight: 600; cursor: pointer; }
+.tool-tab-bar span:hover { color: var(--ink); }
+.tool-tab-bar input:checked + span { color: var(--ink); border-bottom-color: var(--accent); }
+.tool-tab-bar input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
+.tool-panel { padding: 1rem; }
+.tool-panel .hint { margin: 0.5rem 0 0; }
+.tool-tabs:has([value=process]:not(:checked)) .process-panel, .tool-tabs:has([value=snippet]:not(:checked)) .snippet-panel { display: none; }
+.process-controls { display: grid; justify-items: start; gap: 0.6rem; }
+.bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
+.fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }
+.fit-text { white-space: nowrap; }
+/* Number fields drawn as plain text; spectrum.js sizes them to their value. */
+.process-controls .inline-num { all: unset; padding: 0 2px; margin: 0 -2px; border-radius: 3px; cursor: text; }
+.inline-num::-webkit-inner-spin-button, .inline-num::-webkit-outer-spin-button { appearance: none; margin: 0; }
+.inline-num::placeholder { color: inherit; opacity: 1; }
+.process-controls .inline-num:hover { background: var(--sunken); }
+.process-controls .inline-num:focus-visible { outline: 2px solid var(--focus); outline-offset: 1px; }
+#smooth-text:placeholder-shown + span { display: none; }
+/* Two overlaid range inputs; only the thumbs take the pointer. 8px is half a thumb. */
+.fit-range { position: relative; flex: 1; min-width: 5rem; height: 1.25rem; }
+.fit-range::before, .fit-range::after { content: ""; position: absolute; top: 50%; height: 4px; margin-top: -2px; border-radius: 2px; pointer-events: none; }
+.fit-range::before { left: 8px; right: 8px; background: var(--line); }
+.fit-range::after { left: calc(8px + var(--a, 0) * (100% - 16px)); right: calc(8px + (1 - var(--b, 1)) * (100% - 16px)); background: var(--accent); }
+.fit-range input { position: absolute; inset: 0; z-index: 1; width: 100%; height: 100%; margin: 0; appearance: none; background: none; pointer-events: none; }
+.fit-range input::-webkit-slider-thumb { appearance: none; pointer-events: auto; cursor: pointer; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-sizing: border-box; }
+.fit-range input::-moz-range-thumb { pointer-events: auto; cursor: pointer; width: 16px; height: 16px; border-radius: 50%; background: var(--accent); border: 2px solid var(--surface); box-sizing: border-box; }
+.fit-range input:focus-visible { outline: none; }
+.fit-range input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
+.fit-range input:focus-visible::-moz-range-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
+.process-controls:has(#bg-mode option[value=""]:checked) .fit-window { display: none; }
 .process-controls label { display: inline-flex; gap: 0.45rem; align-items: center; cursor: pointer; }
 .process-controls input, .compare-list .shift input { accent-color: var(--accent); margin: 0; }
-.process-controls input[type="number"] { width: 5.5rem; }
-.plot-process .hint { margin: 0.5rem 0 0; }
 .compare-list .shift { display: inline-flex; gap: 0.35rem; align-items: center; color: var(--muted); }
 .compare-list .shift input { width: 4.5rem; }
 .plot-message { color: var(--muted); padding: 2rem; text-align: center; margin: 0 auto; }
@@ -646,8 +676,8 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .plot .u-series > * { padding: 0; border: 0; }
 .plot .u-series th { cursor: default; pointer-events: none; font-size: inherit; font-weight: 400; color: var(--muted) !important; }
 .plot .u-legend .u-label { color: var(--muted) !important; }
-/* The date speaks for itself. */
-.plot .u-legend .u-series:first-child th { display: none; }
+/* The date speaks for itself. The spectrum plot's legend has no x row, so its first row is a spectrum. */
+.plot:not(#plot) .u-legend .u-series:first-child th { display: none; }
 .plot-tip { position: absolute; z-index: 2; pointer-events: none; display: grid; grid-template-columns: auto auto; gap: 0.1rem 1.25rem; padding: 0.5rem 0.65rem; font-size: 0.8rem; line-height: 1.4; white-space: nowrap; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; box-shadow: 0 2px 8px rgb(0 0 0 / 0.12); }
 .plot-tip b { grid-column: 1 / -1; font-weight: 600; margin-bottom: 0.15rem; }
 .plot-tip span { display: flex; align-items: center; gap: 0.4rem; }
@@ -718,10 +748,7 @@ dialog h2 { margin-top: 0; }
 .spectrum-intro { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 1.5rem 4.5rem; margin-top: 1rem; align-items: start; }
 .spectrum-comments { margin: 1rem 0 1.25rem; padding: 0.8rem 1.1rem; border-left: 3px solid var(--accent); border-radius: 0 6px 6px 0;
   background: var(--sunken); font-size: 1.05rem; line-height: 1.55; overflow-wrap: anywhere; }
-.spectrum-intro .compare { margin-top: 0; }
 .uploader-hint { margin: 0.75rem 0 0; font-size: 0.875rem; color: var(--muted); }
-.snippet h2 { font-size: 0.95rem; margin: 0 0 0.5rem; }
-.snippet .hint { margin: 0.5rem 0 0; }
 .notice { border: 1px solid var(--line); background: var(--sunken); border-radius: 8px; padding: 1rem 1.25rem; }
 .notice.warning { border-color: var(--note); background: color-mix(in oklab, var(--note) 13%, var(--bg)); }
 .notice.info { position: relative; padding-left: 3.1rem; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); font-size: 1.05rem; line-height: 1.55; }
@@ -1206,7 +1233,12 @@ html:not(.js) .picture-file label { display: none; }
 .metadata-table { font-size: 0.8125rem; }
 .metadata-table th { font-weight: 500; color: var(--muted); overflow-wrap: anywhere; }
 .metadata-table td { overflow-wrap: anywhere; }
-.compare { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; margin-top: 0.75rem; font-size: 0.875rem; }
+.compare-body { display: flex; flex-wrap: wrap; align-items: center; gap: 0.75rem 1rem; }
+.compare-empty { flex-basis: 100%; display: flex; align-items: center; gap: 1rem; color: var(--muted); }
+.compare-empty svg { flex: none; }
+.compare-empty p { margin: 0; }
+.compare-empty strong { color: var(--ink); font-weight: 600; }
+.compare:has(#compare-list:not([hidden])) .compare-empty { display: none; }
 .compare label:not(.button) { display: inline-flex; gap: 0.45rem; align-items: center; cursor: pointer; }
 .compare-pick { position: relative; cursor: pointer; }
 .compare-pick input { position: absolute; inset: 0; opacity: 0; width: 100%; cursor: pointer; }
@@ -1214,6 +1246,7 @@ html:not(.js) .picture-file label { display: none; }
 .compare.dragging .compare-pick { outline: 2px dashed var(--line); outline-offset: 2px; }
 .compare.over .compare-pick { outline: 2px solid var(--accent); outline-offset: 2px; color: var(--accent-ink); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); }
 .compare .hint { margin: 0; flex: 1 1 16rem; }
+.compare .hint:empty { display: none; }
 .compare-search { flex: 0 1 16rem; }
 .compare-list { flex-basis: 100%; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; font-size: 0.875rem; }
 .compare-list li { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
