@@ -70,6 +70,13 @@ Compared spectra get the same settings, each on its own data.
 - **Smoothing** applies a Savitzky–Golay filter. Drag the slider, or click the value and type the number of points, an odd number from 3 to 51.
 - **Normalise intensity** divides each spectrum by its maximum or by its area. This clears **Independent y axes**, because the spectra then have the same units. If the page cleared it, setting normalisation back to **Off** turns it on again.
 - **Log intensity scale** shows the y axis on a log scale. The plot does not show values at or below zero.
+- **Label peaks** finds the peaks of the main spectrum with HyperSpy and labels each one with its energy in eV.
+  - HyperSpy runs in your browser. The first time you tick the box, it takes a few seconds to load, and the plot is blurred until it is ready. HyperSpy then stays loaded while you move from one spectrum to the next, so the box answers at once. After you have used it once, spectrum pages also load HyperSpy in the background when they open. They do not tick the box for you.
+  - **Sensitivity** sets how sharp a peak must be, compared with the sharpest peak in the spectrum. Drag it left for fewer peaks and right for more.
+  - The peaks are found after the other settings, so smoothing removes peaks that come from noise.
+  - A label goes above its peak, or beside the top of the peak if another label is in the way. If there is no space, the peak gets no label. Taller peaks get their labels first.
+  - Compared spectra do not get labels.
+  - On low-loss spectra, the zero-loss peak is much sharper than the plasmon peaks, so the plasmons get labels only at a high sensitivity. HyperSpy never finds the zero-loss peak, because it ignores peaks at 0 eV or below.
 
 The steps run in this order: background, smoothing, normalisation.
 
@@ -82,6 +89,7 @@ If you compare spectra, the code loads them too and plots them all on one axis, 
 Your own files load by their file name. Change the path if the file is in another folder.
 HyperSpy cannot read CSV, text and XDI files, so the code leaves them out.
 For one spectrum, the plot also marks the same edge onsets as the page, from the exSpy edge table.
+If **Label peaks** is on, the code prints the peak energies of the main spectrum.
 
 The code starts with a short header that lists HyperSpy and exSpy.
 Save the code as a file, for example `spectrum.py`, and run it with `uv run spectrum.py`: [uv](https://docs.astral.sh/uv/) installs both packages for you.
@@ -90,7 +98,7 @@ In a notebook, install `hyperspy` and `exspy` first. Without exSpy, HyperSpy loa
 ## Export an image of the plot
 
 Click **Export**, then choose PNG or SVG, and a light or dark background.
-The image shows the plot as it is on the page: the area you zoomed to, the edge markers, any spectra you compare with it and the settings from **Adjust the plot**.
+The image shows the plot as it is on the page: the area you zoomed to, the edge markers, the peak labels, any spectra you compare with it and the settings from **Adjust the plot**.
 If you changed the settings, the image says which processing it shows.
 It has the title of the spectrum and its address at the top.
 

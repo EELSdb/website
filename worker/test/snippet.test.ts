@@ -12,6 +12,7 @@ describe("HyperSpy snippet", () => {
       's.plot(plot_edges=["Fe", "O"], only_edges=("Major",), norm="log")\nplt.show()',
     );
     expect(hyperspyCode(one, { edges: { elements: ["Fe"], minor: true } })).toContain('s.plot(plot_edges=["Fe"])');
+    expect(hyperspyCode(one, { peaks: 76.4512 })).toContain('s = hs.load(path, signal_type="EELS")\nprint("Peaks (eV):", s.find_peaks1D_ohaver(slope_thresh=76.45)[0]["position"].round(1))\ns.plot()');
   });
 
   it("loads, processes and overlays compared spectra", () => {

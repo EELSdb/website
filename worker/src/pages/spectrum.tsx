@@ -425,6 +425,13 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </select>
                 </label>
                 <label><input type="checkbox" id="log-y" /> Log intensity scale</label>
+                <div class="peaks-row">
+                  <label><input type="checkbox" id="find-peaks" /> Label peaks</label>
+                  <label class="peak-level">
+                    Sensitivity <input type="range" id="peak-level" min="1" max="30" value="10" aria-describedby="peaks-status" />
+                  </label>
+                  <span class="hint" id="peaks-status" aria-live="polite"></span>
+                </div>
                 <div class="scale-row" hidden>
                   <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
                   <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>

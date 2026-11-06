@@ -164,6 +164,9 @@ async function main() {
   const smooth = document.getElementById("smooth");
   const normalise = document.getElementById("normalise");
   const logY = document.getElementById("log-y");
+  const peaksBox = document.getElementById("find-peaks");
+  const peakLevel = document.getElementById("peak-level");
+  const peaksStatus = document.getElementById("peaks-status");
   const procStatus = document.getElementById("process-status");
   const PROC_NOTE = procStatus?.textContent;
   const snippet = document.getElementById("snippet-code");
@@ -236,7 +239,7 @@ async function main() {
       })),
     ];
     const edges = el.dataset.type !== "xrayabs" && showEdges.checked ? { elements, minor: showMinor.checked } : null;
-    snippet.innerHTML = highlightPython(hyperspyCode(spectra, { smooth: o.smooth, normalise: o.normalise, log: log(), edges }));
+    snippet.innerHTML = highlightPython(hyperspyCode(spectra, { smooth: o.smooth, normalise: o.normalise, log: log(), edges, peaks: peaksBox?.checked ? peakSlope : null }));
   };
   let snippetArgs;
   const family = getComputedStyle(document.body).fontFamily;
@@ -256,9 +259,12 @@ async function main() {
     ctx.fillText(sub, x0 + w1, y + 5 * dpr);
     return w1 + w2;
   };
+  // Label boxes drawn in this frame, in canvas pixels, so peak labels can keep clear of them.
+  let taken = [];
   const edgePlugin = {
     hooks: {
       draw: (u) => {
+        taken = [];
         if (!showEdges.checked) return;
         const ctx = u.ctx;
         const dpr = devicePixelRatio || 1;
@@ -284,7 +290,101 @@ async function main() {
           const y = u.bbox.top + 4 * dpr + (row++ % 3) * 17 * dpr;
           ctx.font = `600 ${12 * dpr}px ${family}`;
           const nearRight = px + 4 * dpr + ctx.measureText(edge.label).width > right;
-          drawLabel(ctx, edge.label, nearRight ? px - 4 * dpr : px + 4 * dpr, y, dpr, nearRight);
+          const lx = nearRight ? px - 4 * dpr : px + 4 * dpr;
+          const w = drawLabel(ctx, edge.label, lx, y, dpr, nearRight);
+          taken.push({ x: nearRight ? lx - w : lx, y, w, h: 17 * dpr });
+        }
+        ctx.restore();
+      },
+    },
+  };
+  // Peaks of the main spectrum as drawn, from HyperSpy in Pyodide; i is the nearest channel.
+  let peaks = [];
+  let peakSeq = 0;
+  let hyperspyReady = false;
+  // The slope_thresh of the last search, for the snippet.
+  let peakSlope = null;
+  // The shared worker lives while any spectrum page uses it, including pages kept for the back button.
+  let peakPort;
+  const startPeakWorker = () => {
+    if (peakPort) return peakPort;
+    const worker = typeof SharedWorker === "function" ? new SharedWorker("/peaks-worker.js", { type: "module" }) : new Worker("/peaks-worker.js", { type: "module" });
+    peakPort = worker.port ?? worker;
+    peakPort.onmessage = ({ data: r }) => {
+      if (r.ready) return void (hyperspyReady = true);
+      busy.hidden = true;
+      // Only the latest search counts, and its data is still what is plotted.
+      if (r.id !== peakSeq) return;
+      if (r.error) {
+        peaks = [];
+        peaksStatus.textContent = `HyperSpy could not run: ${r.error.split("\n").filter(Boolean).pop()}`;
+      } else {
+        const x = data[0];
+        peaks = r.peaks.map((energy) => {
+          const i = x.findIndex((v) => v >= energy);
+          return { energy, i: i > 0 && energy - x[i - 1] < x[i] - energy ? i - 1 : i };
+        });
+        peakSlope = r.slope;
+        if (snippet) writeSnippet(...snippetArgs);
+        peaksStatus.textContent = peaks.length ? `${peaks.length} found by HyperSpy` : "HyperSpy found no peaks";
+      }
+      plot.redraw(false);
+    };
+    worker.onerror = () => {
+      busy.hidden = true;
+      peaksStatus.textContent = "HyperSpy could not be loaded.";
+    };
+    return peakPort;
+  };
+  const findPeaks = () => {
+    if (!hyperspyReady) {
+      peaksStatus.textContent = "Loading HyperSpy in your browser (this takes a few seconds)…";
+      busy.hidden = false;
+    }
+    // A fraction of the sharpest curvature: 0.8 at the slider's left end, 0.001 at its right.
+    startPeakWorker().postMessage({ id: ++peakSeq, x: data[0], y: view.y, level: 10 ** (-peakLevel.value / 10) });
+  };
+  // Tallest peaks first. A label goes above its peak, else beside the top, else nowhere.
+  const peakPlugin = {
+    hooks: {
+      draw: (u) => {
+        // Kept for the SVG export, which cannot read the canvas.
+        u.peakMarks = [];
+        if (!peaks.length) return;
+        const ctx = u.ctx;
+        const dpr = devicePixelRatio || 1;
+        const { left, top, width, height } = u.bbox;
+        const h = 13 * dpr;
+        ctx.save();
+        ctx.font = `500 ${11 * dpr}px ${family}`;
+        ctx.textBaseline = "bottom";
+        ctx.fillStyle = ctx.strokeStyle = paint("--ink");
+        ctx.lineWidth = dpr;
+        const free = (b) =>
+          b.x >= left && b.x + b.w <= left + width && b.y >= top && !taken.some((t) => b.x < t.x + t.w && t.x < b.x + b.w && b.y < t.y + t.h && t.y < b.y + b.h);
+        for (const p of [...peaks].sort((a, b) => view.y[b.i] - view.y[a.i])) {
+          const x = u.valToPos(p.energy, "x", true);
+          const y = u.valToPos(view.y[p.i], "y", true);
+          if (!(x >= left && x <= left + width && y >= top && y <= top + height)) continue;
+          const text = p.energy.toFixed(1);
+          const w = ctx.measureText(text).width + 6 * dpr;
+          const base = Math.max(top + h, y - 7 * dpr);
+          const spot = [
+            { align: "center", tx: x, ty: base, box: { x: x - w / 2, y: base - h, w, h }, tick: base < y - 2 * dpr ? [x, y - 2 * dpr, base] : null },
+            { align: "left", tx: x + 6 * dpr, ty: y + h / 2, box: { x: x + 3 * dpr, y: y - h / 2, w, h } },
+            { align: "right", tx: x - 6 * dpr, ty: y + h / 2, box: { x: x - 3 * dpr - w, y: y - h / 2, w, h } },
+          ].find((s) => free(s.box));
+          if (!spot) continue;
+          taken.push(spot.box);
+          u.peakMarks.push({ ...spot, text });
+          if (spot.tick) {
+            ctx.beginPath();
+            ctx.moveTo(x, spot.tick[1]);
+            ctx.lineTo(x, spot.tick[2]);
+            ctx.stroke();
+          }
+          ctx.textAlign = spot.align;
+          ctx.fillText(text, spot.tx, spot.ty);
         }
         ctx.restore();
       },
@@ -345,6 +445,7 @@ async function main() {
     snippetArgs = [o, main, procs];
     if (snippet) writeSnippet(...snippetArgs);
     showValues();
+    if (peaksBox?.checked) findPeaks();
   };
   // Log axes cannot show zero or below.
   const shown = (ys) => (log() ? ys.map((v) => (v > 0 ? v : null)) : ys);
@@ -576,11 +677,14 @@ async function main() {
         },
       },
     },
-    plugins: [windowPlugin, edgePlugin, axisDrag, tooltip, boxZoom, legendSpectra],
+    plugins: [windowPlugin, edgePlugin, peakPlugin, axisDrag, tooltip, boxZoom, legendSpectra],
     };
   };
 
   el.innerHTML = "";
+  // A sibling of the uPlot root, so it survives rebuilds.
+  const busy = Object.assign(document.createElement("div"), { className: "plot-busy", hidden: true, textContent: "Loading HyperSpy, please wait…" });
+  el.append(busy);
   compute();
   let plot = new uPlot(opts(), plotData(), el);
   const redraw = () => plot.redraw(false);
@@ -589,6 +693,20 @@ async function main() {
       redraw();
       if (snippet) writeSnippet(...snippetArgs);
     });
+  peaksBox?.addEventListener("change", () => {
+    if (snippet) writeSnippet(...snippetArgs);
+    if (peaksBox.checked) {
+      try {
+        localStorage.setItem("peaks-used", "1");
+      } catch {}
+      return findPeaks();
+    }
+    peakSeq++;
+    peaks = [];
+    peaksStatus.textContent = "";
+    redraw();
+  });
+  peakLevel?.addEventListener("input", findPeaks);
   new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: opts().height })).observe(el);
   // Canvas colours are resolved once, so rebuild when the scheme changes.
   const rebuild = (keepZoom) => {
@@ -603,6 +721,10 @@ async function main() {
   const proc = document.getElementById("process");
   if (proc) proc.hidden = false;
   showValues();
+  // Viewers who have used "Label peaks" get HyperSpy loaded in the background, so the box answers at once.
+  try {
+    if (peaksBox && localStorage.getItem("peaks-used")) startPeakWorker();
+  } catch {}
   // Normalised spectra share units, so separate axes stop making sense. Bring them back if normalising is turned off.
   let unscaled = false;
   normalise?.addEventListener("input", () => {
@@ -956,6 +1078,15 @@ async function main() {
         parts.push(`<line x1="${x.toFixed(1)}" y1="${T}" x2="${x.toFixed(1)}" y2="${T + PH}" stroke="${c}" stroke-dasharray="3 3" stroke-width="1"/>`);
         parts.push(`<text x="${(x + 4).toFixed(1)}" y="${T + 14 + (k % 3) * 17}" fill="${c}" font-size="12" font-weight="600" stroke="none">${esc(e.label)}</text>`);
       });
+    }
+    // Peak marks are in canvas pixels; the canvas baseline is the bottom of the text, about 3 px below the SVG one.
+    const anchor = { center: "middle", left: "start", right: "end" };
+    for (const m of u.peakMarks ?? []) {
+      if (m.tick) {
+        const [x, y0, y1] = m.tick.map((v, k) => (v / r + (k ? HEAD : 0)).toFixed(1));
+        parts.push(`<line x1="${x}" y1="${y0}" x2="${x}" y2="${y1}" stroke="${colours.ink}" stroke-width="1"/>`);
+      }
+      text(m.tx / r, m.ty / r + HEAD - 3, m.text, `text-anchor="${anchor[m.align]}" fill="${colours.ink}" font-size="11" font-weight="500" stroke="none"`);
     }
     parts.push("</g>");
     // Title, legend and address.

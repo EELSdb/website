@@ -59,6 +59,8 @@ export function hyperspyCode(spectra, o = {}) {
     if (sp.window) lines.push(`${v} = ${v}.remove_background(signal_range=(${num(sp.window[0])}, ${num(sp.window[1])}))`);
     if (o.smooth) lines.push(`${v}.smooth_savitzky_golay(window_length=${o.smooth}, polynomial_order=2)`);
     if (o.normalise) lines.push(`${v} = ${v} / ${v}.data.${o.normalise === "max" ? "max" : "sum"}()`);
+    // The page finds peaks on the main spectrum only. o.peaks is the slope_thresh it used.
+    if (o.peaks != null && !i) lines.push(`print("Peaks (eV):", s.find_peaks1D_ohaver(slope_thresh=${+o.peaks.toPrecision(4)})[0]["position"].round(1))`);
     // The page shifts after processing, so the fit window is on the file's own energies.
     if (sp.shift) lines.push(`${v}.axes_manager[-1].offset += ${num(sp.shift)}`);
     loaded.push([v, sp.name]);

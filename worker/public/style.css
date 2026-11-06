@@ -624,7 +624,9 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .byline { color: var(--muted); margin: 0.35rem 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
 .byline .formula { color: var(--ink); }
 .plot-panel { margin-top: 1.75rem; }
-.plot { min-height: 360px; }
+.plot { min-height: 360px; position: relative; }
+.plot-busy { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; font-weight: 600; backdrop-filter: blur(4px); background: color-mix(in oklab, var(--bg) 40%, transparent); }
+.plot-busy[hidden] { display: none; }
 .plot-tools { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1.25rem; font-size: 0.875rem; color: var(--muted); padding: 0.6rem 0 0; margin-top: 0.25rem; border-top: 1px solid var(--rule); }
 .plot-tools label { display: inline-flex; gap: 0.45rem; align-items: center; color: var(--ink); cursor: pointer; }
 .plot-tools input { accent-color: var(--accent); margin: 0; }
@@ -642,7 +644,7 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .tool-panel .hint { margin: 0.5rem 0 0; }
 .tool-tabs:has([value=process]:not(:checked)) .process-panel, .tool-tabs:has([value=snippet]:not(:checked)) .snippet-panel { display: none; }
 .process-controls { display: grid; justify-items: start; gap: 0.6rem; }
-.bg-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
+.bg-row, .peaks-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
 .fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }
 .fit-text { white-space: nowrap; }
 /* Number fields drawn as plain text; spectrum.js sizes them to their value. */
@@ -664,6 +666,7 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .fit-range input:focus-visible::-webkit-slider-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
 .fit-range input:focus-visible::-moz-range-thumb { outline: 2px solid var(--focus); outline-offset: 1px; }
 .process-controls:has(#bg-mode option[value=""]:checked) .fit-window { display: none; }
+.process-controls:has(#find-peaks:not(:checked)) .peak-level { display: none; }
 .process-controls label { display: inline-flex; gap: 0.45rem; align-items: center; cursor: pointer; }
 .process-controls input, .compare-list .shift input { accent-color: var(--accent); margin: 0; }
 .compare-list .shift { display: inline-flex; gap: 0.35rem; align-items: center; color: var(--muted); }

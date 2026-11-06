@@ -11,10 +11,10 @@ adr:
 
 ## Decision
 
-The browser loads Pyodide core, numpy, micropip, h5py, RosettaSciIO and the `eelsdb` modules. It loads nothing else.
+The browser loads Pyodide core, numpy, micropip, h5py, RosettaSciIO and the `eelsdb` modules. It loads nothing else, with one exception: "Label peaks" on the spectrum page loads HyperSpy in a SharedWorker for viewers who use it ([ADR 0029](/docs/adr/0029-spectrum-page-tools/)).
 
 - The browser does not load exSpy. The edge table comes from a pinned copy of exSpy's `eels_binding_energies.json`, which the Worker serves from `worker/public/`. `checks.log_ratio_thickness` reimplements exSpy's log-ratio thickness method in numpy.
-- The browser does not load HyperSpy. RosettaSciIO's own `hspy.file_writer` writes the HSPY files, with h5py and a signal dictionary that the code builds by hand ([ADR 0025](/docs/adr/0025-hspy-files/)).
+- Writing HSPY files does not need HyperSpy. RosettaSciIO's own `hspy.file_writer` writes the HSPY files, with h5py and a signal dictionary that the code builds by hand ([ADR 0025](/docs/adr/0025-hspy-files/)).
 - The browser does not load scipy. Edge detection ([ADR 0016](/docs/adr/0016-edge-suggestions/)) uses only numpy.
 - Interactive processing on the spectrum page is plain JavaScript in `worker/public/process.js`. This covers background subtraction, smoothing and normalisation. Tests check it against exSpy ([ADR 0029](/docs/adr/0029-spectrum-page-tools/)).
 

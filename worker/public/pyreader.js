@@ -1,6 +1,6 @@
 // Pyodide with RosettaSciIO and the eelsdb modules (served from /py/), shared by the submit form, the spectrum page and review.
 
-const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
+export const PYODIDE = "https://cdn.jsdelivr.net/pyodide/v314.0.7/full/";
 export const RSCIIO = "rosettasciio==0.15.0";
 
 let ready;
@@ -19,6 +19,9 @@ export function loadReader() {
   })();
   return ready;
 }
+
+// For the spectrum page's peak finder (peaks-worker.js).
+export const HYPERSPY = "hyperspy==2.5.0";
 
 /** [energies, intensities] from any file eelsdb.io reads. Spectrum images come back summed. */
 export async function readXY(file) {
