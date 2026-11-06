@@ -515,6 +515,7 @@ a.chip:hover { background: var(--accent-soft); }
 .picker-list .n { margin-left: auto; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .picker-list [aria-selected="true"] { background: var(--sunken); }
 .picker-list .none { color: var(--muted); cursor: default; }
+.picker-list .empty { color: var(--muted); }
 
 .table-scroll { overflow-x: auto; }
 table { border-collapse: collapse; width: 100%; font-size: 0.92rem; }

@@ -125,6 +125,7 @@ function picker({ id, after, label, placeholder, describedby, chipsLabel, listLa
             const li = document.createElement("li");
             li.id = `${id}-opt-${i}`;
             li.setAttribute("role", "option");
+            if (!x.count) li.className = "empty";
             li.innerHTML = `${x.html} <span class="n">${x.count}</span>`;
             li.addEventListener("mousedown", (e) => e.preventDefault());
             li.addEventListener("click", () => add(i));
