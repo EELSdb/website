@@ -119,11 +119,13 @@ news.get("/news/:slug/", async (c) => {
       <article class="prose news-article">
         <p class="small back-link"><a href="/news/">← News</a></p>
         {post.status !== "published" && <p class="notice" role="status">This is a draft. Only moderators can see it until it is published.</p>}
-        <h1>{post.title}</h1>
+        <div class="page-head">
+          <h1>{post.title}</h1>
+          {isModerator(user) && <a class="button secondary" href={`/admin/news/${post.id}/`}>Edit</a>}
+        </div>
         <p class="muted news-byline">
           {String(post.published_at).slice(0, 10)}
           {authors.length > 0 && <> · <Byline authors={authors} /></>}
-          {isModerator(user) && <> · <a href={`/admin/news/${post.id}/`}>Edit</a></>}
         </p>
         <div class="news-body">{raw(body)}</div>
       </article>

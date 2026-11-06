@@ -152,6 +152,7 @@ describe("writing news", () => {
     expect(await (await page("/news/")).text()).not.toContain("test-article");
     const preview = await (await page("/news/test-article/", mod)).text();
     expect(preview).toContain("This is a draft");
+    expect(preview).toContain(`<a class="button secondary" href="/admin/news/${id}/">Edit</a>`);
 
     const bad = await form(`/admin/news/${id}/`, mod, article({ slug: "Not OK", action: "publish" }));
     expect(bad.status).toBe(400);
@@ -160,6 +161,7 @@ describe("writing news", () => {
     expect((await form(`/admin/news/${id}/`, mod, article({ action: "publish" }))).headers.get("location")).toBe(`/admin/news/${id}/?notice=published`);
     const live = await (await page("/news/test-article/")).text();
     expect(live).toContain("<p>Hello <strong>world</strong>.</p>");
+    expect(live).not.toContain(`/admin/news/${id}/`);
     expect(live).toMatch(/2026-11-06 · <span class="by">.*?News Moderator<\/span><\/span> and <span class="by">.*?Guest Writer<\/span><\/span>/);
     expect(await (await page("/news/")).text()).toContain('href="/news/test-article/"');
     expect(await (await page("/sitemap.xml")).text()).toContain("https://eelsdb.eu/news/test-article/");

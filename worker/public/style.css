@@ -879,6 +879,8 @@ ul.mod-list { list-style: none; padding: 0; margin: 1.5rem 0 0; border-top: 1px 
 /* Submit form */
 .page-head { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 0.75rem 1.5rem; margin: 1.75rem 0 0.75rem; }
 .page-head h1 { margin: 0; }
+/* Article titles run long; keep Edit beside the first line instead of wrapping it below. */
+.news-article .page-head { flex-wrap: nowrap; align-items: start; }
 .submit-form { display: grid; gap: 0.5rem; max-width: 60rem; min-width: 0; }
 .form-section { border-top: 1px solid var(--line); padding-top: 0.5rem; }
 .form-section h2 { margin-top: 1rem; }
