@@ -68,7 +68,7 @@ A challenge allows 5 tries. Wrong codes also share a limit of 10 an hour per acc
 
 ### Protection of the two-step settings
 
-- To start set-up, or to add or remove a passkey, the person needs a sign-in in the last 15 minutes.
+- To start set-up, or to add or remove a passkey, the person needs a sign-in in the last 2 hours.
 - To make new recovery codes, turn TOTP off or change "also ask after providers", the person needs a current code or a recovery code.
 
 ## Consequences

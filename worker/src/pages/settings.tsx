@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { FRESH_SIGN_IN_MINUTES, MAX_PASSWORD_FAILURES, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, PROVIDERS, methodsOn, requireUser, safeNext, sha256, signOutOtherSessions, signedInRecently, syncEmails, unclaimedAccountForEmail, type AppEnv } from "../auth";
+import { FRESH_SIGN_IN_HOURS, MAX_PASSWORD_FAILURES, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, PROVIDERS, methodsOn, requireUser, safeNext, sha256, signInAgainUrl, signOutOtherSessions, signedInRecently, syncEmails, unclaimedAccountForEmail, type AppEnv } from "../auth";
 import { mergeAccounts, outranks } from "../merge";
 import { sendEmail } from "../email";
 import { pbkdf2Hash, verifyLegacyPassword } from "../legacy-password";
@@ -22,7 +22,6 @@ const THEMES = [
 const NOTICES: Record<string, string> = {
   profile: "Profile saved.",
   licence: "Licence saved.",
-  stale: `Admin changes need a sign-in in the last ${FRESH_SIGN_IN_MINUTES} minutes. Sign out, sign in again, then repeat the change.`,
   theme: "Appearance saved.",
   sent: `If that address can be added, we have emailed it a link. The link works for ${VERIFY_HOURS} hours.`,
   limit: `You can add up to ${MAX_EMAILS_PER_DAY} addresses a day. Please try again tomorrow.`,
@@ -37,11 +36,9 @@ const NOTICES: Record<string, string> = {
   "password-wrong": "The current password is not right. Nothing was changed.",
   "password-short": `A password needs ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters.`,
   "password-locked": "Too many wrong passwords. Please wait an hour.",
-  "password-stale": `To set a password, sign out and sign in again, then set it within ${FRESH_SIGN_IN_MINUTES} minutes.`,
   "two-step-required": "Moderators and admins need two-step sign-in. Until you set it up, your role does nothing.",
   "two-step-users": "This site requires two-step sign-in. Set it up below before you use your account.",
   "two-step-started": "Add the secret to your authenticator app, then enter a code it shows to turn two-step sign-in on.",
-  "two-step-stale": `To set up two-step sign-in, sign out and sign in again, then set it up within ${FRESH_SIGN_IN_MINUTES} minutes.`,
   "two-step-bad-code": "That code is not right. Nothing was changed.",
   "two-step-locked": "Too many wrong codes. Please wait an hour.",
   "two-step-cancelled": "Set-up cancelled.",
@@ -49,7 +46,6 @@ const NOTICES: Record<string, string> = {
   "two-step-all-on": "You will be asked for your second step after ORCID, Google and GitHub too.",
   "passkey-added": "Passkey added.",
   "passkey-removed": "Passkey removed.",
-  "passkey-stale": `To add or remove a passkey, sign out and sign in again, then try within ${FRESH_SIGN_IN_MINUTES} minutes.`,
   "two-step-all-off": "You will be asked for your second step after an email link or a password only.",
   linked: "Linked.",
   "linked-orcid": "ORCID linked. You can now sign in with it.",
@@ -68,7 +64,7 @@ type Page = "profile" | "emails" | "sign-in" | "two-step" | "tokens";
 const pageUrl = (page: Page) => `/account/settings/${page}/` as AccountPage;
 const PAGE_TITLES = Object.fromEntries(SETTINGS_PAGES.map(([href, label]) => [href, label])) as Record<AccountPage, string>;
 
-async function renderSettings(c: C, page: Page, form?: { values: Profile; errors: Profile }, recoveryCodes?: string[], token?: { created?: string; notice?: string }) {
+async function renderSettings(c: C, page: Page, form?: { values: Profile; errors: Profile }, recoveryCodes?: string[], token?: { created?: string }) {
   const user = c.get("user")!;
   const db = c.env.DB;
   const [{ results: emails }, { results: identities }, { results: pw }, { results: totpRows }, { results: passkeys }, { results: tokens }] = await db.batch<any>([
@@ -97,7 +93,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
   const origin = new URL(c.req.url).origin;
   const picture = page === "profile" ? await pictureState(db, user.id) : null;
   const hasPage = page === "profile" && !!(await db.prepare(`SELECT 1 FROM users u WHERE u.id = ? AND ${HAS_PAGE_SQL}`).bind(user.id).first());
-  const notice = token?.notice ?? (form ? null : NOTICES[c.req.query("notice") ?? ""]);
+  const notice = form ? null : NOTICES[c.req.query("notice") ?? ""];
   return (
     <AccountLayout title={`${PAGE_TITLES[pageUrl(page)]} - Settings`} current={pageUrl(page)} user={user}>
       <div class="settings">
@@ -177,8 +173,8 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
           {passwordOn ? (
           <p class="hint">
             {hasPassword ? "You can sign in with your email address and password." : "You have no password. A password is optional."}{" "}
-            {askCurrent && `Changing or removing it needs your current password, because you signed in more than ${FRESH_SIGN_IN_MINUTES} minutes ago.`}
-            {!hasPassword && !recent && `To set one, sign out and sign in again, then set it within ${FRESH_SIGN_IN_MINUTES} minutes.`}
+            {askCurrent && `Changing or removing it needs your current password, because you signed in more than ${FRESH_SIGN_IN_HOURS} hours ago.`}
+            {!hasPassword && !recent && <><a href={signInAgainUrl(`${pageUrl("sign-in")}#h-password`)}>Sign in again</a> to set one.</>}
           </p>
           ) : (
             <p class="hint">Password sign-in is switched off on this site.{hasPassword && " You can remove the password your account still has."}</p>
@@ -290,7 +286,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
               {recent ? (
                 <form method="post" action="/account/settings/two-step/start/"><button class="button" type="submit">Set up two-step sign-in</button></form>
               ) : (
-                <p class="hint">{NOTICES["two-step-stale"]}</p>
+                <p class="hint"><a href={signInAgainUrl(`${pageUrl("two-step")}#h-two-step`)}>Sign in again</a> to set up two-step sign-in.</p>
               )}
             </>
           )}
@@ -329,7 +325,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
               <p class="notice error-summary" id="passkey-error" role="alert" hidden></p>
             </form>
           ) : (
-            <p class="hint">{NOTICES["passkey-stale"]}</p>
+            <p class="hint"><a href={signInAgainUrl(`${pageUrl("two-step")}#h-passkeys`)}>Sign in again</a> to add or remove a passkey.</p>
           )}
           {passkeys.length > 0 && !totp?.enabled_at && recent && (
             <form method="post" action="/account/settings/two-step/all-methods/" class="settings-form">
@@ -516,6 +512,7 @@ settings.post("/account/settings/password/", requireUser, async (c) => {
   const next = typeof body.new_password === "string" ? body.new_password : "";
   if (!(await methodsOn(c.env)).includes("password")) return back(c, "sign-in", "password-off");
   const allowed = await mayChangePassword(c, body.current_password);
+  if (allowed === "stale") return c.redirect(signInAgainUrl(`${pageUrl("sign-in")}#h-password`));
   if (allowed !== "ok") return back(c, "sign-in", `password-${allowed}`);
   if (next.length < MIN_PASSWORD_LENGTH || next.length > MAX_PASSWORD_LENGTH) return back(c, "sign-in", "password-short");
   await c.env.DB.prepare("UPDATE users SET password_hash = ?, legacy_password_hash = NULL WHERE id = ?").bind(await pbkdf2Hash(next), user.id).run();
@@ -526,6 +523,7 @@ settings.post("/account/settings/password/", requireUser, async (c) => {
 settings.post("/account/settings/password/remove/", requireUser, async (c) => {
   const user = c.get("user")!;
   const allowed = await mayChangePassword(c, (await c.req.parseBody()).current_password);
+  if (allowed === "stale") return c.redirect(signInAgainUrl(`${pageUrl("sign-in")}#h-password`));
   if (allowed !== "ok") return back(c, "sign-in", `password-${allowed}`);
   await c.env.DB.prepare("UPDATE users SET password_hash = NULL, legacy_password_hash = NULL WHERE id = ?").bind(user.id).run();
   await signOutOtherSessions(c, user.id);
@@ -537,7 +535,7 @@ const stepBack = (c: C, notice: string) => back(c, "two-step", notice, "#h-two-s
 
 settings.post("/account/settings/two-step/start/", requireUser, async (c) => {
   const user = c.get("user")!;
-  if (!(await signedInRecently(c))) return stepBack(c, "two-step-stale");
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(`${pageUrl("two-step")}#h-two-step`));
   await c.env.DB.prepare("INSERT INTO user_totp (user_id, secret) VALUES (?, ?) ON CONFLICT (user_id) DO UPDATE SET secret = excluded.secret, last_step = 0 WHERE enabled_at IS NULL")
     .bind(user.id, newSecret()).run();
   return stepBack(c, "two-step-started");
@@ -600,23 +598,23 @@ settings.post("/account/settings/two-step/all-methods/", requireUser, async (c) 
     if (refused) return refused;
   } else {
     if (!(await c.env.DB.prepare("SELECT 1 FROM passkeys WHERE user_id = ?").bind(userId).first())) return stepBack(c, "two-step-bad-code");
-    if (!(await signedInRecently(c))) return stepBack(c, "passkey-stale");
+    if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(`${pageUrl("two-step")}#h-two-step`));
   }
   await c.env.DB.prepare("UPDATE users SET mfa_all_methods = ? WHERE id = ?").bind(body.all_methods ? 1 : 0, c.get("user")!.id).run();
   return stepBack(c, body.all_methods ? "two-step-all-on" : "two-step-all-off");
 });
 
-// Adding or removing a passkey needs a sign-in in the last 15 minutes, like setting up two-step sign-in: someone at an
+// Adding or removing a passkey needs a recent sign-in, like setting up two-step sign-in: someone at an
 // unattended browser could otherwise add their own passkey, or remove the owner's.
 settings.post("/account/settings/passkeys/options/", requireUser, async (c) => {
-  if (!(await signedInRecently(c))) return c.json({ error: NOTICES["passkey-stale"] }, 403);
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(`${pageUrl("two-step")}#h-passkeys`));
   const count = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM passkeys WHERE user_id = ?").bind(c.get("user")!.id).first<number>("n");
   if ((count ?? 0) >= MAX_PASSKEYS) return c.json({ error: `You can have up to ${MAX_PASSKEYS} passkeys.` }, 400);
   return c.json(await registrationOptions(c, c.get("user")!));
 });
 
 settings.post("/account/settings/passkeys/", requireUser, async (c) => {
-  if (!(await signedInRecently(c))) return c.json({ error: NOTICES["passkey-stale"] }, 403);
+  if (!(await signedInRecently(c))) return c.json({ error: `Your sign-in is more than ${FRESH_SIGN_IN_HOURS} hours old. Reload the page to sign in again.` }, 403);
   const body = await c.req.json().catch(() => ({}));
   if (!(await addPasskey(c, c.get("user")!.id, body.token, body.response, text(body.name, 60) || "Passkey"))) {
     return c.json({ error: "The passkey could not be added. Nothing was changed." }, 400);
@@ -625,15 +623,12 @@ settings.post("/account/settings/passkeys/", requireUser, async (c) => {
 });
 
 settings.post("/account/settings/passkeys/remove/", requireUser, async (c) => {
-  if (!(await signedInRecently(c))) return back(c, "two-step", "passkey-stale", "#h-passkeys");
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(`${pageUrl("two-step")}#h-passkeys`));
   await c.env.DB.prepare("DELETE FROM passkeys WHERE credential_id = ? AND user_id = ?").bind(String((await c.req.parseBody()).id ?? ""), c.get("user")!.id).run();
   return back(c, "two-step", "passkey-removed", "#h-passkeys");
 });
 
-const staleToken = (c: C) =>
-  renderSettings(c, "tokens", undefined, undefined, {
-    notice: `To make or revoke a token, sign out and sign in again, then do it within ${FRESH_SIGN_IN_MINUTES} minutes. This keeps a token out of reach of anyone at a browser you left signed in.`,
-  }).then((page) => c.html(page, 403));
+const staleToken = (c: C) => c.redirect(signInAgainUrl(pageUrl("tokens")));
 
 settings.post("/account/settings/tokens/", requireUser, async (c) => {
   const user = c.get("user")!;

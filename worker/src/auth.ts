@@ -174,6 +174,9 @@ export async function syncEmails(db: D1Database, userId: number) {
 
 export async function createSession(c: C, userId: number) {
   await syncEmails(c.env.DB, userId);
+  // Signing in again for a sensitive change replaces the old session rather than leaving it alive.
+  const old = getCookie(c, SESSION_COOKIE);
+  if (old) await c.env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(await sha256(old)).run();
   const token = randomToken();
   const expires = new Date(Date.now() + SESSION_DAYS * 86400_000);
   await c.env.DB.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)")
@@ -224,16 +227,19 @@ export const loadUser: MiddlewareHandler<AppEnv> = async (c, next) => {
 export const MAX_PASSWORD_FAILURES = 10;
 export const MIN_PASSWORD_LENGTH = 10;
 export const MAX_PASSWORD_LENGTH = 200;
-export const FRESH_SIGN_IN_MINUTES = 15;
+export const FRESH_SIGN_IN_HOURS = 2;
 
 /** Whether this session started recently, so sensitive changes can skip asking for the password again. */
 export async function signedInRecently(c: C) {
   const token = getCookie(c, SESSION_COOKIE);
   if (!token) return false;
   const row = await c.env.DB.prepare("SELECT 1 FROM sessions WHERE id = ? AND created_at > datetime('now', ?)")
-    .bind(await sha256(token), `-${FRESH_SIGN_IN_MINUTES} minutes`).first();
+    .bind(await sha256(token), `-${FRESH_SIGN_IN_HOURS} hours`).first();
   return !!row;
 }
+
+/** The sign-in page for a sensitive change on an older session; it brings the person back to `next` to make the change. */
+export const signInAgainUrl = (next: string) => `/login/?notice=again&next=${encodeURIComponent(next)}`;
 
 export async function signOutOtherSessions(c: C, userId: number) {
   await c.env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")

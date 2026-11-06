@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { CHALLENGE_COOKIE, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
+import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
 import { addEmail } from "../account-edit";
 import { sendEmail } from "../email";
 import { authenticationOptions, hasPasskey, verifyPasskey } from "../passkeys";
@@ -56,8 +56,10 @@ function AuthPage(props: { title: string; status?: number; children: Child; scri
 const Or = () => <p class="auth-or" aria-hidden="true">or</p>;
 
 account.get("/login/", async (c) => {
-  if (c.get("user")) return c.redirect(safeNext(c.req.query("next")));
+  // An older session may sign in again, for a change that needs a recent sign-in.
+  if (c.get("user") && (await signedInRecently(c))) return c.redirect(safeNext(c.req.query("next")));
   const next = c.req.query("next");
+  const again = c.req.query("notice") === "again";
   const pending = c.req.query("notice") === "link" ? await getPendingIdentity(c) : null;
   if (c.req.query("notice") === "sent") {
     return c.html(
@@ -84,7 +86,13 @@ account.get("/login/", async (c) => {
       script={has("passkey")}
     >
       <h1>Sign in</h1>
-      <p class="auth-lede">Share spectra and keep favourites. New here? Your first sign-in makes your account.</p>
+      {again ? (
+        <p class="notice warning" role="status">
+          This change needs a sign-in in the last {FRESH_SIGN_IN_HOURS} hours. Sign in again, and you come back to the page to make it.
+        </p>
+      ) : (
+        <p class="auth-lede">Share spectra and keep favourites. New here? Your first sign-in makes your account.</p>
+      )}
       {error && <p class="notice error-summary" role="alert">{error}</p>}
       {pending && (
         <p class="notice" role="status">

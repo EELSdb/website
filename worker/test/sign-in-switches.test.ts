@@ -297,8 +297,8 @@ describe("admin switches", () => {
   it("need a recent sign-in", async () => {
     const ad = await admin();
     const stale = crypto.randomUUID();
-    await run("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-2 hours'), datetime('now', '+1 day'))", await sha256(stale), ad.id);
-    expect(where(await post("/admin/settings/sign-in/", without("password"), `eelsdb_session=${stale}`))).toBe("/admin/settings/?notice=stale");
+    await run("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-3 hours'), datetime('now', '+1 day'))", await sha256(stale), ad.id);
+    expect(where(await post("/admin/settings/sign-in/", without("password"), `eelsdb_session=${stale}`))).toBe(`/login/?notice=again&next=${encodeURIComponent("/admin/settings/")}`);
   });
 
   it("ask for the typed number of locked-out accounts before switching off, then save and log the counts", async () => {

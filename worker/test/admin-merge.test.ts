@@ -238,8 +238,8 @@ describe("the merge pages and safety rules", () => {
 
     const stale = await account({ name: "Stale Target" });
     const gone = await account({ name: "Stale Gone" });
-    await run("UPDATE sessions SET created_at = datetime('now', '-2 hours') WHERE id = ?", await sha256(a.cookie.split("=")[1]));
-    expect((await merge(stale.id, gone.id, a.cookie)).headers.get("location")).toBe(`/admin/users/${stale.id}/?notice=stale`);
+    await run("UPDATE sessions SET created_at = datetime('now', '-3 hours') WHERE id = ?", await sha256(a.cookie.split("=")[1]));
+    expect((await merge(stale.id, gone.id, a.cookie)).headers.get("location")).toBe(`/login/?notice=again&next=${encodeURIComponent(`/admin/users/${stale.id}/`)}`);
     expect(await row("SELECT 1 FROM users WHERE id = ?", gone.id)).not.toBeNull();
   });
 

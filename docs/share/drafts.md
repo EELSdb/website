@@ -13,7 +13,7 @@ A draft is not public, and moderators do not see it. Nothing goes to review unti
 2. Type a label, for example "laptop", and click **Make a token**.
 3. Copy the token. The page shows it only once.
 
-A token can only make drafts in your account. It cannot submit, publish or change anything else. Treat it like a password. Revoke it on the same page (**Settings**, **API tokens**) when you no longer need it. Making or revoking a token needs a sign-in in the last 15 minutes: if yours is older, sign out and sign in again first.
+A token can only make drafts in your account. It cannot submit, publish or change anything else. Treat it like a password. Revoke it on the same page (**Settings**, **API tokens**) when you no longer need it. Making or revoking a token needs a sign-in in the last 2 hours: if yours is older, EELSdb takes you to the sign-in page first.
 
 ## Give it to your assistant
 

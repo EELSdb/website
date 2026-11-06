@@ -195,9 +195,9 @@ describe("site settings page", () => {
     expect(page).toContain("Require a linked ORCID iD to submit spectra");
 
     const stale = crypto.randomUUID();
-    await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-2 hours'), datetime('now', '+1 day'))")
+    await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-3 hours'), datetime('now', '+1 day'))")
       .bind(await sha256(stale), adminId).run();
-    expect((await postForm("/admin/settings/", `eelsdb_session=${stale}`, {})).headers.get("location")).toBe("/admin/settings/?notice=stale");
+    expect((await postForm("/admin/settings/", `eelsdb_session=${stale}`, {})).headers.get("location")).toBe(`/login/?notice=again&next=${encodeURIComponent("/admin/settings/")}`);
     expect(await env.DB.prepare("SELECT value FROM site_settings WHERE key = 'require_orcid'").first("value")).toBe("0");
 
     expect((await postForm("/admin/settings/", admin, {})).headers.get("location")).toBe("/admin/settings/?notice=saved");

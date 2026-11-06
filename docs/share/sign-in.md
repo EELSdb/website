@@ -64,7 +64,7 @@ After 10 wrong passwords for the same address or username within an hour, EELSdb
 The error message does not say whether the account exists.
 
 - To set a password, sign in with an email link, open **Settings**, then **Sign-in methods**, and use **Password**. A password needs 10 to 200 characters and has no other rules.
-- To change or remove it, type your current password, unless you signed in in the last 15 minutes.
+- To change or remove it, type your current password, unless you signed in in the last 2 hours.
 - Changing or removing your password signs you out on every other browser and device.
 - If you forget it, click **Forgot your password?** and ask for an email link, then set a new password under **Settings**, **Sign-in methods**. There are no separate password sign-up or reset forms.
 
@@ -72,7 +72,7 @@ The error message does not say whether the account exists.
 
 You can protect your account with a code from an authenticator app (for example an app on your phone, or a password manager that makes one-time codes).
 
-1. Open **Settings**, then **Two-step and passkeys**, and find **Two-step sign-in**. You need to have signed in in the last 15 minutes.
+1. Open **Settings**, then **Two-step and passkeys**, and find **Two-step sign-in**. You need to have signed in in the last 2 hours.
 2. Click **Set up two-step sign-in**. Scan the QR code with your authenticator app, or type the secret under it into the app. The secret and a link are there too, if the QR code does not show.
 3. Type the code that the app shows and click **Turn on two-step sign-in**.
 4. EELSdb shows 10 recovery codes once. Save them somewhere safe, such as your password manager. Each one works once, if you lose your phone.
@@ -94,18 +94,18 @@ A passkey lets you sign in with your device's fingerprint, face or screen lock, 
 It is more secure than a password, because there is no secret to type or to steal in a fake page.
 A passkey sign-in is complete by itself: EELSdb does not ask for a second step.
 
-1. Open **Settings**, then **Two-step and passkeys**, and find **Passkeys**. You need to have signed in in the last 15 minutes.
+1. Open **Settings**, then **Two-step and passkeys**, and find **Passkeys**. You need to have signed in in the last 2 hours.
 2. Type a name that tells you which device it is, such as "Laptop", and click **Add a passkey**.
 3. Follow your browser's prompt. A phone, a password manager or a security key can hold the passkey.
 
 To sign in, click **Sign in with a passkey** on the sign-in page and choose your passkey. Many browsers also offer it in the email address field.
-The list on the **Two-step and passkeys** page shows when each passkey was added and last used. To remove one, you need to have signed in in the last 15 minutes.
+The list on the **Two-step and passkeys** page shows when each passkey was added and last used. To remove one, you need to have signed in in the last 2 hours.
 
 - A passkey is also a second step. If you have a passkey but no authenticator app, a sign-in with an email link or a password ends with **Use a passkey**. If you have both, you choose a code or a passkey.
 - A passkey counts as two-step sign-in for [moderators and administrators](/docs/moderate/review/#two-step-sign-in-is-required). If you remove your last passkey, and have no authenticator app, your moderator role stops working until you add one.
 - Keep a second way in: another passkey on another device, an authenticator app with its recovery codes, or an email address you can still open.
 
-Making or revoking a [API token](/docs/share/drafts/) also needs a sign-in in the last 15 minutes. If your sign-in is older, sign in again first.
+Making or revoking a [API token](/docs/share/drafts/) also needs a sign-in in the last 2 hours. If your sign-in is older, EELSdb takes you to the sign-in page first.
 
 With ORCID, Google or GitHub, EELSdb receives your name and email address from the service. It never sees those passwords.
 

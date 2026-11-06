@@ -23,7 +23,7 @@ const unique = () => crypto.randomUUID().slice(0, 8);
 
 async function staleSession(userId: number) {
   const token = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-2 hours'), datetime('now', '+1 day'))")
+  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-3 hours'), datetime('now', '+1 day'))")
     .bind(await sha256(token), userId).run();
   return `eelsdb_session=${token}`;
 }
@@ -65,11 +65,11 @@ describe("registration", () => {
     expect(page).toContain("never used");
   });
 
-  it("needs a signed-in user and a sign-in in the last 15 minutes", async () => {
+  it("needs a signed-in user and a sign-in in the last 2 hours", async () => {
     expect((await json("/account/settings/passkeys/options/")).status).toBe(302);
     const u = await mkUser();
     const stale = await staleSession(u.id);
-    expect((await json("/account/settings/passkeys/options/", {}, stale)).status).toBe(403);
+    expect((await json("/account/settings/passkeys/options/", {}, stale)).headers.get("location")).toContain("/login/?notice=again");
     // A challenge made while fresh does not let a stale session finish.
     const { options, token } = await (await json("/account/settings/passkeys/options/", {}, u.cookie)).json<any>();
     const auth = new SoftwareAuthenticator();
@@ -248,7 +248,7 @@ describe("removing a passkey", () => {
 
     const stale = await staleSession(u.id);
     const refused = await form("/account/settings/passkeys/remove/", { id: auth.id }, stale);
-    expect(refused.headers.get("Location")).toContain("notice=passkey-stale");
+    expect(refused.headers.get("Location")).toContain("/login/?notice=again");
     expect(await passkeyCount(u.id)).toBe(1);
 
     const done = await form("/account/settings/passkeys/remove/", { id: auth.id }, u.cookie);
@@ -307,7 +307,7 @@ describe("pages", () => {
     await register(cookie);
     expect(await (await go("/account/settings/two-step/", { headers: { Cookie: cookie } })).text()).toContain("Also ask for a passkey after ORCID");
     const stale = await staleSession(id);
-    expect((await form("/account/settings/two-step/all-methods/", { all_methods: "1" }, stale)).headers.get("location")).toContain("passkey-stale");
+    expect((await form("/account/settings/two-step/all-methods/", { all_methods: "1" }, stale)).headers.get("location")).toContain("/login/?notice=again");
     expect(await env.DB.prepare("SELECT mfa_all_methods FROM users WHERE id = ?").bind(id).first("mfa_all_methods")).toBe(0);
     expect((await form("/account/settings/two-step/all-methods/", { all_methods: "1" }, cookie)).headers.get("location")).toContain("two-step-all-on");
     expect(await env.DB.prepare("SELECT mfa_all_methods FROM users WHERE id = ?").bind(id).first("mfa_all_methods")).toBe(1);

@@ -52,6 +52,7 @@ if (browserSupportsWebAuthn()) {
     add.addEventListener("submit", async (event) => {
       event.preventDefault();
       const res = await json("/account/settings/passkeys/options/");
+      if (res.redirected) return void (location.href = res.url);
       const { options, token, error } = await res.json();
       if (!options) return fail(error || "That did not work. Please try again.");
       let response;

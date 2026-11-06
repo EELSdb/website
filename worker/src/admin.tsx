@@ -1,6 +1,6 @@
 import { Hono, type Context } from "hono";
 import { raw } from "hono/html";
-import { FRESH_SIGN_IN_MINUTES, PROVIDERS, accountsLockedOut, methodsFrom, requireUser, signedInRecently, wayInSql, type AppEnv } from "./auth";
+import { PROVIDERS, accountsLockedOut, methodsFrom, requireUser, signInAgainUrl, signedInRecently, wayInSql, type AppEnv } from "./auth";
 import { hasTwoStep } from "./totp";
 import { EXPORT_KEY, fileHeaders } from "./files";
 import { isModerator } from "./instruments";
@@ -120,7 +120,6 @@ admin.use("/admin/settings/*", async (c, next) => {
 
 const SETTINGS_NOTICES: Record<string, string> = {
   saved: "Saved.",
-  stale: `To change a site setting, sign out and sign in again, then change it within ${FRESH_SIGN_IN_MINUTES} minutes.`,
 };
 
 const METHOD_LABELS: Record<SwitchableMethod, string> = {
@@ -281,7 +280,7 @@ async function settingsPage(c: Context<AppEnv>, opts: { error?: string; proposed
 admin.get("/admin/settings/", (c) => settingsPage(c));
 
 admin.post("/admin/settings/", async (c) => {
-  if (!(await signedInRecently(c))) return c.redirect("/admin/settings/?notice=stale");
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl("/admin/settings/"));
   const value = (await c.req.parseBody()).require_orcid ? "1" : "0";
   const changed = value !== (await getSettings(c.env.DB)).require_orcid;
   await setSetting(c.env.DB, "require_orcid", value, c.get("user")!.id);
@@ -290,7 +289,7 @@ admin.post("/admin/settings/", async (c) => {
 });
 
 admin.post("/admin/settings/sign-in/", async (c) => {
-  if (!(await signedInRecently(c))) return c.redirect("/admin/settings/?notice=stale");
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl("/admin/settings/"));
   const env = c.env;
   const me = c.get("user")!;
   const body = await c.req.parseBody();
@@ -323,7 +322,7 @@ admin.post("/admin/settings/sign-in/", async (c) => {
 });
 
 admin.post("/admin/settings/two-step/", async (c) => {
-  if (!(await signedInRecently(c))) return c.redirect("/admin/settings/?notice=stale");
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl("/admin/settings/"));
   const db = c.env.DB;
   const me = c.get("user")!;
   const body = await c.req.parseBody();

@@ -1,5 +1,5 @@
 import { Hono, type Context } from "hono";
-import { FRESH_SIGN_IN_MINUTES, PROVIDERS, methodOn, signOutEverywhere, signedInRecently, type AppEnv } from "./auth";
+import { PROVIDERS, methodOn, signInAgainUrl, signOutEverywhere, signedInRecently, type AppEnv } from "./auth";
 import { EmailList, PictureChoice, ProfileFields, addEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, type EmailRow } from "./account-edit";
 import { sendEmail } from "./email";
 import { accountFacts, mergeAccounts, mergePlan, outranks, type Facts } from "./merge";
@@ -17,7 +17,6 @@ const PAGE_SIZE = 50;
 const ROLES = ["user", "moderator", "admin"];
 
 const NOTICES: Record<string, string> = {
-  stale: `Admin changes need a sign-in in the last ${FRESH_SIGN_IN_MINUTES} minutes. Sign out, sign in again, then repeat the change.`,
   profile: "Profile saved.",
   role: "Role saved.",
   licence: "Licence saved.",
@@ -479,10 +478,10 @@ function action(path: string, run: (c: C, p: Person) => Promise<string | Respons
     const id = Number(c.req.param("id"));
     const own = id === c.get("user")!.id;
     if (own && !self) return c.text("Use your own settings to change your own account.", 400);
-    const back = (notice: string) => (own ? `/account/settings/profile/?notice=${notice}` : pageUrl(id, notice));
+    const back = (notice?: string) => (own ? `/account/settings/profile/${notice ? `?notice=${notice}` : ""}` : pageUrl(id, notice));
     const p = await personRow(c.env.DB, id);
     if (!p) return c.notFound();
-    if (!(await signedInRecently(c))) return c.redirect(back("stale"));
+    if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(back()));
     const result = await run(c, p);
     return typeof result === "string" ? c.redirect(back(result)) : result;
   });

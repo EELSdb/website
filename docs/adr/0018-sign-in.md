@@ -38,7 +38,7 @@ No sign-in can skip `completeSignIn`.
 
 ### Sessions
 
-The session cookie is `eelsdb_session`. The Worker stores the SHA-256 of a random token in `sessions`. A session lasts 30 days. Sensitive changes need a sign-in in the last 15 minutes, measured from `sessions.created_at`.
+The session cookie is `eelsdb_session`. The Worker stores the SHA-256 of a random token in `sessions`. A session lasts 30 days. Sensitive changes need a sign-in in the last 2 hours, measured from `sessions.created_at`. On an older session, the change sends the person to the sign-in page (`/login/?notice=again&next=…`) without signing them out. Signing in there replaces the old session and returns them to the page to make the change.
 
 ### Email links
 

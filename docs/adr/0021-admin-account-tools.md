@@ -33,7 +33,7 @@ The tools are in `worker/src/admin-users.tsx`, under `/admin/users/`. Only admin
 
 ### Safety rules
 
-- Every action needs a sign-in in the last 15 minutes. Admins already need two-step sign-in ([ADR 0019](/docs/adr/0019-two-step-and-passkeys/)).
+- Every action needs a sign-in in the last 2 hours. Admins already need two-step sign-in ([ADR 0019](/docs/adr/0019-two-step-and-passkeys/)).
 - An admin cannot act on their own account, and must use their own settings instead. So an admin can never lower the last admin's role. The one exception is the licence: an admin can set their own on their profile settings, because no safety rule depends on it and a second account would get around the rule anyway. Their own change is logged but not emailed.
 - Admins cannot mark an address as confirmed. A confirmed address can sign in by email link, so this action would let an admin take over any account.
 - Some changes affect sign-in:

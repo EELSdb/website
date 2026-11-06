@@ -45,7 +45,7 @@ const sessionCount = (id: number) => env.DB.prepare("SELECT COUNT(*) AS n FROM s
 
 async function staleSession(userId: number) {
   const token = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-2 hours'), datetime('now', '+1 day'))")
+  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-3 hours'), datetime('now', '+1 day'))")
     .bind(await sha256(token), userId).run();
   return `eelsdb_session=${token}`;
 }
@@ -117,7 +117,7 @@ describe("set-up in settings", () => {
     const cookie = await staleSession(u.id);
     expect(await (await go("/account/settings/two-step/", { headers: { Cookie: cookie } })).text()).not.toContain("Set up two-step sign-in</button>");
     const res = await post("/account/settings/two-step/start/", {}, cookie);
-    expect(res.headers.get("location")).toContain("two-step-stale");
+    expect(res.headers.get("location")).toContain("/login/?notice=again");
     expect(await env.DB.prepare("SELECT 1 FROM user_totp WHERE user_id = ?").bind(u.id).first()).toBeNull();
   });
 
@@ -303,17 +303,16 @@ describe("moderators and admins", () => {
 });
 
 describe("drafts tokens", () => {
-  it("need a sign-in in the last 15 minutes to make or revoke", async () => {
+  it("need a sign-in in the last 2 hours to make or revoke", async () => {
     const id = (await env.DB.prepare("INSERT INTO users (display_name) VALUES ('Draft Fresh') RETURNING id").first<number>("id"))!;
     const stale = await staleSession(id);
     const made = await post("/account/settings/tokens/", { label: "x" }, stale);
-    expect(made.status).toBe(403);
-    expect(await made.text()).toContain("sign in again, then do it within 15 minutes");
+    expect(made.headers.get("location")).toBe(`/login/?notice=again&next=${encodeURIComponent("/account/settings/tokens/")}`);
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM draft_tokens WHERE user_id = ?").bind(id).first("n")).toBe(0);
 
     await env.DB.prepare("INSERT INTO draft_tokens (user_id, hash, label) VALUES (?, 'h', 'keep')").bind(id).run();
     const tokenId = await env.DB.prepare("SELECT id FROM draft_tokens WHERE user_id = ?").bind(id).first<number>("id");
-    expect((await post(`/account/settings/tokens/${tokenId}/revoke/`, {}, stale)).status).toBe(403);
+    expect((await post(`/account/settings/tokens/${tokenId}/revoke/`, {}, stale)).headers.get("location")).toContain("/login/?notice=again");
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM draft_tokens WHERE user_id = ?").bind(id).first("n")).toBe(1);
 
     const fresh = await sessionFor({ id, display_name: "Draft Fresh" });

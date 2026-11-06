@@ -10,7 +10,7 @@ Open **Accounts** from the moderation page. Like all admin pages, they need [two
 
 ## Safety rules
 
-- Every change needs a sign-in in the last 15 minutes. If you signed in earlier, EELSdb asks you to sign in again and repeat the change.
+- Every change needs a sign-in in the last 2 hours. If you signed in earlier, EELSdb takes you to the sign-in page, then back to the page to make the change again.
 - You cannot use these pages on your own account. Use your own [settings](/docs/share/sign-in/). This also means you can never remove the last administrator. The one exception is your licence, which you set under **Licence** on your own profile settings.
 - You cannot confirm an email address for someone. A confirmed address signs in with an email link, so only the person can confirm it, by opening the link EELSdb sends to the address.
 - You never see passwords, authenticator secrets, recovery codes or sign-in links.
@@ -77,7 +77,7 @@ The kept account's name, profile, role, licence and username win. If the other a
 
 **What is dropped:** the other account's name, affiliation, country, job title, links and other profile settings, its sessions, pending sign-in links and challenges, and anything listed above that the kept account already has.
 
-**Safety rules:** the same as for every change here (a sign-in in the last 15 minutes, not your own account on either side). If both accounts are administrators, the page asks you to tick a box saying they are the same person. The merge is logged on the kept account with the other account's number and name. The kept account's primary confirmed address and the other account's are both emailed before the other account goes.
+**Safety rules:** the same as for every change here (a sign-in in the last 2 hours, not your own account on either side). If both accounts are administrators, the page asks you to tick a box saying they are the same person. The merge is logged on the kept account with the other account's number and name. The kept account's primary confirmed address and the other account's are both emailed before the other account goes.
 
 ## Emails the person gets
 
@@ -85,7 +85,7 @@ EELSdb emails the person's primary confirmed address, with what changed and when
 
 ## Site settings
 
-Administrators open **Site settings** from the moderation page (`/admin/settings/`). Changing a setting needs a sign-in in the last 15 minutes, like the account actions. **Recent changes** at the bottom of the page lists who changed what and when.
+Administrators open **Site settings** from the moderation page (`/admin/settings/`). Changing a setting needs a sign-in in the last 2 hours, like the account actions. **Recent changes** at the bottom of the page lists who changed what and when.
 
 **Require a linked ORCID iD to submit spectra** is on by default. While it is on, a person whose account has no ORCID sign-in linked cannot submit a new spectrum on the web form, and cannot submit drafts for review. They see why, with a **Link ORCID** button. These do not need an ORCID iD: editing a published spectrum, and making drafts through the API.
 

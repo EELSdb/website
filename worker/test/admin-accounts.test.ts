@@ -30,7 +30,7 @@ async function person(opts: { name?: string; slug?: string; verified?: boolean; 
 
 const staleCookie = async (userId: number) => {
   const token = crypto.randomUUID();
-  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-2 hours'), datetime('now', '+1 day'))")
+  await env.DB.prepare("INSERT INTO sessions (id, user_id, created_at, expires_at) VALUES (?, ?, datetime('now', '-3 hours'), datetime('now', '+1 day'))")
     .bind(await sha256(token), userId).run();
   return `eelsdb_session=${token}`;
 };
@@ -367,7 +367,7 @@ describe("licence", () => {
 });
 
 describe("safety", () => {
-  it("needs a sign-in in the last 15 minutes for every action", async () => {
+  it("needs a sign-in in the last 2 hours for every action", async () => {
     const a = await admin();
     const old = await staleCookie(a.id);
     const p = await person();
@@ -388,13 +388,15 @@ describe("safety", () => {
     const mails = sent.length;
     for (const [path, body] of attempts) {
       const res = await post(`/admin/users/${p.id}/${path}`, old, body);
-      expect(res.headers.get("location"), path).toBe(`/admin/users/${p.id}/?notice=stale`);
+      expect(res.headers.get("location"), path).toBe(`/login/?notice=again&next=${encodeURIComponent(`/admin/users/${p.id}/`)}`);
     }
     expect(await row<any>("SELECT role, display_name, password_hash IS NOT NULL AS pw FROM users WHERE id = ?", p.id)).toEqual({ role: "user", display_name: `Person ${p.id}`, pw: 1 });
     expect(await count("SELECT 1 FROM sessions WHERE user_id = ?", p.id)).toBe(1);
     expect(await log(p.id)).toEqual([]);
     expect(sent.length).toBe(mails);
-    expect(await (await go(`/admin/users/${p.id}/?notice=stale`, old)).text()).toContain("need a sign-in in the last 15 minutes");
+    const signIn = await go(`/login/?notice=again&next=${encodeURIComponent(`/admin/users/${p.id}/`)}`, old);
+    expect(signIn.status).toBe(200);
+    expect(await signIn.text()).toContain("needs a sign-in in the last 2 hours");
   });
 
   it("refuses every action on one's own account, including the role", async () => {

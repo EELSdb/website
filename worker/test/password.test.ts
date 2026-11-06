@@ -90,6 +90,21 @@ describe("email and password sign-in", () => {
     expect(sessionOf(locked)).toBeUndefined();
   });
 
+  it("lets an older session sign in again, replacing it, and sends a recent one straight on", async () => {
+    const email = `${unique("again")}@example.invalid`;
+    const id = await mkUser({ password: "a long password", email });
+    const page = (cookie: string) => exports.default.fetch(`${SITE}/login/?notice=again&next=%2Fadmin%2F`, { redirect: "manual", headers: { Cookie: cookie } });
+    const old = await sessionAt(id, 180);
+    const shown = await page(old);
+    expect(shown.status).toBe(200);
+    expect(await shown.text()).toContain("needs a sign-in in the last 2 hours");
+    expect((await page(await sessionAt(id, 1))).headers.get("location")).toBe("/admin/");
+    const again = await post("/login/password/", { login: email, password: "a long password", next: "/admin/" }, old);
+    expect(again.headers.get("location")).toBe("/admin/");
+    expect(sessionOf(again)).toBeTruthy();
+    expect(await env.DB.prepare("SELECT 1 FROM sessions WHERE id = ?").bind(await sha256(old.split("=")[1])).first()).toBeNull();
+  });
+
   it("shows the password form on the login page whether or not the old-password flag is on", async () => {
     for (const flag of ["1", "0"]) {
       legacyFlag().LEGACY_PASSWORD_LOGIN = flag;
@@ -133,8 +148,8 @@ describe("password settings", () => {
   it("sets a first password only after a fresh sign-in, then signs in with it", async () => {
     const email = `${unique("s")}@example.invalid`;
     const id = await mkUser({ email });
-    const stale = await sessionAt(id, 60);
-    expect((await post("/account/settings/password/", { new_password: "a long password" }, stale)).headers.get("location")).toContain("password-stale");
+    const stale = await sessionAt(id, 180);
+    expect((await post("/account/settings/password/", { new_password: "a long password" }, stale)).headers.get("location")).toContain("/login/?notice=again");
     expect(await column(id, "password_hash")).toBeNull();
     const cookie = await sessionAt(id, 1);
     expect((await post("/account/settings/password/", { new_password: "short" }, cookie)).headers.get("location")).toBe("/account/settings/sign-in/?notice=password-short");
@@ -144,9 +159,9 @@ describe("password settings", () => {
     expect(sessionOf(await login(email, "a long password"))).toBeTruthy();
   });
 
-  it("needs the current password to change or remove when the sign-in is older than 15 minutes", async () => {
+  it("needs the current password to change or remove when the sign-in is older than 2 hours", async () => {
     const id = await mkUser({ password: "old password!" });
-    const cookie = await sessionAt(id, 16);
+    const cookie = await sessionAt(id, 121);
     const before = await column(id, "password_hash");
     expect((await post("/account/settings/password/", { new_password: "brand new one" }, cookie)).headers.get("location")).toContain("password-wrong");
     expect((await post("/account/settings/password/", { new_password: "brand new one", current_password: "nope nope nope" }, cookie)).headers.get("location")).toContain("password-wrong");
@@ -156,7 +171,7 @@ describe("password settings", () => {
     expect(await column(id, "password_hash")).not.toBe(before);
   });
 
-  it("skips the current password after a sign-in in the last 15 minutes", async () => {
+  it("skips the current password after a sign-in in the last 2 hours", async () => {
     const id = await mkUser({ password: "old password!" });
     const cookie = await sessionAt(id, 5);
     expect((await post("/account/settings/password/", { new_password: "brand new one" }, cookie)).headers.get("location")).toContain("password-saved");
@@ -167,13 +182,13 @@ describe("password settings", () => {
   it("asks for the current password on the page only when it is needed", async () => {
     const id = await mkUser({ password: "old password!" });
     const page = (cookie: string) => exports.default.fetch(`${SITE}/account/settings/sign-in/`, { headers: { Cookie: cookie } }).then((r) => r.text());
-    expect(await page(await sessionAt(id, 30))).toContain('name="current_password"');
+    expect(await page(await sessionAt(id, 180))).toContain('name="current_password"');
     expect(await page(await sessionAt(id, 1))).not.toContain('name="current_password"');
   });
 
   it("locks wrong current passwords after 10 tries", async () => {
     const id = await mkUser({ password: "old password!" });
-    const cookie = await sessionAt(id, 30);
+    const cookie = await sessionAt(id, 180);
     for (let i = 0; i < 10; i++) await post("/account/settings/password/", { new_password: "brand new one", current_password: "wrong" }, cookie);
     const res = await post("/account/settings/password/", { new_password: "brand new one", current_password: "old password!" }, cookie);
     expect(res.headers.get("location")).toContain("password-locked");
