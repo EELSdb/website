@@ -299,7 +299,7 @@ A single centred column, `min(1320px, 100% - 2rem)`, widened to `min(1920px, 100
 **Other recurring grids** (inner pages):
 - **Browse:** an 18.75rem filter rail with a `rule` right border, sticky below the header, beside the results table, gap 2rem; the page title sits over the results so the rail starts level with its sticky offset. The rail scrolls on its own (1.25rem right padding keeps overlay scrollbars off the fields) and pins Apply and Clear to its foot. With JavaScript, filters apply as they change (text fields after a 400ms pause) by swapping in the results section, and Apply and Clear are hidden; a muted "Clear all" ends the active-filter chips instead. Below 860px the results come first and the filters drop beneath them behind a "jump to filters" link.
 - **Account pages:** a 13rem account nav, sticky below the header, beside the page, gap 3.5rem. Below 860px it becomes one wrapping row of links above the page.
-- **Spectrum page:** full-width plot (min 360px tall, 280px below 860px), then two equal metadata columns, gap 2rem.
+- **Spectrum page:** full-width plot (min 360px tall, 280px below 860px); then two equal tool boxes, "Compare spectra" left and the "Adjust the plot" / "Use in HyperSpy" tabs right (gap 4.5rem, one column below 860px), aligned at the top; then two equal metadata columns, gap 2rem.
 - **Forms:** a 60rem form with 2-, 3- and 4-column field grids (gap 0 1.25rem) that collapse to one (or two, for the 4-grid) below 860px.
 
 Breakpoints: 560px (phone: smaller header logo, periodic table becomes a list, type column shrinks to dots), 860px (inner pages to one column), 960px (homepage rows to one column, tiles to 2 columns), 1000px (header nav folds into the burger menu), 1180px (homepage buttons move under the logo and lede, smaller filter badges), 1440px (`hide-md` table columns hidden below it).
@@ -461,6 +461,18 @@ Inline `<span class="formula">` built by `formulaTokens()`: subscripts and super
 
 ### Spectrum plot
 uPlot on a canvas, coloured from the CSS tokens at draw time: trace in `plot` (1.5px), axes in `muted`, grid and ticks in `line`, major edge markers in `edge` and minor ones in `muted`. The plot is rebuilt when the colour scheme changes.
+- **Compared spectra:** `compare-1` to `compare-4`, each with its own right-hand axis, ticks and rotated label in its colour. Hovering an axis tints the half a drag moves (its colour at 10%). Power-law fits are dashed (6/4) in their spectrum's colour.
+- **Fit window:** a 1.5px dashed `edge` line at 50% along the bottom of the plot, with solid 8px end caps (no cap where the plot edge cuts the window). While its slider is dragged, the window is also shaded `accent` at 10%.
+- **Zoom selection:** a box in `accent` at 12%.
+- **Legend:** only with compared spectra; names only, no values. **Tooltip:** a `surface` box (`line` border, 4px corners, small shadow) beside the pointer, flipping left near the right edge: the energy in 600, then a colour mark, name and value for each spectrum.
+
+### Tool box (spectrum page)
+`surface`, 1px `line` border, 6px corners, 0.875rem text; panels padded 1rem.
+- **Header strip:** 1px `line` bottom border. Tabs are visually hidden radios with 600 labels, `muted` until chosen; the chosen tab is `ink` with a 2px `accent` underline. A box with one title uses the same strip height, so side-by-side boxes line up.
+- **Rows:** one setting per row. A row that only applies sometimes (the fit window, "Independent y axes") hides when it does not apply.
+- **Fit window slider:** two 16px `accent` thumbs with a 2px `surface` ring on a 4px `line` track; the span between them is `accent`.
+- **Inline numbers:** number fields drawn as plain text, sized to their text, `sunken` on hover, the focus ring on focus.
+- **Empty state (Compare spectra):** a 44px icon of two traces in `plot` and `compare-1`, a 600 `ink` lead sentence and `muted` text; hidden once a spectrum is compared.
 
 ### Submit file card
 One card per uploaded file on the files step: `surface`, 1px `line` border, 6px corners.
