@@ -439,7 +439,7 @@ export async function browsePage(c: Context<AppEnv>) {
             )}
           </div>
           {ignored.length > 0 && (
-            <p class="notice" role="status">Some filters could not be read and were left out: {ignored.join(", ")}.</p>
+            <p class="notice warning" role="status">Some filters could not be read and were left out: {ignored.join(", ")}.</p>
           )}
           {shown.length === 0 ? (
             <p class="empty notice">

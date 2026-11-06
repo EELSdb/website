@@ -257,7 +257,7 @@ instruments.get("/instruments/:id/", async (c) => {
         {user && <> · <a href={`/instruments/${instrument.id}/edit/`}>Suggest a change</a></>}
       </p>
       {isModerator(user) && shown.status === "pending" && (
-        <div class="notice moderation">
+        <div class="notice warning">
           <p><strong>Moderator:</strong> this version needs a decision.</p>
           <form method="post" action={`/instruments/${instrument.id}/versions/${shown.version}/approve/`} style="display:inline">
             <button class="button" type="submit">Approve</button>

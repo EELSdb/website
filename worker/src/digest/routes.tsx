@@ -1,7 +1,7 @@
 import { Hono, type Context } from "hono";
 import { raw } from "hono/html";
 import { signInAgainUrl, signedInRecently, type AppEnv } from "../auth";
-import { AccountLayout } from "../pages/layout";
+import { AccountLayout, type Notice } from "../pages/layout";
 import { getSettings, logChange, setSetting } from "../settings";
 import { MONTH, digestMonths, monthDigest, type DigestMonth } from "./data";
 import { sendDigest } from "./send";
@@ -26,11 +26,11 @@ export const monthCounts = (m: Pick<DigestMonth, "news" | "spectra">) =>
 export const MAX_TEST_ADDRESSES = 10;
 const validEmail = (e: string) => e.length <= 254 && /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(e);
 
-const NOTICES: Record<string, string> = {
-  saved: "Saved.",
-  "bad-address": `Give up to ${MAX_TEST_ADDRESSES} email addresses, separated by commas, spaces or new lines.`,
-  nothing: "That month had no news and no new spectra, so it has no digest.",
-  capped: "Not all tests were sent: today's emails are close to the daily cap.",
+const NOTICES: Record<string, Notice> = {
+  saved: ["success", "Saved."],
+  "bad-address": ["error-summary", `Give up to ${MAX_TEST_ADDRESSES} email addresses, separated by commas, spaces or new lines.`],
+  nothing: ["warning", "That month had no news and no new spectra, so it has no digest."],
+  capped: ["warning", "Not all tests were sent: today's emails are close to the daily cap."],
 };
 
 // Keeps the "View on the web" link on the chosen month.
@@ -51,14 +51,15 @@ digestAdmin.get("/admin/digest/", async (c) => {
   const on = settings.digest_enabled === "1";
   const asked = c.req.query("month");
   const chosen = months.find((m) => m.month === asked)?.month ?? months[0]?.month;
-  const notice = c.req.query("notice") === "test-sent" ? `Test sent to ${plural(Number(c.req.query("n")) || 0, "address", "addresses")}.` : NOTICES[c.req.query("notice") ?? ""];
+  const notice: Notice | undefined =
+    c.req.query("notice") === "test-sent" ? ["success", `Test sent to ${plural(Number(c.req.query("n")) || 0, "address", "addresses")}.`] : NOTICES[c.req.query("notice") ?? ""];
   const readers = counts?.readers ?? 0;
   const unconfirmed = counts?.unconfirmed ?? 0;
   return c.html(
     <AccountLayout title="Monthly digest" current="/admin/digest/" user={c.get("user")!}>
       <div class="settings">
         <h1>Monthly digest</h1>
-        {notice && <p class={`notice${c.req.query("notice") === "bad-address" ? " error-summary" : ""}`} role="status">{notice}</p>}
+        {notice && <p class={`notice ${notice[0]}`} role="status">{notice[1]}</p>}
         <p>
           {plural(readers, "person has", "people have")} the digest turned on
           {unconfirmed > 0 ? `; ${unconfirmed} of them ${unconfirmed === 1 ? "has" : "have"} no confirmed address yet and get${unconfirmed === 1 ? "s" : ""} nothing` : ""}.{" "}

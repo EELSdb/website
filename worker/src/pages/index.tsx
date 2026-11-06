@@ -109,7 +109,7 @@ pages.get("/downloads/", async (c) => {
             </span>
           </p>
         ) : (
-          <p class="notice">The archive has not been made yet.</p>
+          <p class="notice info">The archive has not been made yet.</p>
         )}
         <p>
           Most spectra are open data, under the <a href="https://opendatacommons.org/licenses/odbl/">Open Database License (ODbL)</a>. Please cite the contributors'
@@ -196,7 +196,7 @@ pages.get("/moderators/", async (c) => {
           The people who look after the EELS Data Base. To reach them, see <a href="/contact/">Contact</a>.
         </p>
         {staff.length > 0 && (
-          <p class="notice staff-links">
+          <p class="notice info staff-links">
             Your staff pages:{" "}
             {staff.map(([href, label], i) => <>{i > 0 && " · "}<a href={href}>{label}</a></>)}
           </p>

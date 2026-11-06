@@ -365,7 +365,7 @@ A button that copies a DOI to the clipboard.
 - **State:** linked chips (active filters, tags) wash to `accent-soft` on hover.
 
 ### Cards / Containers
-- **Notice:** `sunken` panel, `line` border, 8px corners, padding 1rem 1.25rem; with `danger` border for an error summary.
+- **Notice:** 8px corners, padding 1rem 1.25rem. Every message gets a tone: a border in the tone's colour and a background of that colour mixed into `bg` (10–13%). `success` (`type-xrayabs`) for a finished action; `info` (`accent`) for a next step or a neutral fact; `warning` (`note`) for something not done, pending or that needs care; `error-summary` (`danger`) for a failed action or input to fix. A plain `sunken` notice with a `line` border is only for empty states. On the contact page the `info` notice also carries a 1.3rem info icon and 1.05rem text.
 - **Dialog:** `surface`, `line` border, 10px corners, the soft lift, max 42rem wide.
 - **Code block:** `sunken`, 6px corners, padding 0.9rem 1rem, line height 1.6, scrolls sideways.
 

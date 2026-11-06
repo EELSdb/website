@@ -220,7 +220,7 @@ describe("picture choice", () => {
       expect(await state(p.id)).toEqual({ avatar_key: null, use_gravatar });
       expect(await env.FILES.get(`avatars/${key}`)).toBeNull();
       const html = await (await get("/account/settings/profile/?notice=profile", p.cookie)).text();
-      expect(html).toContain('<p class="notice" role="status">Profile saved.</p>');
+      expect(html).toContain('<p class="notice success" role="status">Profile saved.</p>');
       expect(html).toContain(`id="f-picture-${picture}" value="${picture}" checked=""`);
     }
   });

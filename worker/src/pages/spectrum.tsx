@@ -240,7 +240,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
         <a href="/spectra/">← All spectra</a>
       </p>
       {b.spectrum.status !== "published" && (
-        <p class="notice" role="status">Not published yet: this spectrum is waiting for a moderator. Only you and the moderators can see this page.</p>
+        <p class="notice warning" role="status">Not published yet: this spectrum is waiting for a moderator. Only you and the moderators can see this page.</p>
       )}
       <div class="spectrum-head">
         <div>

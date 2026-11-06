@@ -754,8 +754,9 @@ dialog h2 { margin-top: 0; }
 .notice { border: 1px solid var(--line); background: var(--sunken); border-radius: 8px; padding: 1rem 1.25rem; }
 .notice.warning { border-color: var(--note); background: color-mix(in oklab, var(--note) 13%, var(--bg)); }
 .notice.success { border-color: var(--type-xrayabs); background: color-mix(in oklab, var(--type-xrayabs) 12%, var(--bg)); }
-.notice.info { position: relative; padding-left: 3.1rem; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); font-size: 1.05rem; line-height: 1.55; }
-.notice.info::before { content: ""; position: absolute; left: 1.15rem; top: 1.18rem; width: 1.3rem; height: 1.3rem; background: var(--accent);
+.notice.info { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); }
+.contact .notice.info { position: relative; padding-left: 3.1rem; font-size: 1.05rem; line-height: 1.55; }
+.contact .notice.info::before { content: ""; position: absolute; left: 1.15rem; top: 1.18rem; width: 1.3rem; height: 1.3rem; background: var(--accent);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5.5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center / contain; }
 
 
@@ -1079,7 +1080,7 @@ input[type="file"]::file-selector-button:hover { background: var(--surface); bor
 .formula-warning .hint { color: var(--muted); }
 .error { margin: 0; font-size: 0.85rem; color: var(--danger); font-weight: 600; }
 .has-error input, .has-error select, .has-error textarea { border-color: var(--danger); }
-.error-summary { border-color: var(--danger); margin-bottom: 1rem; }
+.error-summary { border-color: var(--danger); background: color-mix(in oklab, var(--danger) 11%, var(--bg)); margin-bottom: 1rem; }
 .grid-2 { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.25rem; }
 .grid-3 { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 0 1.25rem; }
 .grid-4 { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0 0.75rem; }

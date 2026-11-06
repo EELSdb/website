@@ -4,7 +4,7 @@ import { Hono, type Context } from "hono";
 import { getSettings, twoStepRequired } from "../settings";
 import { requireUser, sha256, type AppEnv } from "../auth";
 import { SITE } from "../api/format";
-import { AccountLayout, TypeBadge } from "../pages/layout";
+import { AccountLayout, TypeBadge, type Notice } from "../pages/layout";
 import { LicenceAgreement, SubmitBlocked, submitBlock } from "./index";
 import { DEFAULT_LICENCE } from "../api/metadata";
 import { collectUploads, parseForm } from "./form";
@@ -96,7 +96,7 @@ function measured(a: Record<string, any> | undefined, col: string, unit: string,
 
 drafts.get("/account/drafts/", requireUser, async (c) => draftsPage(c));
 
-async function draftsPage(c: Context<AppEnv>, notice?: string, status: 200 | 403 = 200) {
+async function draftsPage(c: Context<AppEnv>, notice?: Notice, status: 200 | 403 = 200) {
   const user = c.get("user")!;
   const db = c.env.DB;
   const [{ results: list }, { results: acq }, { results: files }] = await db.batch<any>([
@@ -113,7 +113,7 @@ async function draftsPage(c: Context<AppEnv>, notice?: string, status: 200 | 403
         Drafts are spectra that an assistant or a script prepared for you. They are not public and moderators do not see them. Check each one, then
         submit it for review. Drafts are deleted after {DRAFT_DAYS} days. See <a href="/docs/share/drafts/">Prepare drafts with an assistant</a>.
       </p>
-      {notice && <p class="notice" role="status">{notice}</p>}
+      {notice && <p class={`notice ${notice[0]}`} role="status">{notice[1]}</p>}
       <SubmitBlocked user={user} next="/account/drafts/" />
       {list.length ? (
         <form method="post" action="/account/drafts/">
@@ -165,18 +165,18 @@ drafts.post("/account/drafts/", requireUser, async (c) => {
   const db = c.env.DB;
   const body = await c.req.parseBody({ all: true });
   const ids = [body.id ?? []].flat().map(Number).filter(Number.isInteger);
-  if (!ids.length) return draftsPage(c, "Choose one or more drafts first.");
+  if (!ids.length) return draftsPage(c, ["error-summary", "Choose one or more drafts first."]);
   const marks = ids.map(() => "?").join(",");
   if (body.action === "delete") {
     const n = await deleteDrafts(c.env, `owner_id = ? AND id IN (${marks})`, user.id, ...ids);
-    return draftsPage(c, `Deleted ${n === 1 ? "one draft" : `${n} drafts`}.`);
+    return draftsPage(c, ["success", `Deleted ${n === 1 ? "one draft" : `${n} drafts`}.`]);
   }
   const block = submitBlock(user);
-  if (block) return draftsPage(c, Object.values(block).join(" "), 403);
-  if (!body.agreement) return draftsPage(c, "Please confirm that you checked the drafts and agree to the licence.");
+  if (block) return draftsPage(c, ["error-summary", Object.values(block).join(" ")], 403);
+  if (!body.agreement) return draftsPage(c, ["error-summary", "Please confirm that you checked the drafts and agree to the licence."]);
   const { results } = await db.prepare(`SELECT id, slug FROM spectra WHERE owner_id = ? AND status = 'draft' AND id IN (${marks})`)
     .bind(user.id, ...ids).all<{ id: number; slug: string }>();
-  if (!results.length) return draftsPage(c, "None of the chosen drafts is still a draft.");
+  if (!results.length) return draftsPage(c, ["warning", "None of the chosen drafts is still a draft."]);
   await db.batch(results.flatMap((s) => submitDraftStatements(db, s.id, user, null)));
   return c.redirect(`/account/submissions/?submitted=${results.length}`);
 });

@@ -3,7 +3,7 @@ import { PROVIDERS, methodOn, signInAgainUrl, signOutEverywhere, signedInRecentl
 import { EmailList, PictureChoice, ProfileFields, addEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, type EmailRow } from "./account-edit";
 import { sendEmail } from "./email";
 import { accountFacts, mergeAccounts, mergePlan, outranks, type Facts } from "./merge";
-import { AccountLayout, Avatar } from "./pages/layout";
+import { AccountLayout, Avatar, type Notice } from "./pages/layout";
 import { sendLoginLink } from "./pages/account";
 import { HAS_PAGE_SQL } from "./pages/profile";
 import { authorSlug } from "./submit/store";
@@ -16,25 +16,25 @@ type Person = { id: number; display_name: string; role: string; slug: string | n
 const PAGE_SIZE = 50;
 const ROLES = ["user", "moderator", "admin"];
 
-const NOTICES: Record<string, string> = {
-  profile: "Profile saved.",
-  role: "Role saved.",
-  licence: "Licence saved.",
-  sent: "Added, and a confirmation link was sent to the address. It stays unconfirmed until the person opens it.",
-  limit: "That account has had its daily limit of confirmation emails. Try again tomorrow.",
-  "email-bad": "That does not look like an email address.",
-  primary: "Primary address changed.",
-  removed: "Address removed.",
-  "keep-primary": "Make another confirmed address primary before removing this one.",
-  "link-sent": "Sign-in link sent to the address.",
-  "link-off": "Email links are switched off on this site, so no sign-in link was sent.",
-  unlinked: "Account unlinked. The person was told by email.",
-  "password-removed": "Password removed and the person signed out everywhere.",
-  "no-password": "This account has no password.",
-  "two-step-reset": "Two-step sign-in reset and the person signed out everywhere.",
-  "no-two-step": "This account has no two-step sign-in to reset.",
-  "signed-out": "Signed out everywhere.",
-  merged: "Accounts merged. Both people were told by email, where they had a confirmed address.",
+const NOTICES: Record<string, Notice> = {
+  profile: ["success", "Profile saved."],
+  role: ["success", "Role saved."],
+  licence: ["success", "Licence saved."],
+  sent: ["success", "Added, and a confirmation link was sent to the address. It stays unconfirmed until the person opens it."],
+  limit: ["error-summary", "That account has had its daily limit of confirmation emails. Try again tomorrow."],
+  "email-bad": ["error-summary", "That does not look like an email address."],
+  primary: ["success", "Primary address changed."],
+  removed: ["success", "Address removed."],
+  "keep-primary": ["warning", "Make another confirmed address primary before removing this one."],
+  "link-sent": ["success", "Sign-in link sent to the address."],
+  "link-off": ["warning", "Email links are switched off on this site, so no sign-in link was sent."],
+  unlinked: ["success", "Account unlinked. The person was told by email."],
+  "password-removed": ["success", "Password removed and the person signed out everywhere."],
+  "no-password": ["warning", "This account has no password."],
+  "two-step-reset": ["success", "Two-step sign-in reset and the person signed out everywhere."],
+  "no-two-step": ["warning", "This account has no two-step sign-in to reset."],
+  "signed-out": ["success", "Signed out everywhere."],
+  merged: ["success", "Accounts merged. Both people were told by email, where they had a confirmed address."],
 };
 
 const ACTION_LABELS: Record<string, string> = {
@@ -199,7 +199,7 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
   const picture = await pictureState(db, id);
   const errors = form?.errors ?? {};
   const base = `/admin/users/${id}`;
-  const noticeText = form ? null : NOTICES[c.req.query("notice") ?? ""];
+  const notice = form ? null : NOTICES[c.req.query("notice") ?? ""];
   const origin = new URL(c.req.url).origin;
   const staff = u.role !== "user";
   return (
@@ -216,7 +216,7 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
             </p>
           </div>
         </div>
-        {noticeText && <p class="notice" role="status">{noticeText}</p>}
+        {notice && <p class={`notice ${notice[0]}`} role="status">{notice[1]}</p>}
 
         <section class="settings-section" aria-labelledby="h-profile">
           <h2 id="h-profile">Profile</h2>

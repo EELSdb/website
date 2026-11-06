@@ -198,13 +198,13 @@ export function SubmitBlocked({ user, next }: { user: User; next: string }) {
   return (
     <>
       {user.orcid_prompt === "required" && (
-        <div class="notice submit-blocked" role="status">
+        <div class="notice warning submit-blocked" role="status">
           <p>{ORCID_REQUIRED_MESSAGE}</p>
           <p><a class="button" href={`/auth/orcid/link?next=${encodeURIComponent(next)}`}>Link ORCID</a></p>
         </div>
       )}
       {email && (
-        <div class="notice submit-blocked" role="status">
+        <div class="notice warning submit-blocked" role="status">
           <p aria-live="polite">{EMAIL_REQUIRED_MESSAGE}{email.address && ` We sent a link to ${email.address}: open it in this browser.`}</p>
           {email.address ? (
             <form class="resend" method="post" action={`/account/settings/emails/${email.id}/send/`}>
@@ -642,7 +642,7 @@ submit.get("/account/submissions/", requireUser, async (c) => {
   return c.html(
     <AccountLayout title="Your submissions" current="/account/submissions/" user={user}>
       <h1>Your submissions</h1>
-      {just && <p class="notice" role="status">Thank you. Your spectrum is in the review queue; you will see its status here.</p>}
+      {just && <p class="notice success" role="status">Thank you. Your spectrum is in the review queue; you will see its status here.</p>}
       {results.length ? (
         <div class="table-scroll">
           <table>

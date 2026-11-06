@@ -8,7 +8,7 @@ import { MAX_PASSKEYS, addPasskey, registrationOptions } from "../passkeys";
 import { MAX_SECOND_STEP_FAILURES, makeRecoveryCodes, matchingStep, newSecret, otpauthUri, spendCode } from "../totp";
 import { HAS_PAGE_SQL } from "./profile";
 import { LicenceSection } from "../admin-users";
-import { AccountLayout, SETTINGS_PAGES, type AccountPage } from "./layout";
+import { AccountLayout, SETTINGS_PAGES, type AccountPage, type Notice } from "./layout";
 import { DetailsFields, EmailList, LinkFields, PictureChoice, VERIFY_HOURS, MAX_EMAILS_PER_DAY, addEmail, allowEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, text, type EmailRow, type Profile } from "../account-edit";
 
 export const settings = new Hono<AppEnv>();
@@ -22,46 +22,46 @@ const THEMES = [
 
 const PASSWORD_LINK_MINUTES = 60;
 
-const NOTICES: Record<string, string> = {
-  profile: "Profile saved.",
-  licence: "Licence saved.",
-  theme: "Appearance saved.",
-  sent: `If that address can be added, we have emailed it a link. The link works for ${VERIFY_HOURS} hours.`,
-  limit: `You can add up to ${MAX_EMAILS_PER_DAY} addresses a day. Please try again tomorrow.`,
-  "email-bad": "That does not look like an email address.",
-  verified: "Email address confirmed.",
-  "verified-merged": "Email address confirmed. The spectra and favourites recorded with it are now on your account.",
-  "verify-failed": "This link has expired, was already used, belongs to another signed-in account, or the address is confirmed on another account.",
-  primary: "Primary address changed.",
-  removed: "Address removed.",
-  "password-saved": "Password saved. You were signed out everywhere else.",
-  "password-removed": "Password removed. You were signed out everywhere else. You can still sign in with an email link.",
-  "password-short": `A password needs ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters.`,
-  "password-sent": `Check your email: your new password works once you open the link we sent you. The link works for ${PASSWORD_LINK_MINUTES} minutes.`,
-  "password-limit": "No email was sent: you have asked for several today. Please try again tomorrow.",
-  "two-step-required": "Moderators and admins need two-step sign-in. Until you set it up, your role does nothing.",
-  "two-step-users": "This site requires two-step sign-in. Set it up below before you use your account.",
-  "two-step-started": "Add the secret to your authenticator app, then enter a code it shows to turn two-step sign-in on.",
-  "two-step-bad-code": "That code is not right. Nothing was changed.",
-  "two-step-locked": "Too many wrong codes. Please wait an hour.",
-  "two-step-cancelled": "Set-up cancelled.",
-  "two-step-off": "Two-step sign-in is off.",
-  "two-step-all-on": "You will be asked for your second step after ORCID, Google and GitHub too.",
-  "passkey-added": "Passkey added.",
-  "passkey-removed": "Passkey removed.",
-  "two-step-all-off": "You will be asked for your second step after an email link or a password only.",
-  linked: "Linked.",
-  "linked-orcid": "ORCID linked. You can now sign in with it.",
-  "linked-google": "Google linked. You can now sign in with it.",
-  "linked-github": "GitHub linked. You can now sign in with it.",
-  "link-taken": "That account is already linked to a different EELSdb account, so nothing was changed.",
-  "link-has": "Your account already has a different account of that kind linked. Nothing was changed.",
-  "link-off": "Sign-in with that service is switched off on this site, so it cannot be linked.",
-  "password-off": "Password sign-in is switched off on this site, so a password cannot be set.",
-  "link-failed": "The sign-in service did not confirm who you are, so nothing was linked. Please try again.",
-  "token-revoked": "Token revoked.",
-  digest: "Saved.",
-  "keep-primary": "Make another confirmed address primary before removing this one.",
+const NOTICES: Record<string, Notice> = {
+  profile: ["success", "Profile saved."],
+  licence: ["success", "Licence saved."],
+  theme: ["success", "Appearance saved."],
+  sent: ["info", `If that address can be added, we have emailed it a link. The link works for ${VERIFY_HOURS} hours.`],
+  limit: ["error-summary", `You can add up to ${MAX_EMAILS_PER_DAY} addresses a day. Please try again tomorrow.`],
+  "email-bad": ["error-summary", "That does not look like an email address."],
+  verified: ["success", "Email address confirmed."],
+  "verified-merged": ["success", "Email address confirmed. The spectra and favourites recorded with it are now on your account."],
+  "verify-failed": ["error-summary", "This link has expired, was already used, belongs to another signed-in account, or the address is confirmed on another account."],
+  primary: ["success", "Primary address changed."],
+  removed: ["success", "Address removed."],
+  "password-saved": ["success", "Password saved. You were signed out everywhere else."],
+  "password-removed": ["success", "Password removed. You were signed out everywhere else. You can still sign in with an email link."],
+  "password-short": ["error-summary", `A password needs ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters.`],
+  "password-sent": ["info", `Check your email: your new password works once you open the link we sent you. The link works for ${PASSWORD_LINK_MINUTES} minutes.`],
+  "password-limit": ["error-summary", "No email was sent: you have asked for several today. Please try again tomorrow."],
+  "two-step-required": ["warning", "Moderators and admins need two-step sign-in. Until you set it up, your role does nothing."],
+  "two-step-users": ["warning", "This site requires two-step sign-in. Set it up below before you use your account."],
+  "two-step-started": ["info", "Add the secret to your authenticator app, then enter a code it shows to turn two-step sign-in on."],
+  "two-step-bad-code": ["error-summary", "That code is not right. Nothing was changed."],
+  "two-step-locked": ["error-summary", "Too many wrong codes. Please wait an hour."],
+  "two-step-cancelled": ["info", "Set-up cancelled."],
+  "two-step-off": ["success", "Two-step sign-in is off."],
+  "two-step-all-on": ["success", "You will be asked for your second step after ORCID, Google and GitHub too."],
+  "passkey-added": ["success", "Passkey added."],
+  "passkey-removed": ["success", "Passkey removed."],
+  "two-step-all-off": ["success", "You will be asked for your second step after an email link or a password only."],
+  linked: ["success", "Linked."],
+  "linked-orcid": ["success", "ORCID linked. You can now sign in with it."],
+  "linked-google": ["success", "Google linked. You can now sign in with it."],
+  "linked-github": ["success", "GitHub linked. You can now sign in with it."],
+  "link-taken": ["error-summary", "That account is already linked to a different EELSdb account, so nothing was changed."],
+  "link-has": ["error-summary", "Your account already has a different account of that kind linked. Nothing was changed."],
+  "link-off": ["warning", "Sign-in with that service is switched off on this site, so it cannot be linked."],
+  "password-off": ["warning", "Password sign-in is switched off on this site, so a password cannot be set."],
+  "link-failed": ["error-summary", "The sign-in service did not confirm who you are, so nothing was linked. Please try again."],
+  "token-revoked": ["success", "Token revoked."],
+  digest: ["success", "Saved."],
+  "keep-primary": ["warning", "Make another confirmed address primary before removing this one."],
 };
 
 type Page = "profile" | "emails" | "sign-in" | "two-step" | "tokens";
@@ -103,9 +103,9 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
     <AccountLayout title={`${PAGE_TITLES[pageUrl(page)]} - Settings`} current={pageUrl(page)} user={user}>
       <div class="settings">
         <h1>{PAGE_TITLES[pageUrl(page)]}</h1>
-        {notice && <p class="notice" role="status">{notice}</p>}
+        {notice && <p class={`notice ${notice[0]}`} role="status">{notice[1]}</p>}
         {page === "two-step" && (user.needs_2fa || user.setup_required) && !notice && (
-          <p class="notice" role="status">{NOTICES[user.setup_required ? "two-step-users" : "two-step-required"]}</p>
+          <p class="notice warning" role="status">{NOTICES[user.setup_required ? "two-step-users" : "two-step-required"][1]}</p>
         )}
 
         {page === "profile" && (
@@ -240,7 +240,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
           <h2 id="h-two-step">Two-step sign-in</h2>
           {recoveryCodes ? (
             <>
-              <p class="notice" role="status">Two-step sign-in is on. Save these recovery codes now: they are not shown again. Each works once, if you lose your phone.</p>
+              <p class="notice warning" role="status">Two-step sign-in is on. Save these recovery codes now: they are not shown again. Each works once, if you lose your phone.</p>
               <ul class="recovery-codes">{recoveryCodes.map((code) => <li><code>{code}</code></li>)}</ul>
             </>
           ) : totp?.enabled_at ? (
@@ -366,7 +366,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
             <a href="/account/drafts/">drafts page</a>.
           </p>
           {token?.created && (
-            <div class="notice" role="status">
+            <div class="notice warning" role="status">
               <p><strong>Your new token.</strong> Copy it now: it is not shown again.</p>
               <pre id="new-token">{token.created}</pre>
             </div>

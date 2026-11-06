@@ -108,11 +108,11 @@ account.get("/login/", async (c) => {
       )}
       {error && <p class="notice error-summary" role="alert">{error}</p>}
       {pending && (
-        <p class="notice" role="status">
+        <p class="notice info" role="status">
           Sign in your usual way, and we will link your {PROVIDERS[pending.provider]?.label ?? pending.provider} account to that account.
         </p>
       )}
-      {!on.length && <p class="notice" role="status">Signing in is not possible right now. Please <a href="/contact/">contact us</a>.</p>}
+      {!on.length && <p class="notice warning" role="status">Signing in is not possible right now. Please <a href="/contact/">contact us</a>.</p>}
       {top && (
         <div class="auth-alt">
           {has("orcid") && (

@@ -282,6 +282,7 @@ export const SETTINGS_PAGES = [
   ["/account/settings/two-step/", "Two-step and passkeys"],
   ["/account/settings/tokens/", "API tokens"],
 ] as const;
+export type Notice = [tone: "success" | "info" | "warning" | "error-summary", text: string];
 export type AccountPage = (typeof ACCOUNT_PAGES)[number][0] | (typeof SETTINGS_PAGES)[number][0];
 
 const STAFF_PAGES = [

@@ -118,7 +118,7 @@ news.get("/news/:slug/", async (c) => {
     >
       <article class="prose news-article">
         <p class="small back-link"><a href="/news/">← News</a></p>
-        {post.status !== "published" && <p class="notice" role="status">This is a draft. Only moderators can see it until it is published.</p>}
+        {post.status !== "published" && <p class="notice warning" role="status">This is a draft. Only moderators can see it until it is published.</p>}
         <div class="page-head">
           <h1>{post.title}</h1>
           {isModerator(user) && <a class="button secondary" href={`/admin/news/${post.id}/`}>Edit</a>}

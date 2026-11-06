@@ -198,7 +198,7 @@ async function settingsPage(c: Context<AppEnv>, opts: { error?: string; proposed
     <AccountLayout title="Site settings" current="/admin/settings/" user={c.get("user")!}>
       <div class="settings">
         <h1>Site settings</h1>
-        {notice && <p class="notice" role="status">{notice}</p>}
+        {notice && <p class="notice success" role="status">{notice}</p>}
         <h2>Submitting</h2>
         <form method="post" action="/admin/settings/" class="settings-form">
           <div class="field">
@@ -217,7 +217,7 @@ async function settingsPage(c: Context<AppEnv>, opts: { error?: string; proposed
 
         <h2 id="h-signin">Sign-in methods</h2>
         {opts.error && <p class="notice error-summary" role="alert">{opts.error}</p>}
-        <div class="notice lockout-warning">
+        <div class="notice warning lockout-warning">
           <p><strong>Right now, {lockedOutText(lockedNow, methods, true)}</strong></p>
           <p>
             Switching a method off locks out every account that has no other switched-on way to sign in. People signed in now stay signed in until their session
