@@ -88,9 +88,11 @@ describe("the welcome page", () => {
     const pending = cookieOf(res, "eelsdb_pending")!;
     const page = await (await go("/login/welcome/", { headers: { Cookie: pending } })).text();
     expect(page).toContain("Welcome to EELSdb");
-    expect(page).toContain("Have you signed in here before");
-    expect(page).toContain("Yes, sign in to my account");
-    expect(page).toContain("No, create a new account");
+    expect(page).toContain("What is your email address? ORCID did not share it with us.");
+    expect(page).toContain('action="/login/email/"');
+    expect(page).toContain('name="next" value="/spectra/"');
+    expect(page).toContain('href="/login/?notice=link"');
+    expect(page).not.toContain("No, create a new account");
     expect(page).toContain("Ori Cid");
   });
 
@@ -120,7 +122,7 @@ describe("the welcome page", () => {
     expect(cookieOf(res, "eelsdb_pending")).toBeUndefined();
   });
 
-  it("makes the account, with the provider's method and next, when the answer is No", async () => {
+  it("makes the account, with the provider's method and next, on Create (email links off)", async () => {
     const profile = orcidProfile();
     const pending = await welcomed("orcid", profile);
     const res = await post("/login/welcome/", {}, pending);
@@ -133,7 +135,7 @@ describe("the welcome page", () => {
     expect((await post("/login/welcome/", {}, pending)).headers.get("location")).toBe("/login/?error=state");
   });
 
-  it("signs a new account in without a second step after No", async () => {
+  it("signs a new account in without a second step after Create", async () => {
     const pending = await welcomed("github", { id: 880000 + ++n, login: "gh", name: "Gh" });
     expect(cookieOf(await post("/login/welcome/", {}, pending), "eelsdb_second_step")).toBeUndefined();
   });
@@ -274,10 +276,10 @@ describe("ORCID public email", () => {
     const u = await user();
     const profile = orcidProfile();
     const res = await providerSignIn("orcid", profile, { emails: [record(u.email, { verified: false, primary: false }), record(`other-${uniq()}@example.invalid`, { primary: false })] });
-    expect(res.headers.get("location")).toBe("/login/welcome/");
-    expect(await identityOwner("orcid", profile.orcid)).toBeNull();
-    const pending = await env.DB.prepare("SELECT email FROM pending_identities WHERE subject = ?").bind(profile.orcid).first<{ email: string }>();
-    expect(pending!.email).toMatch(/^other-/);
+    expect(res.headers.get("location")).toBe("/spectra/");
+    const id = await identityOwner("orcid", profile.orcid);
+    expect(id).not.toBe(u.id);
+    expect(await env.DB.prepare("SELECT email FROM user_emails WHERE user_id = ? AND verified = 1").bind(id).first("email")).toMatch(/^other-/);
   });
 
   it("goes on without an address when the call is empty, fails, errors or times out", async () => {
@@ -302,9 +304,66 @@ describe("the pending identity", () => {
   });
 });
 
-describe("the email step after a provider sign-up", () => {
-  const STEP = "/account/welcome/email/?next=%2Fspectra%2F";
+describe("the welcome email link", () => {
   const record = (email: string) => ({ email, verified: true, primary: true });
+
+  async function askFromWelcome(email: string, pending: string) {
+    expect((await post("/login/email/", { email, next: "/spectra/" }, pending)).headers.get("location")).toBe("/login/?notice=sent");
+    return sent[sent.length - 1].text.match(/\/login\/email\/([^/\s]+)\//)![1];
+  }
+
+  it("is not needed when the service shares a confirmed address that no account uses: the account is made at once", async () => {
+    const profile = orcidProfile();
+    const res = await providerSignIn("orcid", profile, { emails: [record(`s-${uniq()}@example.invalid`)] });
+    expect(res.headers.get("location")).toBe("/spectra/");
+    expect(cookieOf(res, "eelsdb_session")).toBeDefined();
+    const id = await identityOwner("orcid", profile.orcid);
+    expect(await env.DB.prepare("SELECT display_name, orcid FROM users WHERE id = ?").bind(id).first()).toEqual({ display_name: "Ori Cid", orcid: profile.orcid });
+    const gh = { id: 860000 + ++n, login: "gh", name: "Gh", emails: [record(`g-${uniq()}@example.invalid`)] };
+    expect((await providerSignIn("github", gh)).headers.get("location")).toBe("/spectra/");
+    expect(await identityOwner("github", String(gh.id))).not.toBeNull();
+  });
+
+  it("with a new address makes the account, with the service's name and iD, and goes on to next", async () => {
+    const profile = orcidProfile();
+    const pending = await welcomed("orcid", profile);
+    const address = `new-${uniq()}@example.invalid`;
+    const token = await askFromWelcome(address, pending);
+    expect(await (await go("/login/?notice=sent", { headers: { Cookie: pending } })).text()).toContain("Open it in this browser, so we can add ORCID to your account.");
+    const res = await post(`/login/email/${token}/`, {}, pending);
+    expect(res.headers.get("location")).toBe("/spectra/");
+    expect(cookieOf(res, "eelsdb_session")).toBeDefined();
+    const id = await identityOwner("orcid", profile.orcid);
+    expect(await env.DB.prepare("SELECT display_name, orcid FROM users WHERE id = ?").bind(id).first()).toEqual({ display_name: "Ori Cid", orcid: profile.orcid });
+    expect(await env.DB.prepare("SELECT verified FROM user_emails WHERE user_id = ? AND email = ?").bind(id, address).first("verified")).toBe(1);
+    expect(await count("SELECT 1 FROM pending_identities WHERE subject = ?", profile.orcid)).toBe(0);
+  });
+
+  it("with an unclaimed old account's address takes it over and adds the iD", async () => {
+    const legacy = `old-${uniq()}@example.invalid`;
+    const old = (await env.DB.prepare("INSERT INTO users (display_name, legacy_email) VALUES ('Old One', ?) RETURNING id").bind(legacy).first<number>("id"))!;
+    const profile = orcidProfile();
+    const pending = await welcomed("orcid", profile);
+    const res = await post(`/login/email/${await askFromWelcome(legacy, pending)}/`, {}, pending);
+    expect(res.headers.get("location")).toBe("/account/settings/sign-in/?notice=linked-orcid#h-signin");
+    expect(await identityOwner("orcid", profile.orcid)).toBe(old);
+  });
+
+  it("opened in another browser never adds the iD, so asking for a link to someone else's address gains nothing", async () => {
+    const profile = orcidProfile();
+    const pending = await welcomed("orcid", profile);
+    const victim = await user();
+    const res = await post(`/login/email/${await askFromWelcome(victim.email, pending)}/`, {});
+    expect(res.headers.get("location")).toBe("/spectra/");
+    const fresh = `n-${uniq()}@example.invalid`;
+    await post(`/login/email/${await askFromWelcome(fresh, pending)}/`, {});
+    expect(await identityOwner("orcid", profile.orcid)).toBeNull();
+    expect(await count("SELECT 1 FROM pending_identities WHERE subject = ?", profile.orcid)).toBe(1);
+  });
+});
+
+describe("the email step after Create (email links off)", () => {
+  const STEP = "/account/welcome/email/?next=%2Fspectra%2F";
 
   async function signedUp(provider: "github" | "orcid" | "google", profile: Record<string, any>, orcid?: Orcid) {
     const res = await post("/login/welcome/", {}, await welcomed(provider, profile, orcid));
@@ -322,10 +381,7 @@ describe("the email step after a provider sign-up", () => {
     }
   });
 
-  it("is not asked when the service shared a confirmed address, nor of an existing account", async () => {
-    const mail = `s-${uniq()}@example.invalid`;
-    const { res } = await signedUp("orcid", orcidProfile(), { emails: [record(mail)] });
-    expect(res.headers.get("location")).toBe("/spectra/");
+  it("is not asked of an existing account", async () => {
     const u = await user();
     const profile = orcidProfile();
     await env.DB.prepare("INSERT INTO identities (user_id, provider, subject) VALUES (?, 'orcid', ?)").bind(u.id, profile.orcid).run();

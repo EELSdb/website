@@ -502,10 +502,14 @@ export async function finishSignIn(c: C) {
     if (!user) return c.redirect("/login/?error=state");
     return c.redirect(await linkIdentity(c.env.DB, user.id, identity, next));
   }
-  const userId = await findUserForIdentity(c.env.DB, identity);
+  let userId = await findUserForIdentity(c.env.DB, identity);
   if (userId === null) {
-    await keepPendingIdentity(c, identity, next);
-    return c.redirect("/login/welcome/");
+    // A confirmed address that no account uses means a new person; without one, the welcome page asks for an address.
+    if (!identity.email || !identity.emailVerified) {
+      await keepPendingIdentity(c, identity, next);
+      return c.redirect("/login/welcome/");
+    }
+    userId = await createUserForIdentity(c.env.DB, identity);
   }
   return completeSignIn(c, userId, { method: c.req.param("provider") as SignInMethod, next });
 }

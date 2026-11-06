@@ -54,7 +54,7 @@ These records explain the main design decisions in EELSdb. Each record gives the
 |---|---|
 | [0018. Sign-in](/docs/adr/0018-sign-in/) | Six sign-in methods all end in one function, and ORCID is the first choice. |
 | [0019. Two-step sign-in](/docs/adr/0019-two-step-and-passkeys/) | Accounts can add an authenticator app or passkeys, and site settings decide which groups must use them. |
-| [0020. One account per person](/docs/adr/0020-one-account-per-person/) | EELSdb links services to one account, asks before it creates an account, and merges duplicates. |
+| [0020. One account per person](/docs/adr/0020-one-account-per-person/) | EELSdb links services to one account, finds accounts by a confirmed email address before it creates one, and merges duplicates. |
 | [0021. Admin account tools](/docs/adr/0021-admin-account-tools/) | Admins can fix locked-out and duplicate accounts, under strict safety rules. |
 | [0022. Email and contact form](/docs/adr/0022-email-and-contact/) | The Worker sends email through Cloudflare Email Service, and the contact form emails the admins. |
 | [0031. Profiles and privacy](/docs/adr/0031-public-profiles-and-privacy/) | EELSdb publishes only what each person chooses to share, and never publishes a full email address. |

@@ -1,6 +1,6 @@
 ---
 title: "0020. One account per person"
-description: "EELSdb links services to one account, asks before it creates an account, and merges duplicates."
+description: "EELSdb links services to one account, finds accounts by a confirmed email address before it creates one, and merges duplicates."
 adr:
   date: 2026-10-22
 ---
@@ -29,10 +29,23 @@ An ORCID iD comes only from a sign-in with ORCID or a link to ORCID. The profile
 
 ### No hidden duplicates
 
-Sometimes a provider sign-in matches no linked identity, no verified address and no unclaimed old account. The Worker then does not make an account. It keeps the identity for 15 minutes in `pending_identities`, with the HttpOnly cookie `eelsdb_pending`. It then asks: "Have you signed in here before?"
+Sometimes a provider sign-in gives a confirmed address that no account uses. The Worker then makes the account at once, because there is nothing to ask. A person whose account uses a different address gets a second account, and an admin merges them.
 
+Sometimes a provider sign-in matches no linked identity and gives no confirmed address. Most ORCID sign-ins are like this. The Worker then does not make an account. It keeps the identity for 15 minutes in `pending_identities`, with the HttpOnly cookie `eelsdb_pending`. The welcome page asks for an email address and sends an email link to it ([ADR 0018](/docs/adr/0018-sign-in/)). The link finds the account in the usual order:
+
+- The link finds an account that confirmed the address, or an unclaimed migrated account with that old address. It signs the person in to that account. The Worker links the pending identity after any second step.
+- The link finds no account. It makes one, with the name from the service, and links the pending identity at once.
+
+The page always answers "Check your email", so it does not show which addresses have an account.
+
+Only the browser that holds the cookie can link the pending identity. The link never carries the identity. Otherwise a person could sign in with their own ORCID and ask for a link to another person's address. When the owner opened the link, the first person's ORCID would join the owner's account. A link opened in another browser still signs in or makes the account, but links nothing. The person can link the service later in settings.
+
+The welcome page also links to the sign-in page, for a person whose account uses a different address. It names the other methods that are on. The next successful sign-in in that browser, by any method, links the pending identity after any second step.
+
+When email links are switched off, the welcome page asks "Have you signed in here before?" instead:
+
+- "Yes" goes to the sign-in page, as above.
 - "No, create a new account" makes the account and signs the person in. If the service shared no confirmed address, the new account then goes through an email step. The step has no skip button, by the owner's decision. The page never blocks a person who leaves through the address bar.
-- "Yes" goes to the sign-in page. The next successful sign-in in that browser, by any method, links the pending identity after any second step.
 - Sometimes the pending service is the only method that is switched on. The page then tells the person to create the account and ask an admin to merge.
 
 ### Taking over a migrated account
@@ -67,4 +80,6 @@ When you add a table that references `users`, add its rule to `mergeAccounts`. T
 ## Alternatives considered
 
 - A separate "claim your old account" flow, with its own form, email, rate limit and table. A confirmed address proves ownership equally well, with far less code.
-- Create provider accounts at once and merge them later. This leaves duplicates that only an admin can fix.
+- Create provider accounts at once even without a confirmed address, and merge them later. This leaves duplicates that only an admin can fix.
+- Always ask "Have you signed in here before?". People who answered "No" by mistake got a second account. Confirming their usual address on it then failed, because the first account had confirmed it. An email address answers the same question, and the person does not have to remember how they signed in.
+- Let the email link carry the pending identity, so that it works on another device. A person could then put their ORCID on another person's account, as described above.

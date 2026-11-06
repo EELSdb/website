@@ -210,11 +210,27 @@ describe("the welcome page", () => {
     return (await go("/login/welcome/", cookieOf(cb, "eelsdb_pending")!)).text();
   }
 
-  it("names only the other ways in that are on", async () => {
+  it("asks for an address, and names only the other ways in that are on", async () => {
     await off("password", "github");
     const page = await welcome();
-    expect(page).toContain("with Google, a passkey or an email link?");
+    expect(page).toContain("Email me a link");
+    expect(page).toContain("Sign in with Google or a passkey</a>, and we add ORCID to it.");
+    expect(page).not.toContain("Yes, sign in to my account");
+  });
+
+  it("asks whether the person signed in before when email links are off", async () => {
+    await off("password", "github", "email_link");
+    const page = await welcome();
+    expect(page).toContain("with Google or a passkey?");
     expect(page).toContain("Yes, sign in to my account");
+    expect(page).not.toContain("Email me a link");
+  });
+
+  it("leaves out the other-ways line when only an email link remains", async () => {
+    await off("password", "github", "google", "passkey");
+    const page = await welcome();
+    expect(page).toContain("Email me a link");
+    expect(page).not.toContain("notice=link");
   });
 
   it("asks to merge instead when the provider is the only method on", async () => {

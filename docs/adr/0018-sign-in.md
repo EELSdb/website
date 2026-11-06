@@ -51,6 +51,7 @@ The email link is also the sign-up path. There is no separate sign-up form.
   1. the account with that verified address
   2. a migrated account whose old email matches and that has no linked service
   3. if neither exists, it makes a new account
+- In a browser that holds a pending identity, the link also links that identity. A new account then takes its name from the service ([ADR 0020](/docs/adr/0020-one-account-per-person/)).
 
 ### Passwords
 

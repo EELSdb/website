@@ -26,19 +26,26 @@ A passkey still works as your [second step](#two-step-sign-in) when passkey sign
 
 ### First time with ORCID, Google or GitHub
 
-If you sign in with ORCID, Google or GitHub and EELSdb does not know you yet, it does not make an account at once. It asks **Have you signed in here before**, naming the other ways in that are switched on. This stops a second account being made for you.
+EELSdb knows your account already when the service gives an email address that you confirmed on your account, or the address recorded with spectra submitted before 2026. If the service gives a confirmed address that no account uses, EELSdb makes your account with it at once. Google and GitHub always give an address. ORCID gives one only if you made it public on your ORCID record and verified it, and most people have not.
 
-- **No, create a new account** makes your account, and you are signed in.
-- **Yes, sign in to my account** takes you to the sign-in page. Sign in your usual way: an email link, a password, a passkey or another service. EELSdb then links the service you just used to that account. If the account has [two-step sign-in](#two-step-sign-in), the link is added only after you pass the second step.
-- You have 15 minutes. After that, or if you give up, nothing is linked and no account is made.
+If the service gives no address, EELSdb asks for one on a page called **Welcome to EELSdb**:
+
+1. Type your email address and click **Email me a link**.
+2. Open the link in the email, in the same browser, and click **Sign in**.
+   - If an EELSdb account uses that address, you are signed in to it, and EELSdb links the service you just used to that account. This includes an account from before 2026 that has that address. If the account has [two-step sign-in](#two-step-sign-in), the service is linked only after you pass the second step.
+   - If not, EELSdb makes your account, with the name the service gave, and links the service to it.
+
+Some things to know:
+
+- Open the link in the browser where you started. In another browser or device, the link still signs you in, but it does not link the service. Link it afterwards under **Settings**, **Sign-in methods**.
+- Does your account use a different address? Click **Sign in with…** under the form. Sign in your usual way, and EELSdb links the service you just used to that account.
+- You have 15 minutes. After that, nothing is linked.
 - If that ORCID, Google or GitHub account is already linked to a different EELSdb account, or your account already has a different one of that kind, nothing is linked, and the **Sign-in methods** page in your settings says so.
-- If the service you used is the only way in that is switched on, there is nothing else to sign in with. The page says: "If you used EELSdb before with another sign-in, create this account and ask us to merge them". Click **Create my account**, then [contact us](/contact/).
-
-EELSdb knows your account already when the service gives an email address that you confirmed on your account, or the address recorded with spectra submitted before 2026. ORCID gives an address only if you made it public on your ORCID record and verified it. A private address cannot be used. If you cannot tell which account is yours, ask for an email link to your usual address.
+- If email links are switched off, the page asks **Have you signed in here before** instead. **Yes, sign in to my account** takes you to the sign-in page, and **No, create a new account** makes your account. If the service you used is the only way in that is switched on, click **Create my account**, then [contact us](/contact/) to have your old account merged.
 
 ### Add and confirm your email address
 
-EELSdb sends sign-in links, emails about your submissions and the messages that get you back into your account to your confirmed email address. ORCID rarely shares one, so right after a new account is made with ORCID, Google or GitHub that has no confirmed address, EELSdb asks for it on a page called **One more step: add your email address**. Type your address and click **Send confirmation link**, then open the link in the email while you are signed in. The page has no skip button, and you see it once for each new account. If you leave it, you can add the address any time under **Email addresses** in your account settings.
+EELSdb sends sign-in links, emails about your submissions and the messages that get you back into your account to your confirmed email address. Every account made with an email link or with ORCID, Google or GitHub starts with one. If your account has none, add it under **Email addresses** in your account settings, then open the link in the email while you are signed in. When email links are switched off, a new account made with ORCID, Google or GitHub without an address goes to a page called **One more step: add your email address** first.
 
 Adding an address, or making one your primary address, needs a sign-in in the last 2 hours. If your sign-in is older, EELSdb takes you to the sign-in page first.
 
@@ -110,7 +117,7 @@ The list on the **Two-step and passkeys** page shows when each passkey was added
 
 Making or revoking a [API token](/docs/share/drafts/) also needs a sign-in in the last 2 hours. If your sign-in is older, EELSdb takes you to the sign-in page first.
 
-With ORCID, Google or GitHub, EELSdb receives your name and email address from the service. It never sees those passwords.
+With ORCID, Google or GitHub, EELSdb receives your name from the service, and your email address if the service shares it. It never sees those passwords.
 
 ## Link ORCID, Google or GitHub
 

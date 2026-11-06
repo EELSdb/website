@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, signInAgainUrl, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
+import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, signInAgainUrl, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
 import { addEmail } from "../account-edit";
 import { sendEmail } from "../email";
 import { authenticationOptions, hasPasskey, verifyPasskey } from "../passkeys";
@@ -60,13 +60,18 @@ account.get("/login/", async (c) => {
   if (c.get("user") && (await signedInRecently(c))) return c.redirect(safeNext(c.req.query("next")));
   const next = c.req.query("next");
   const again = c.req.query("notice") === "again";
-  const pending = c.req.query("notice") === "link" ? await getPendingIdentity(c) : null;
-  if (c.req.query("notice") === "sent") {
+  const notice = c.req.query("notice");
+  const pending = notice === "link" || notice === "sent" ? await getPendingIdentity(c) : null;
+  if (notice === "sent") {
+    const label = pending && (PROVIDERS[pending.provider]?.label ?? pending.provider);
     return c.html(
       <AuthPage title="Check your email">
         <h1>Check your email</h1>
-        <p class="auth-lede">If the address is valid, a sign-in link is on its way. Open it in the browser where you want to be signed in.</p>
-        <p class="hint">The link works for {LINK_MINUTES} minutes, once. No email after a few minutes? Check your spam folder, or <a href="/login/">try again</a>.</p>
+        <p class="auth-lede">
+          If the address is valid, a sign-in link is on its way.{" "}
+          {pending ? `Open it in this browser, so we can add ${label} to your account.` : "Open it in the browser where you want to be signed in."}
+        </p>
+        <p class="hint">The link works for {LINK_MINUTES} minutes, once. No email after a few minutes? Check your spam folder, or <a href={pending ? "/login/welcome/" : "/login/"}>try again</a>.</p>
       </AuthPage>,
     );
   }
@@ -171,11 +176,32 @@ account.get("/login/welcome/", async (c) => {
   if (!on.includes(pending.provider as (typeof on)[number])) return c.redirect(METHOD_OFF);
   const label = PROVIDERS[pending.provider]?.label ?? pending.provider;
   const others = on.filter((m) => m !== pending.provider).map((m) => METHOD_NAMES[m] ?? PROVIDERS[m].label);
+  const otherWays = on.filter((m) => m !== pending.provider && m !== "email_link").map((m) => METHOD_NAMES[m] ?? PROVIDERS[m].label);
   const said = pending.name ? <>{label} says you are <strong>{pending.name}</strong>. </> : null;
   return c.html(
     <AuthPage title="Welcome">
       <h1>Welcome to EELSdb</h1>
-      {others.length ? (
+      {on.includes("email_link") ? (
+        <>
+          <p class="auth-lede">{said}What is your email address? {label} did not share it with us.</p>
+          <form method="post" action="/login/email/" class="auth-form">
+            <input type="hidden" name="next" value={pending.next ?? "/account/"} />
+            <div class="field">
+              <label for="email">Email address</label>
+              <input id="email" name="email" type="email" autocomplete="email" required aria-describedby="welcome-hint" />
+            </div>
+            <button class="button" type="submit">Email me a link</button>
+            <p class="hint" id="welcome-hint">
+              If an EELSdb account uses this address, the link signs you in to it and adds {label}. If not, it makes your account. Open the link in this browser.
+            </p>
+          </form>
+          {otherWays.length > 0 && (
+            <p class="hint auth-restart">
+              Your account uses another address? <a href="/login/?notice=link">Sign in with {listOr(otherWays)}</a>, and we add {label} to it.
+            </p>
+          )}
+        </>
+      ) : others.length ? (
         <>
           <p class="auth-lede">{said}Have you signed in here before, with {listOr(others)}?</p>
           <div class="auth-alt">
@@ -351,14 +377,21 @@ account.post("/login/email/:token/", async (c) => {
     .first<{ email: string; next: string | null }>();
   if (!link) return c.redirect(`/login/email/${c.req.param("token")}/`);
   let userId = await accountForEmail(db, link.email);
+  let next = link.next ?? undefined;
   if (userId === null) {
-    userId = (await db.prepare("INSERT INTO users (display_name, use_gravatar) VALUES (?, 1) RETURNING id").bind(link.email.split("@")[0]).first<number>("id"))!;
+    // From this browser's cookie only: if the link carried it, opening a link someone else asked for would put their ORCID on your account.
+    const pending = await getPendingIdentity(c);
+    userId = (await db.prepare("INSERT INTO users (display_name, use_gravatar) VALUES (?, 1) RETURNING id").bind(pending?.name || link.email.split("@")[0]).first<number>("id"))!;
+    if (pending) {
+      next = await linkIdentity(db, userId, pending, next);
+      await clearPendingIdentity(c);
+    }
   }
   await db
     .prepare("INSERT INTO user_emails (user_id, email, verified) VALUES (?, ?, 1) ON CONFLICT (user_id, email) DO UPDATE SET verified = 1")
     .bind(userId, link.email)
     .run();
-  return completeSignIn(c, userId, { method: "email_link", next: link.next ?? undefined });
+  return completeSignIn(c, userId, { method: "email_link", next });
 });
 
 account.post("/login/password/", async (c) => {
