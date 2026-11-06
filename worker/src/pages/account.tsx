@@ -2,7 +2,7 @@ import { Hono, type Context } from "hono";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
 import { deleteCookie, getCookie } from "hono/cookie";
-import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
+import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD_FAILURES, METHOD_OFF, MAX_PASSWORD_LENGTH, PROVIDERS, accountForEmail, clearPendingIdentity, completeSignIn, createSession, createUserForIdentity, findUserForIdentity, finishSignIn, getPendingIdentity, linkPendingIdentity, methodOn, methodsOn, rememberMethod, requireUser, safeNext, sha256, signOut, signedInRecently, signInAgainUrl, startLink, startSignIn, type AppEnv, type SignInMethod, type User } from "../auth";
 import { addEmail } from "../account-edit";
 import { sendEmail } from "../email";
 import { authenticationOptions, hasPasskey, verifyPasskey } from "../passkeys";
@@ -250,6 +250,7 @@ account.post("/account/welcome/email/", requireUser, async (c) => {
   const user = c.get("user")!;
   const body = await c.req.parseBody();
   const next = safeNext(typeof body.next === "string" ? body.next : undefined);
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(`${EMAIL_STEP}?next=${encodeURIComponent(next)}`));
   const intro = `Someone signed in to the EELS Data Base as "${user.display_name}" and added this address.`;
   const result = await addEmail(c.env, new URL(c.req.url).origin, user.id, body.email, intro);
   if (result === "email-bad") return c.html(<EmailStep user={user} next={next} error="That does not look like an email address." />, 422);

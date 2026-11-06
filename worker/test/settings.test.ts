@@ -91,6 +91,26 @@ describe("settings", () => {
     expect(await env.DB.prepare("SELECT job_title FROM users WHERE id = 7100002").first("job_title")).toBeNull();
   });
 
+  it("needs a recent sign-in to add an address or make one primary", async () => {
+    const cookie = await sessionFor({ id: 7100005, display_name: "Stale Mail" });
+    await env.DB.prepare("UPDATE sessions SET created_at = datetime('now', '-3 hours') WHERE user_id = 7100005").run();
+    await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (7100005, 'stale-one@example.org', 1, 1), (7100005, 'stale-two@example.org', 1, 0)").run();
+    const two = (await env.DB.prepare("SELECT id FROM user_emails WHERE email = 'stale-two@example.org'").first<number>("id"))!;
+    const before = sent.length;
+    const again = `/login/?notice=again&next=${encodeURIComponent("/account/settings/emails/")}`;
+    expect((await post("/account/settings/emails/", cookie, { email: "added@example.org" })).headers.get("location")).toBe(again);
+    expect((await post(`/account/settings/emails/${two}/primary/`, cookie)).headers.get("location")).toBe(again);
+    expect((await post("/account/welcome/email/", cookie, { email: "added@example.org", next: "/submit-data/" })).headers.get("location")).toBe(
+      `/login/?notice=again&next=${encodeURIComponent("/account/welcome/email/?next=%2Fsubmit-data%2F")}`,
+    );
+    expect(sent.length).toBe(before);
+    const rows = await env.DB.prepare("SELECT email, is_primary FROM user_emails WHERE user_id = 7100005 ORDER BY email").all();
+    expect(rows.results).toEqual([{ email: "stale-one@example.org", is_primary: 1 }, { email: "stale-two@example.org", is_primary: 0 }]);
+    const page = await (await get("/account/settings/emails/", cookie)).text();
+    expect(page).toContain("to add an address or change the primary one.");
+    expect(page).not.toContain('<form method="post" action="/account/settings/emails/" class="inline-form">');
+  });
+
   it("adds, confirms, promotes and removes email addresses", async () => {
     const cookie = await sessionFor({ id: 7100004, display_name: "Mail User" });
     await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (7100004, 'first@example.org', 1, 1)").run();

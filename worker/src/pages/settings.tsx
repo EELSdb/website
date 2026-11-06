@@ -139,10 +139,14 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
         <section class="settings-section lone">
           <p class="hint">The primary address is used for your avatar and for messages about your submissions. Addresses are never shown on the site.</p>
           {emails.length > 0 && <EmailList emails={emails as EmailRow[]} base="/account/settings/emails" />}
-          <form method="post" action="/account/settings/emails/" class="inline-form">
-            <input type="email" name="email" required aria-label="Email address to add" autocomplete="email" placeholder="name@example.org" />
-            <button class="button secondary" type="submit">Add address</button>
-          </form>
+          {recent ? (
+            <form method="post" action="/account/settings/emails/" class="inline-form">
+              <input type="email" name="email" required aria-label="Email address to add" autocomplete="email" placeholder="name@example.org" />
+              <button class="button secondary" type="submit">Add address</button>
+            </form>
+          ) : (
+            <p class="hint"><a href={signInAgainUrl(pageUrl("emails"))}>Sign in again</a> to add an address or change the primary one.</p>
+          )}
         </section>
         )}
 
@@ -416,7 +420,10 @@ settings.get("/avatars/:user/:file", async (c) => {
   });
 });
 
+// Adding an address or making one primary needs a recent sign-in: a confirmed address signs in by email link and receives
+// password links, so someone at an unattended browser could otherwise give themselves a way in.
 settings.post("/account/settings/emails/", requireUser, async (c) => {
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(pageUrl("emails")));
   const user = c.get("user")!;
   const intro = `Someone signed in to the EELS Data Base as "${user.display_name}" and added this address.`;
   return back(c, "emails", await addEmail(c.env, new URL(c.req.url).origin, user.id, (await c.req.parseBody()).email, intro));
@@ -436,6 +443,7 @@ settings.post("/account/settings/emails/:id/send/", requireUser, async (c) => {
 });
 
 settings.post("/account/settings/emails/:id/primary/", requireUser, async (c) => {
+  if (!(await signedInRecently(c))) return c.redirect(signInAgainUrl(pageUrl("emails")));
   const row = await ownEmail(c);
   if (!row?.verified) return c.notFound();
   await makePrimary(c.env.DB, c.get("user")!.id, row);
@@ -484,8 +492,8 @@ settings.get("/account/emails/verify/:token/", requireUser, async (c) => {
   return back(c, "emails", merge ? "verified-merged" : "verified");
 });
 
-// No recent sign-in or current password: the password only works once a link to a confirmed address is opened. An
-// unattended browser that confirms its own address could already sign in with email links, so this adds no new way in.
+// No recent sign-in or current password: the password only works once a link to a confirmed address is opened, and
+// adding an address or making one primary needs a recent sign-in.
 settings.post("/account/settings/password/", requireUser, async (c) => {
   const user = c.get("user")!;
   const db = c.env.DB;
