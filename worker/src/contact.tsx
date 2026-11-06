@@ -8,6 +8,7 @@ import { turnstileOk } from "./turnstile";
 export const contact = new Hono<AppEnv>();
 
 export const TOPICS: Record<string, string> = {
+  feature: "Feature request",
   spectrum: "A question about a spectrum",
   website: "A problem with the website",
   account: "My account",
@@ -59,9 +60,10 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
     >
       <div class="prose contact">
         <h1>Contact</h1>
-        <p class="lede">Write to the people who run the EELS Data Base. A person reads every message.</p>
-        <p class="hint">
-          To report a bug in public or ask for a feature, <a href="https://github.com/EELSdb/website/issues">open an issue on GitHub</a> instead, so others can follow it.
+        <p class="lede">This form sends an email to the people who run the EELS Data Base. A person reads every message.</p>
+        <p class="notice info">
+          <strong>Found a bug or want a new feature?</strong> You can <a href="https://github.com/EELSdb/website/issues">open an issue on GitHub</a>, so others can
+          follow it in public. If you prefer not to use GitHub, send us an email with the form below.
         </p>
         {props.logOnly && (
           <p class="notice warning">This copy of the site does not send email. Your message is saved for the administrators to read on the site, but nobody receives it by email.</p>
@@ -83,7 +85,7 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
           <div class={cls("topic")}>
             <label for="f-topic">What is it about?</label>
             <select id="f-topic" name="topic" required>
-              {Object.entries(TOPICS).map(([k, label]) => <option value={k} selected={(v.topic ?? "spectrum") === k}>{label}</option>)}
+              {Object.entries(TOPICS).map(([k, label]) => <option value={k} selected={v.topic === k}>{label}</option>)}
             </select>
             <Err name="topic" />
           </div>
@@ -99,7 +101,7 @@ function ContactPage(props: { user: User | null; v: Partial<Values>; errors: Rec
           </div>
           {props.siteKey && <div class="cf-turnstile" data-sitekey={props.siteKey} data-appearance="interaction-only"></div>}
           <Err name="turnstile" />
-          <p><button class="button" type="submit">Send message</button></p>
+          <p><button class="button" type="submit">Send email</button></p>
         </form>
       </div>
     </Layout>

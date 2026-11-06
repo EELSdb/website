@@ -724,6 +724,9 @@ dialog h2 { margin-top: 0; }
 .snippet .hint { margin: 0.5rem 0 0; }
 .notice { border: 1px solid var(--line); background: var(--sunken); border-radius: 8px; padding: 1rem 1.25rem; }
 .notice.warning { border-color: var(--note); background: color-mix(in oklab, var(--note) 13%, var(--bg)); }
+.notice.info { position: relative; padding-left: 3.1rem; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); font-size: 1.05rem; line-height: 1.55; }
+.notice.info::before { content: ""; position: absolute; left: 1.15rem; top: 1.18rem; width: 1.3rem; height: 1.3rem; background: var(--accent);
+  mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5.5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center / contain; }
 
 
 /* Content pages: downloads, news */
