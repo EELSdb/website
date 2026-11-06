@@ -283,6 +283,10 @@ describe("pages", () => {
     expect(md.html).toContain("- Beam energy: 300 kV (typed by the contributor)");
     expect(md.html).toContain("- API v2 record (JSON): https://api.eelsdb.eu/v2/spectra/22236");
     expect(md.html).toContain("@article{ewels2016eelsdb,");
+    expect(md.html).toContain("- Energy range: 1700 to 2574 eV, step 0.5 eV\n");
+    await env.DB.prepare("UPDATE spectra SET step_ev = NULL WHERE id = 22236").run();
+    expect((await page("/spectra/mlc-nanotube-ylas-tas2.md")).html).toContain("- Energy range: 1700 to 2574 eV\n");
+    await env.DB.prepare("UPDATE spectra SET step_ev = 0.5 WHERE id = 22236").run();
     const html = (await page("/spectra/mlc-nanotube-ylas-tas2/")).html;
     expect(html).toContain('<link rel="alternate" type="text/markdown" href="/spectra/mlc-nanotube-ylas-tas2.md"/>');
     expect(html).toContain('<link rel="alternate" type="application/json" href="https://api.eelsdb.eu/v2/spectra/22236"/>');

@@ -59,7 +59,7 @@ export async function spectrumMarkdown(db: D1Database, slug: string) {
       ["Intensity units", s.intensity_units],
       ["Source and purity", s.source_purity],
       ["Keywords", s.keywords],
-      ["Energy range", s.energy.min_ev !== null ? `${s.energy.min_ev} to ${s.energy.max_ev} eV, step ${s.energy.step_ev} eV` : null],
+      ["Energy range", s.energy.min_ev !== null && s.energy.max_ev !== null ? `${s.energy.min_ev} to ${s.energy.max_ev} eV${s.energy.step_ev !== null ? `, step ${s.energy.step_ev} eV` : ""}` : null],
     ]),
     s.description?.trim() ?? "",
     a &&
