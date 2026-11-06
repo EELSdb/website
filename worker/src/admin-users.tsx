@@ -172,7 +172,7 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
     await db.batch<any>([
       db.prepare(
         `SELECT u.id, u.display_name, u.slug, u.role, u.licence, u.created_at, u.avatar_key, u.orcid, u.password_hash IS NOT NULL AS has_password,
-                u.legacy_password_hash IS NOT NULL AS has_legacy_password, ${HAS_PAGE_SQL} AS has_page,
+                ${HAS_PAGE_SQL} AS has_page,
                 (SELECT COUNT(*) FROM spectra s WHERE s.owner_id = u.id AND s.status = 'draft') AS drafts
          FROM users u WHERE u.id = ?`,
       ).bind(id),
@@ -275,8 +275,8 @@ async function renderUser(c: C, id: number, form?: { values: Record<string, stri
             ))}
             <dt>Password</dt>
             <dd>
-              {u.has_password ? "Set" : u.has_legacy_password ? "Set (from the old site)" : "None"}{" "}
-              {(u.has_password || u.has_legacy_password) && (
+              {u.has_password ? "Set" : "None"}{" "}
+              {!!u.has_password && (
                 <form method="post" action={`${base}/password/remove/`} class="inline-form">
                   <button class="link-button danger" type="submit">Remove password</button>
                 </form>
@@ -577,8 +577,11 @@ action("identities/unlink/", async (c, p) => {
 });
 
 action("password/remove/", async (c, p) => {
-  const done = await c.env.DB.prepare("UPDATE users SET password_hash = NULL, legacy_password_hash = NULL WHERE id = ? AND (password_hash IS NOT NULL OR legacy_password_hash IS NOT NULL)")
-    .bind(p.id).run();
+  const db = c.env.DB;
+  const [done] = await db.batch([
+    db.prepare("UPDATE users SET password_hash = NULL WHERE id = ? AND password_hash IS NOT NULL").bind(p.id),
+    db.prepare("DELETE FROM password_changes WHERE user_id = ?").bind(p.id),
+  ]);
   if (!done.meta.changes) return "no-password";
   await signOutEverywhere(c.env.DB, p.id);
   await record(c, p, "password_removed", {}, "Your password was removed and you were signed out everywhere. You can still sign in with an email link to a confirmed address.");

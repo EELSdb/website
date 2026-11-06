@@ -59,13 +59,14 @@ Your name starts as the part of the address before the @, and you can change it 
 
 A password is optional.
 Open **Sign in with a password** on the sign-in page and type any confirmed email address of your account, or your username, and your password.
-Your username is the one in the address of your author page (you can change it under **Settings**, **Profile**). Accounts from the old site can also use their old-site username.
+Your username is the one in the address of your author page (you can change it under **Settings**, **Profile**).
 After 10 wrong passwords for the same address or username within an hour, EELSdb stops accepting passwords for it for an hour.
 The error message does not say whether the account exists.
 
-- To set a password, sign in with an email link, open **Settings**, then **Sign-in methods**, and use **Password**. A password needs 10 to 200 characters and has no other rules.
-- To change or remove it, type your current password, unless you signed in in the last 2 hours.
-- Changing or removing your password signs you out on every other browser and device.
+- To set or change a password, open **Settings**, then **Sign-in methods**, type it under **Password** and click **Save password**. A password needs 10 to 200 characters and has no other rules.
+- EELSdb then emails a link to your confirmed address. Your new password works once you open the link and click **Use this password**, on any device, within 60 minutes. Until then your current password, if you have one, still works. If you save again, only the newest link works.
+- You need a confirmed email address to set a password.
+- Using a new password, or removing your password, signs you out on every other browser and device.
 - If you forget it, click **Forgot your password?** and ask for an email link, then set a new password under **Settings**, **Sign-in methods**. There are no separate password sign-up or reset forms.
 
 ### Two-step sign-in
@@ -129,7 +130,7 @@ To make those spectra and your favourites from that time yours, add the address 
 
 If you no longer have that address, [contact us](/contact/).
 
-You can also sign in with an email link to that address, or with a password from before 2026 where the site still accepts them. After you sign in with an old password once, EELSdb stores it in its new format and forgets the old one.
+You can also sign in with an email link to that address. Passwords from the old site do not work here: set a new one under **Settings**, **Sign-in methods**.
 
 ## Set up your profile
 

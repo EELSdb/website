@@ -1,14 +1,15 @@
 import { Hono, type Context } from "hono";
-import { FRESH_SIGN_IN_HOURS, MAX_PASSWORD_FAILURES, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, PROVIDERS, methodsOn, requireUser, safeNext, sha256, signInAgainUrl, signOutOtherSessions, signedInRecently, syncEmails, unclaimedAccountForEmail, type AppEnv } from "../auth";
+import { FRESH_SIGN_IN_HOURS, MAX_PASSWORD_LENGTH, MIN_PASSWORD_LENGTH, PROVIDERS, methodsOn, requireUser, safeNext, sessionId, sha256, signInAgainUrl, signOutOtherSessions, signedInRecently, syncEmails, unclaimedAccountForEmail, type AppEnv } from "../auth";
 import { mergeAccounts, outranks } from "../merge";
 import { sendEmail } from "../email";
-import { pbkdf2Hash, verifyLegacyPassword } from "../legacy-password";
+import { hashPassword } from "../password";
+import { AuthPage } from "./account";
 import { MAX_PASSKEYS, addPasskey, registrationOptions } from "../passkeys";
 import { MAX_SECOND_STEP_FAILURES, makeRecoveryCodes, matchingStep, newSecret, otpauthUri, spendCode } from "../totp";
 import { HAS_PAGE_SQL } from "./profile";
 import { LicenceSection } from "../admin-users";
 import { AccountLayout, SETTINGS_PAGES, type AccountPage } from "./layout";
-import { DetailsFields, EmailList, LinkFields, PictureChoice, VERIFY_HOURS, MAX_EMAILS_PER_DAY, addEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, text, type EmailRow, type Profile } from "../account-edit";
+import { DetailsFields, EmailList, LinkFields, PictureChoice, VERIFY_HOURS, MAX_EMAILS_PER_DAY, addEmail, allowEmail, emailOf, makePrimary, pictureState, removeEmail, resendVerification, saveProfile, storedProfile, text, type EmailRow, type Profile } from "../account-edit";
 
 export const settings = new Hono<AppEnv>();
 type C = Context<AppEnv>;
@@ -18,6 +19,8 @@ const THEMES = [
   ["light", "Light"],
   ["dark", "Dark"],
 ] as const;
+
+const PASSWORD_LINK_MINUTES = 60;
 
 const NOTICES: Record<string, string> = {
   profile: "Profile saved.",
@@ -33,9 +36,9 @@ const NOTICES: Record<string, string> = {
   removed: "Address removed.",
   "password-saved": "Password saved. You were signed out everywhere else.",
   "password-removed": "Password removed. You were signed out everywhere else. You can still sign in with an email link.",
-  "password-wrong": "The current password is not right. Nothing was changed.",
   "password-short": `A password needs ${MIN_PASSWORD_LENGTH} to ${MAX_PASSWORD_LENGTH} characters.`,
-  "password-locked": "Too many wrong passwords. Please wait an hour.",
+  "password-sent": `Check your email: your new password works once you open the link we sent you. The link works for ${PASSWORD_LINK_MINUTES} minutes.`,
+  "password-limit": "No email was sent: you have asked for several today. Please try again tomorrow.",
   "two-step-required": "Moderators and admins need two-step sign-in. Until you set it up, your role does nothing.",
   "two-step-users": "This site requires two-step sign-in. Set it up below before you use your account.",
   "two-step-started": "Add the secret to your authenticator app, then enter a code it shows to turn two-step sign-in on.",
@@ -81,7 +84,7 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
   const totp = totpRows[0] as { secret: string; enabled_at: string | null; codes_left: number } | undefined;
   const hasPassword = !!pw[0].has;
   const recent = await signedInRecently(c);
-  const askCurrent = hasPassword && !recent;
+  const confirmed = emails.some((e: any) => e.verified);
   const v = form?.values ?? (await storedProfile(db, user.id));
   const errors = form?.errors ?? {};
   const orcidId: string | null = identities.find((i: any) => i.provider === "orcid")?.subject ?? null;
@@ -170,31 +173,29 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
 
         <section class="settings-section" aria-labelledby="h-password">
           <h2 id="h-password">Password</h2>
-          {passwordOn ? (
-          <p class="hint">
-            {hasPassword ? "You can sign in with your email address and password." : "You have no password. A password is optional."}{" "}
-            {askCurrent && `Changing or removing it needs your current password, because you signed in more than ${FRESH_SIGN_IN_HOURS} hours ago.`}
-            {!hasPassword && !recent && <><a href={signInAgainUrl(`${pageUrl("sign-in")}#h-password`)}>Sign in again</a> to set one.</>}
-          </p>
-          ) : (
+          {!passwordOn ? (
             <p class="hint">Password sign-in is switched off on this site.{hasPassword && " You can remove the password your account still has."}</p>
-          )}
-          {passwordOn && (hasPassword || recent) && (
-          <form method="post" action="/account/settings/password/" class="settings-form">
-            {hasPassword && <h3>Change your password</h3>}
-            {askCurrent && (
-              <div class="field">
-                <label for="f-current-password">Current password</label>
-                <input id="f-current-password" name="current_password" type="password" autocomplete="current-password" required />
-              </div>
-            )}
-            <div class="field">
-              <label for="f-new-password">{hasPassword ? "New password" : "Password"}</label>
-              <input id="f-new-password" name="new_password" type="password" autocomplete="new-password" required minlength={MIN_PASSWORD_LENGTH} maxlength={MAX_PASSWORD_LENGTH} />
-              <p class="hint">{MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters. Changing it signs you out everywhere else.</p>
-            </div>
-            <div><button class="button" type="submit">{hasPassword ? "Change password" : "Set password"}</button></div>
-          </form>
+          ) : !confirmed ? (
+            <p class="hint">
+              Confirm your email address first: you sign in with it, and the link that turns on your password goes to it.{" "}
+              <a href={pageUrl("emails")}>Email addresses</a>
+            </p>
+          ) : (
+            <>
+              <p class="hint">
+                {hasPassword
+                  ? "You can sign in with your email address and password. To change it, save a new one here, then open the link we email you."
+                  : "A password is optional. Save one here, then open the link we email you to start using it."}
+              </p>
+              <form method="post" action="/account/settings/password/" class="settings-form">
+                <div class="field">
+                  <label for="f-new-password">{hasPassword ? "New password" : "Password"}</label>
+                  <input id="f-new-password" name="new_password" type="password" autocomplete="new-password" required minlength={MIN_PASSWORD_LENGTH} maxlength={MAX_PASSWORD_LENGTH} />
+                  <p class="hint">{MIN_PASSWORD_LENGTH} to {MAX_PASSWORD_LENGTH} characters.</p>
+                </div>
+                <div><button class="button" type="submit">Save password</button></div>
+              </form>
+            </>
           )}
           {hasPassword && (
             <form method="post" action="/account/settings/password/remove/" class="settings-form">
@@ -203,12 +204,6 @@ async function renderSettings(c: C, page: Page, form?: { values: Profile; errors
                 {passwordOn ? "Then you sign in with an email link or another method instead, and nobody can sign in to your account with a password." : "Then nobody can sign in to your account with a password if password sign-in is switched back on."}{" "}
                 Removing it signs you out everywhere else.
               </p>
-              {askCurrent && (
-                <div class="field">
-                  <label for="f-remove-password">Current password</label>
-                  <input id="f-remove-password" name="current_password" type="password" autocomplete="current-password" required />
-                </div>
-              )}
               <div><button class="button secondary" type="submit">Remove password</button></div>
             </form>
           )}
@@ -489,45 +484,88 @@ settings.get("/account/emails/verify/:token/", requireUser, async (c) => {
   return back(c, "emails", merge ? "verified-merged" : "verified");
 });
 
-/** Passes when the session is fresh or the current password is right; wrong guesses count towards the same hourly lockout as sign-in. */
-// A first password needs a fresh sign-in too: otherwise anyone at an unattended signed-in browser could set one and keep access.
-async function mayChangePassword(c: C, current: unknown): Promise<"ok" | "wrong" | "locked" | "stale"> {
-  const user = c.get("user")!;
-  const db = c.env.DB;
-  const row = await db.prepare("SELECT password_hash FROM users WHERE id = ?").bind(user.id).first<string | null>("password_hash");
-  if (await signedInRecently(c)) return "ok";
-  if (!row) return "stale";
-  const key = `account:${user.id}`;
-  const failures = await db.prepare("SELECT COUNT(*) AS n FROM rate_events WHERE kind = 'password' AND key = ? AND at > datetime('now', '-1 hour')").bind(key).first<number>("n");
-  if ((failures ?? 0) >= MAX_PASSWORD_FAILURES) return "locked";
-  const password = typeof current === "string" ? current : "";
-  if (password.length <= MAX_PASSWORD_LENGTH && (await verifyLegacyPassword(password, row))) return "ok";
-  await db.prepare("INSERT INTO rate_events (kind, key) VALUES ('password', ?)").bind(key).run();
-  return "wrong";
-}
-
+// No recent sign-in or current password: the password only works once a link to a confirmed address is opened. An
+// unattended browser that confirms its own address could already sign in with email links, so this adds no new way in.
 settings.post("/account/settings/password/", requireUser, async (c) => {
   const user = c.get("user")!;
-  const body = await c.req.parseBody();
-  const next = typeof body.new_password === "string" ? body.new_password : "";
+  const db = c.env.DB;
+  const password = (await c.req.parseBody()).new_password;
   if (!(await methodsOn(c.env)).includes("password")) return back(c, "sign-in", "password-off");
-  const allowed = await mayChangePassword(c, body.current_password);
-  if (allowed === "stale") return c.redirect(signInAgainUrl(`${pageUrl("sign-in")}#h-password`));
-  if (allowed !== "ok") return back(c, "sign-in", `password-${allowed}`);
-  if (next.length < MIN_PASSWORD_LENGTH || next.length > MAX_PASSWORD_LENGTH) return back(c, "sign-in", "password-short");
-  await c.env.DB.prepare("UPDATE users SET password_hash = ?, legacy_password_hash = NULL WHERE id = ?").bind(await pbkdf2Hash(next), user.id).run();
-  await signOutOtherSessions(c, user.id);
-  return back(c, "sign-in", "password-saved");
+  const to = await db.prepare("SELECT email FROM user_emails WHERE user_id = ? AND verified = 1 ORDER BY is_primary DESC, id LIMIT 1").bind(user.id).first<string>("email");
+  if (!to) return c.redirect(pageUrl("sign-in"));
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) return back(c, "sign-in", "password-short");
+  if (!(await allowEmail(db, user.id))) return back(c, "sign-in", "password-limit", "#h-password");
+  const token = crypto.randomUUID();
+  await db.batch([
+    db.prepare("DELETE FROM password_changes WHERE user_id = ?").bind(user.id),
+    db.prepare("INSERT INTO password_changes (token_hash, user_id, password_hash, session_id, expires_at) VALUES (?, ?, ?, ?, ?)")
+      .bind(await sha256(token), user.id, await hashPassword(password), await sessionId(c), new Date(Date.now() + PASSWORD_LINK_MINUTES * 60_000).toISOString()),
+  ]);
+  await sendEmail(c.env, {
+    to,
+    subject: "Confirm your new EELS Data Base password",
+    text: `Someone signed in to the EELS Data Base as "${user.display_name}" and saved a new password. If that was you, open this link to start using it (it works for ${PASSWORD_LINK_MINUTES} minutes, once):\n${new URL(c.req.url).origin}/account/password/${token}/\n\nIf not, ignore this email. Your password has not changed.`,
+  });
+  return back(c, "sign-in", "password-sent", "#h-password");
 });
 
 settings.post("/account/settings/password/remove/", requireUser, async (c) => {
   const user = c.get("user")!;
-  const allowed = await mayChangePassword(c, (await c.req.parseBody()).current_password);
-  if (allowed === "stale") return c.redirect(signInAgainUrl(`${pageUrl("sign-in")}#h-password`));
-  if (allowed !== "ok") return back(c, "sign-in", `password-${allowed}`);
-  await c.env.DB.prepare("UPDATE users SET password_hash = NULL, legacy_password_hash = NULL WHERE id = ?").bind(user.id).run();
+  const db = c.env.DB;
+  await db.batch([
+    db.prepare("UPDATE users SET password_hash = NULL WHERE id = ?").bind(user.id),
+    db.prepare("DELETE FROM password_changes WHERE user_id = ?").bind(user.id),
+  ]);
   await signOutOtherSessions(c, user.id);
   return back(c, "sign-in", "password-removed");
+});
+
+const DeadPasswordLink = () => (
+  <AuthPage title="Link no longer works">
+    <h1>This link no longer works</h1>
+    <p class="auth-lede">
+      It was used already, it is more than {PASSWORD_LINK_MINUTES} minutes old, or you saved a newer password since. Save your password again under
+      Settings, Sign-in methods.
+    </p>
+    <a class="button auth-wide" href={`${pageUrl("sign-in")}#h-password`}>Sign-in methods</a>
+  </AuthPage>
+);
+
+// Opening the link only shows a button, so an email scanner that follows it changes nothing.
+settings.get("/account/password/:token/", async (c) => {
+  const live = await c.env.DB.prepare("SELECT 1 FROM password_changes WHERE token_hash = ? AND expires_at > ?")
+    .bind(await sha256(c.req.param("token")), new Date().toISOString()).first();
+  if (!live || !(await methodsOn(c.env)).includes("password")) return c.html(<DeadPasswordLink />, 410);
+  return c.html(
+    <AuthPage title="Use your new password">
+      <h1>Use your new password</h1>
+      <form method="post" class="auth-form">
+        <button class="button" type="submit">Use this password</button>
+        <p class="hint">This extra click stops email scanners from using up your link.</p>
+      </form>
+    </AuthPage>,
+  );
+});
+
+// No sign-in needed: the link proves the person can read the account's email, on whatever device they open it.
+settings.post("/account/password/:token/", async (c) => {
+  const db = c.env.DB;
+  const change = await db.prepare("DELETE FROM password_changes WHERE token_hash = ? AND expires_at > ? RETURNING user_id, password_hash, session_id")
+    .bind(await sha256(c.req.param("token")), new Date().toISOString())
+    .first<{ user_id: number; password_hash: string; session_id: string | null }>();
+  if (!change || !(await methodsOn(c.env)).includes("password")) return c.html(<DeadPasswordLink />, 410);
+  await db.batch([
+    db.prepare("UPDATE users SET password_hash = ? WHERE id = ?").bind(change.password_hash, change.user_id),
+    db.prepare("DELETE FROM sessions WHERE user_id = ? AND id IS NOT ?").bind(change.user_id, change.session_id),
+  ]);
+  if ((await sessionId(c)) === change.session_id) return c.redirect(`${pageUrl("sign-in")}?notice=password-saved#h-password`);
+  return c.html(
+    <AuthPage title="Password saved">
+      <h1>Your new password works now</h1>
+      <p class="auth-lede">Sign in with your email address and the new password. Other browsers and devices were signed out, except the one where you saved it.</p>
+      <a class="button auth-wide" href="/login/">Sign in</a>
+    </AuthPage>,
+  );
 });
 
 

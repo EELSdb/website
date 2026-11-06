@@ -6,7 +6,7 @@ import { CHALLENGE_COOKIE, FRESH_SIGN_IN_HOURS, LAST_METHOD_COOKIE, MAX_PASSWORD
 import { addEmail } from "../account-edit";
 import { sendEmail } from "../email";
 import { authenticationOptions, hasPasskey, verifyPasskey } from "../passkeys";
-import { pbkdf2Hash, verifyLegacyPassword } from "../legacy-password";
+import { verifyPassword } from "../password";
 import { spendCode } from "../totp";
 import { AccountLayout, Avatar, Formula, Layout, TypeBadge, accountSummary } from "./layout";
 
@@ -42,7 +42,7 @@ const LAST_USED_SCRIPT = `(function(){try{var m=localStorage.getItem("signin-met
 const METHOD_NAMES: Record<string, string> = { email_link: "an email link", password: "a password", passkey: "a passkey" };
 const listOr = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} or ${items[items.length - 1]}` : items[0] ?? "");
 
-function AuthPage(props: { title: string; status?: number; children: Child; script?: boolean; user?: User }) {
+export function AuthPage(props: { title: string; status?: number; children: Child; script?: boolean; user?: User }) {
   return (
     <Layout title={props.title} path="/login/" user={props.user ?? null}>
       <div class="auth">
@@ -369,24 +369,16 @@ account.post("/login/password/", async (c) => {
   const failures = await c.env.DB.prepare("SELECT COUNT(*) AS n FROM rate_events WHERE kind = 'password' AND key = ? AND at > datetime('now', '-1 hour')")
     .bind(key).first<number>("n");
   if ((failures ?? 0) >= MAX_PASSWORD_FAILURES) return c.redirect("/login/?error=locked");
-  const legacyAllowed = c.env.LEGACY_PASSWORD_LOGIN === "1";
   const user = login
     ? await c.env.DB.prepare(
-        `SELECT id, password_hash, legacy_password_hash FROM users
-         WHERE (password_hash IS NOT NULL OR (?1 = 1 AND legacy_password_hash IS NOT NULL))
-         AND (id = (SELECT user_id FROM user_emails WHERE email = ?2 AND verified = 1) OR slug = ?2 OR legacy_login = ?3 OR legacy_email = ?3 COLLATE NOCASE)
-         ORDER BY id != (SELECT user_id FROM user_emails WHERE email = ?2 AND verified = 1), slug IS NOT ?2, id LIMIT 1`,
-      ).bind(legacyAllowed ? 1 : 0, key, login).first<{ id: number; password_hash: string | null; legacy_password_hash: string | null }>()
+        `SELECT id, password_hash FROM users
+         WHERE password_hash IS NOT NULL AND (id = (SELECT user_id FROM user_emails WHERE email = ?1 AND verified = 1) OR slug = ?1)
+         ORDER BY id != (SELECT user_id FROM user_emails WHERE email = ?1 AND verified = 1), id LIMIT 1`,
+      ).bind(key).first<{ id: number; password_hash: string }>()
     : null;
-  const hash = user?.password_hash ?? user?.legacy_password_hash;
-  if (!user || !hash || password.length > MAX_PASSWORD_LENGTH || !(await verifyLegacyPassword(password, hash))) {
+  if (!user || password.length > MAX_PASSWORD_LENGTH || !(await verifyPassword(password, user.password_hash))) {
     await c.env.DB.prepare("INSERT INTO rate_events (kind, key) VALUES ('password', ?)").bind(key).run();
     return c.redirect("/login/?error=password");
-  }
-  if (!user.password_hash) {
-    // phpass and bcrypt are only checked while LEGACY_PASSWORD_LOGIN is on; after one good sign-in the account no longer needs them.
-    const moved = hash.startsWith("$pbkdf2-") ? hash : await pbkdf2Hash(password);
-    await c.env.DB.prepare("UPDATE users SET password_hash = ?, legacy_password_hash = NULL WHERE id = ?").bind(moved, user.id).run();
   }
   return completeSignIn(c, user.id, { method: "password", next: typeof body.next === "string" ? body.next : undefined });
 });

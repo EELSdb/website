@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { sha256 } from "../src/auth";
 import { sent } from "../src/email";
-import { pbkdf2Hash } from "../src/legacy-password";
+import { hashPassword } from "../src/password";
 import { sessionFor } from "./helpers/session";
 
 const SITE = "https://eelsdb.eu";
@@ -20,8 +20,8 @@ const admin = () => sessionFor({ id: ++nextId, display_name: "Account Admin", ro
 async function person(opts: { name?: string; slug?: string; verified?: boolean; password?: boolean } = {}) {
   const id = ++nextId;
   const email = `p${id}@example.invalid`;
-  await env.DB.prepare("INSERT INTO users (id, display_name, slug, password_hash, legacy_password_hash) VALUES (?, ?, ?, ?, ?)")
-    .bind(id, opts.name ?? `Person ${id}`, opts.slug ?? null, opts.password === false ? null : await pbkdf2Hash("a long password"), opts.password === false ? null : "$P$Bold").run();
+  await env.DB.prepare("INSERT INTO users (id, display_name, slug, password_hash) VALUES (?, ?, ?, ?)")
+    .bind(id, opts.name ?? `Person ${id}`, opts.slug ?? null, opts.password === false ? null : await hashPassword("a long password")).run();
   await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (?, ?, ?, 1)").bind(id, email, opts.verified === false ? 0 : 1).run();
   const token = crypto.randomUUID();
   await env.DB.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, datetime('now', '+1 day'))").bind(await sha256(token), id).run();
@@ -97,7 +97,7 @@ describe("user page", () => {
     await env.DB.prepare("INSERT INTO passkeys (credential_id, user_id, public_key, name) VALUES ('cred-facts', ?, 'KEYKEYKEY', 'Laptop key')").bind(p.id).run();
     const html = await (await go(`/admin/users/${p.id}/`, a.cookie)).text();
     for (const text of [p.email, "GitHub", "gh@example.invalid", "On, 2 recovery codes left", "Laptop key", "1 active", "Remove password"]) expect(html).toContain(text);
-    for (const secret of ["SECRETSECRETSECRET", "KEYKEYKEY", "pbkdf2", "$P$Bold", "cred-facts"]) expect(html).not.toContain(secret);
+    for (const secret of ["SECRETSECRETSECRET", "KEYKEYKEY", "pbkdf2", "cred-facts"]) expect(html).not.toContain(secret);
     expect((await go("/admin/users/999999999/", a.cookie)).status).toBe(404);
   });
 
@@ -278,17 +278,32 @@ describe("sign-in methods and sessions", () => {
     expect((await log(p.id)).map((e) => e.action)).toEqual(["identity_unlinked"]);
   });
 
-  it("removes the password, both hashes, signs the person out everywhere and tells them", async () => {
+  it("removes the password, signs the person out everywhere and tells them", async () => {
     const a = await admin();
     const p = await person();
     const res = await post(`/admin/users/${p.id}/password/remove/`, a.cookie);
     expect(res.headers.get("location")).toContain("notice=password-removed");
-    expect(await row<any>("SELECT password_hash, legacy_password_hash FROM users WHERE id = ?", p.id)).toEqual({ password_hash: null, legacy_password_hash: null });
+    expect(await row<any>("SELECT password_hash FROM users WHERE id = ?", p.id)).toEqual({ password_hash: null });
     expect(await count("SELECT 1 FROM sessions WHERE user_id = ?", p.id)).toBe(0);
     expect((await go("/account/", p.cookie)).status).toBe(302);
     expect(mailTo(p.email).at(-1)!.text).toContain("password was removed");
     expect((await post(`/admin/users/${p.id}/password/remove/`, a.cookie)).headers.get("location")).toContain("notice=no-password");
     expect((await log(p.id)).map((e) => e.action)).toEqual(["password_removed"]);
+  });
+
+  it("cancels a password the person saved but has not confirmed, when an admin removes the password or ends the sessions", async () => {
+    const a = await admin();
+    const linkFor = async (p: { cookie: string; email: string }) => {
+      await post("/account/settings/password/", p.cookie, { new_password: "a waiting password" });
+      return mailTo(p.email).at(-1)!.text.match(/\/account\/password\/([\w-]+)\//)![1];
+    };
+    for (const [action, password] of [["password/remove/", true], ["password/remove/", false], ["sessions/end/", true]] as const) {
+      const p = await person({ password });
+      const token = await linkFor(p);
+      await post(`/admin/users/${p.id}/${action}`, a.cookie);
+      expect(await count("SELECT 1 FROM password_changes WHERE user_id = ?", p.id), action).toBe(0);
+      expect(await (await post(`/account/password/${token}/`, "")).text()).toContain("This link no longer works");
+    }
   });
 
   it("resets two-step sign-in: secret, recovery codes and passkeys go, sessions end, a moderator loses the role until set up again", async () => {

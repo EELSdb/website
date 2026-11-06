@@ -10,7 +10,6 @@ interface Env {
   EMAIL_PROVIDER?: string;
   EMAIL_FROM?: string;
   CONTACT_EMAIL?: string;
-  LEGACY_PASSWORD_LOGIN?: string;
   TURNSTILE_SITE_KEY?: string;
   TURNSTILE_SECRET_KEY?: string;
   ANALYTICS_ACCOUNT_ID?: string;

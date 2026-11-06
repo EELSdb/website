@@ -37,26 +37,26 @@ For each kept account, we migrate these data:
 
 - The display name, affiliation and country.
 - The ORCID iD, if set.
-- The login name and email. The site uses them for matching only and never exposes them.
+- The email. The site uses it for matching only and never exposes it.
 - Favourites and microscope presets.
-- Password hashes, but only for legacy password sign-in ([ADR 0018](/docs/adr/0018-sign-in/)).
 
-We do not migrate pending spectra, the forum, jobs, comments, sessions, security-plugin tables, profile-plugin tables, saved browse filters, page size or social links.
+We do not migrate login names, password hashes, pending spectra, the forum, jobs, comments, sessions, security-plugin tables, profile-plugin tables, saved browse filters, page size or social links.
 
 The new site drops the forum, the jobs board, comments and the registered-users list. News stays as a frozen archive.
 
-A person takes over old spectra in this way. The person signs in by any method and confirms the old email address under Settings. The site then merges the migrated account into the person's account ([ADR 0020](/docs/adr/0020-one-account-per-person/)). Most people need to do nothing. An email link or their old password signs them straight into the old account.
+A person takes over old spectra in this way. The person signs in by any method and confirms the old email address under Settings. The site then merges the migrated account into the person's account ([ADR 0020](/docs/adr/0020-one-account-per-person/)). Most people need to do nothing. An email link to the old address, or Google or GitHub with that address, signs them straight into the old account. Old passwords do not work ([ADR 0018](/docs/adr/0018-sign-in/)).
 
 ## Consequences
 
 - The export script is built and runs locally. The accounts reach the live site only at the cut-over ([ADR 0010](/docs/adr/0010-migrating-public-data/)), after a final export from the read-only old site.
+- Older accounts are kept even without data, so the site can invite them to its newsletter.
 - The data worth keeping is, in order: spectrum ownership (the main reason), favourites, presets (marginal) and affiliation for profiles. Attribution of spectra does not need accounts.
 - The dump creates its own database name when you load it. The script detects the database that holds the WordPress tables.
 - The dump stores favourites as one row per spectrum, not as a serialised list.
 - Agent permission checks block reading the dump unless the owner asks directly. This is intended.
 - The local D1 holds the migrated real accounts. Never print rows from `users`, `user_emails` or `identities`. Use made-up test users and delete them afterwards.
 - Never give a local test user a real person's email. When the site renders the avatar, it sends the email hash to Gravatar.
-- Before you share the local site remotely, reseed it without accounts and turn legacy password sign-in off.
+- Before you share the local site remotely, reseed it without accounts.
 
 ## Research: matching old accounts to ORCID (2026-10-22)
 

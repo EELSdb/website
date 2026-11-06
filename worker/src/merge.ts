@@ -25,7 +25,7 @@ export async function accountFacts(db: D1Database, id: number): Promise<Facts | 
   const [{ results: [u] }, { results: emails }, { results: identities }] = await db.batch<any>([
     db.prepare(
       `SELECT u.id, u.display_name, u.slug, u.role, u.avatar_key, u.orcid, u.mfa_all_methods,
-              (u.password_hash IS NOT NULL OR u.legacy_password_hash IS NOT NULL) AS has_password,
+              u.password_hash IS NOT NULL AS has_password,
               EXISTS (SELECT 1 FROM user_totp t WHERE t.user_id = u.id AND t.enabled_at IS NOT NULL) AS totp,
               (SELECT COUNT(*) FROM recovery_codes r WHERE r.user_id = u.id AND r.used_at IS NULL) AS recovery_codes,
               (SELECT COUNT(*) FROM passkeys p WHERE p.user_id = u.id) AS passkeys,
@@ -134,10 +134,9 @@ export async function mergeAccounts(db: D1Database, fromId: number, intoId: numb
     ).bind(from, to),
     move("draft_tokens", "user_id"),
   );
-  // Both hash columns travel together, so a password never ends up half there.
   if (!kept.has_password) {
     statements.push(
-      db.prepare("UPDATE users SET password_hash = (SELECT password_hash FROM users WHERE id = ?1), legacy_password_hash = (SELECT legacy_password_hash FROM users WHERE id = ?1) WHERE id = ?2").bind(from, to),
+      db.prepare("UPDATE users SET password_hash = (SELECT password_hash FROM users WHERE id = ?1) WHERE id = ?2").bind(from, to),
     );
   }
 

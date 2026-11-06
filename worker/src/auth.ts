@@ -241,12 +241,19 @@ export async function signedInRecently(c: C) {
 /** The sign-in page for a sensitive change on an older session; it brings the person back to `next` to make the change. */
 export const signInAgainUrl = (next: string) => `/login/?notice=again&next=${encodeURIComponent(next)}`;
 
+/** This browser's `sessions.id`. */
+export const sessionId = async (c: C) => sha256(getCookie(c, SESSION_COOKIE) ?? "");
+
 export async function signOutOtherSessions(c: C, userId: number) {
-  await c.env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?")
-    .bind(userId, await sha256(getCookie(c, SESSION_COOKIE) ?? "")).run();
+  await c.env.DB.prepare("DELETE FROM sessions WHERE user_id = ? AND id != ?").bind(userId, await sessionId(c)).run();
 }
 
-export const signOutEverywhere = (db: D1Database, userId: number) => db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId).run();
+/** Also cancels a new password waiting for its emailed link, so a reset leaves no way back in. */
+export const signOutEverywhere = (db: D1Database, userId: number) =>
+  db.batch([
+    db.prepare("DELETE FROM sessions WHERE user_id = ?").bind(userId),
+    db.prepare("DELETE FROM password_changes WHERE user_id = ?").bind(userId),
+  ]);
 
 export async function signOut(c: C) {
   const token = getCookie(c, SESSION_COOKIE);
@@ -263,12 +270,12 @@ export const METHOD_OFF = "/login/?error=off";
 const LINK_OFF = "/account/settings/sign-in/?notice=link-off#h-signin";
 
 /** SQL that is true when account `u` can take this first step. Shared by the lock-out guard and the admin count, so both agree. */
-export function wayInSql(method: SwitchableMethod, env: Env) {
+export function wayInSql(method: SwitchableMethod) {
   switch (method) {
     case "passkey":
       return "EXISTS (SELECT 1 FROM passkeys p WHERE p.user_id = u.id)";
     case "password":
-      return env.LEGACY_PASSWORD_LOGIN === "1" ? "(u.password_hash IS NOT NULL OR u.legacy_password_hash IS NOT NULL)" : "u.password_hash IS NOT NULL";
+      return "u.password_hash IS NOT NULL";
     case "email_link":
       // An unclaimed old account is reached through its old address (see accountForEmail).
       return `(EXISTS (SELECT 1 FROM user_emails e WHERE e.user_id = u.id AND e.verified = 1)
@@ -280,7 +287,7 @@ export function wayInSql(method: SwitchableMethod, env: Env) {
 
 /** How many accounts (or whether this one, with `userId`) would have none of these methods to sign in with. */
 export async function accountsLockedOut(env: Env, methods: SwitchableMethod[], userId?: number) {
-  const any = methods.length ? methods.map((m) => wayInSql(m, env)).join(" OR ") : "0";
+  const any = methods.length ? methods.map((m) => wayInSql(m)).join(" OR ") : "0";
   const sql = `SELECT COUNT(*) AS n FROM users u WHERE NOT (${any})${userId === undefined ? "" : " AND u.id = ?"}`;
   const stmt = env.DB.prepare(sql);
   return (await (userId === undefined ? stmt : stmt.bind(userId)).first<number>("n")) ?? 0;

@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sha256 } from "../src/auth";
 import { sent } from "../src/email";
-import { pbkdf2Hash } from "../src/legacy-password";
+import { hashPassword } from "../src/password";
 import { base32Encode, stepAt, totpCode } from "../src/totp";
 import { SoftwareAuthenticator } from "./helpers/authenticator";
 import { sessionFor } from "./helpers/session";
@@ -52,7 +52,7 @@ const orcidProfile = () => ({ orcid: orcidId(), name: "Ori Cid" });
 async function user(opts: { password?: string; totp?: string; role?: string } = {}) {
   const email = `w-${uniq()}@example.invalid`;
   const id = (await env.DB.prepare("INSERT INTO users (display_name, role, password_hash) VALUES ('Existing Person', ?, ?) RETURNING id")
-    .bind(opts.role ?? "user", opts.password ? await pbkdf2Hash(opts.password) : null).first<number>("id"))!;
+    .bind(opts.role ?? "user", opts.password ? await hashPassword(opts.password) : null).first<number>("id"))!;
   await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (?, ?, 1, 1)").bind(id, email).run();
   if (opts.totp) await env.DB.prepare("INSERT INTO user_totp (user_id, secret, enabled_at) VALUES (?, ?, datetime('now'))").bind(id, opts.totp).run();
   return { id, email };

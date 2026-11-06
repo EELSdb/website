@@ -20,8 +20,8 @@ const admin = (role = "admin") => sessionFor({ id: ++nextId, display_name: `Merg
 
 async function account(opts: { name: string; slug?: string | null; role?: string; password?: boolean; verified?: boolean; emails?: string[]; unverified?: string[] }) {
   const id = ++nextId;
-  await run("INSERT INTO users (id, display_name, slug, role, password_hash, legacy_password_hash) VALUES (?, ?, ?, ?, ?, ?)",
-    id, opts.name, opts.slug ?? null, opts.role ?? "user", opts.password ? `pbkdf2$${id}` : null, opts.password ? `$P$B${id}` : null);
+  await run("INSERT INTO users (id, display_name, slug, role, password_hash) VALUES (?, ?, ?, ?, ?)",
+    id, opts.name, opts.slug ?? null, opts.role ?? "user", opts.password ? `pbkdf2$${id}` : null);
   const emails = opts.emails ?? [`m${id}@example.invalid`];
   for (const [i, email] of emails.entries()) {
     await run("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (?, ?, ?, ?)", id, email, opts.verified === false || opts.unverified?.includes(email) ? 0 : 1, i === 0 ? 1 : 0);
@@ -91,7 +91,7 @@ describe("merging accounts", () => {
     expect(await count("SELECT 1 FROM login_links WHERE token_hash = ?", `ll-${g}`)).toBe(0);
 
     const u = (await row<any>("SELECT * FROM users WHERE id = ?", k))!;
-    expect([u.display_name, u.affiliation, u.slug, u.password_hash, u.legacy_password_hash]).toEqual(["Kept Person", "Kept Lab", "kept-person", `pbkdf2$${k}`, `$P$B${k}`]);
+    expect([u.display_name, u.affiliation, u.slug, u.password_hash]).toEqual(["Kept Person", "Kept Lab", "kept-person", `pbkdf2$${k}`]);
     expect([u.avatar_key, u.orcid, u.mfa_all_methods]).toEqual(["gone-avatar", "0000-0002-1825-0097", 1]);
 
     expect((await all<any>("SELECT email, verified, is_primary FROM user_emails WHERE user_id = ? ORDER BY email", k)).map((e) => [e.email, e.verified, e.is_primary])).toEqual([

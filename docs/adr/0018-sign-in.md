@@ -10,7 +10,6 @@ adr:
 - Contributors' old accounts must keep working ([ADR 0011](/docs/adr/0011-migrating-accounts/)).
 - EELSdb wants to identify contributors by ORCID iD, and may move to ORCID-only sign-in later. We measured this on local data. ORCID-only sign-in would lock out about 396 accounts, which is almost every migrated account. So it needs a linking campaign first.
 - Not everyone has or wants ORCID, Google or GitHub.
-- A check of an old WordPress password hash uses a lot of CPU. phpass uses 8,192 MD5 rounds, and bcrypt uses cost 12. Checking these on every sign-in would put heavy work in the request path.
 
 ## Decision
 
@@ -58,17 +57,14 @@ The email link is also the sign-up path. There is no separate sign-up form.
 Passwords are optional.
 
 - `users.password_hash` holds a PBKDF2-SHA256 hash with 100,000 iterations, made with Web Crypto. 100,000 is the Workers maximum.
-- Sign-in accepts a confirmed email address, the current username or the old-site login. When several accounts match, the Worker prefers the confirmed address, then the username, then the old login.
-- The Worker also accepts legacy hashes when `LEGACY_PASSWORD_LOGIN` is on. It accepts two formats:
-  - phpass `$P$B…`
-  - WordPress 6.8+ `$wp$2y$…`, which is bcrypt over base64(HMAC-SHA384(key `wp-sha384`, trim(password)))
-
-  The Worker checks legacy hashes with bcryptjs, because Web Crypto has no MD5 or bcrypt. On the first successful sign-in, it rehashes the password to PBKDF2 and clears the legacy column.
+- Sign-in accepts a confirmed email address or the current username. When they match different accounts, the Worker prefers the confirmed address.
+- Passwords from the old site are not migrated. Old accounts are reached through their old email address ([ADR 0011](/docs/adr/0011-migrating-accounts/)).
 - After 10 failures in an hour, the Worker locks the login.
 - A password must have 10 to 200 characters. There are no other rules. The Worker rejects a password over 200 characters without hashing it.
 - There is no reset form. "Forgot your password?" sends an email link.
-- To set a first password, the person needs a recent sign-in. Without this rule, anyone at an unattended signed-in browser could add a password and keep access.
-- To change or remove a password, the person needs the current password or a recent sign-in. The change signs out other sessions.
+- To set or change a password, the person types it once in Settings. The Worker stores its hash in `password_changes` and emails a link to the primary confirmed address. The password works only once that link is opened, within 60 minutes. A newer request replaces an older one. So a password never works without access to a confirmed address. This needs no recent sign-in and no current password: an unattended signed-in browser that adds and confirms its own address can already sign in with email links, so a password gives it no new way in. An account with no confirmed address cannot set a password.
+- The link opens a page with a button, like sign-in links, so an email scanner cannot use it. It needs no sign-in, so it works on another device. Using it signs out every session except the one that asked. Opened in the browser that asked, it returns to Settings; anywhere else it shows a page that says the new password works.
+- Removing a password needs nothing more. It also cancels a waiting new password and signs out other sessions. Email-link sign-in still reaches the account.
 
 ### OAuth details
 
@@ -114,4 +110,5 @@ Admins change site settings at `/admin/settings/`. The values are in the `site_s
 
 ## Alternatives considered
 
-- OAuth only. Not everyone has these services, and migrated accounts need their old passwords.
+- OAuth only. Not everyone has these services, and most migrated accounts have only an old email address.
+- Accepting the old WordPress password hashes (phpass and WordPress bcrypt), and the old-site logins, and rehashing each password on first use. Few people would use them: most old accounts had not signed in for years, and the old email address reaches the same account. The hashes are weak, checking them needs a bcrypt library and a lot of CPU, and keeping them in the new database is a risk with no end date.

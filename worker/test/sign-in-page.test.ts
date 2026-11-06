@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { sent } from "../src/email";
-import { pbkdf2Hash } from "../src/legacy-password";
+import { hashPassword } from "../src/password";
 import { account } from "../src/pages/account";
 import { base32Encode, stepAt, totpCode } from "../src/totp";
 import { SoftwareAuthenticator } from "./helpers/authenticator";
@@ -115,7 +115,7 @@ describe("last method hand-off", () => {
 
   it("is set for a password", async () => {
     const email = fresh();
-    const id = (await env.DB.prepare("INSERT INTO users (display_name, password_hash) VALUES ('Pw', ?) RETURNING id").bind(await pbkdf2Hash("a long password")).first<number>("id"))!;
+    const id = (await env.DB.prepare("INSERT INTO users (display_name, password_hash) VALUES ('Pw', ?) RETURNING id").bind(await hashPassword("a long password")).first<number>("id"))!;
     await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified) VALUES (?, ?, 1)").bind(id, email).run();
     expect(handedOff(await post("/login/password/", { login: email, password: "a long password" }))).toBe("password");
     expect(handedOff(await post("/login/password/", { login: email, password: "wrong" }))).toBeUndefined();

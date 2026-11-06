@@ -29,7 +29,7 @@
   // Daily: delete old drafts, contact messages and rate-limit events, and copy usage counts into D1.
   "triggers": { "crons": ["17 3 * * *"] },
   // Caps the CPU one invocation can bill (Workers Paid default: 30 s); env.dev inherits it. The heaviest work,
-  // an old bcrypt (cost 12) password check, needs well under 1 s.
+  // a PBKDF2 password hash, needs well under 1 s.
   "limits": { "cpu_ms": 2000 },
   "observability": { "enabled": true },
   // A test deployment on its own hosts, data and files: `npx wrangler deploy --env dev`. Copy this block for

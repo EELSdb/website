@@ -2,7 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { accountsLockedOut, sha256 } from "../src/auth";
 import { sent } from "../src/email";
-import { pbkdf2Hash } from "../src/legacy-password";
+import { hashPassword } from "../src/password";
 import { SIGN_IN_METHODS } from "../src/settings";
 import { SoftwareAuthenticator } from "./helpers/authenticator";
 import { sessionFor } from "./helpers/session";
@@ -31,7 +31,7 @@ const email = () => `switch-${++n}-${crypto.randomUUID().slice(0, 6)}@example.in
 async function account(ways: { password?: string; email?: boolean; provider?: string; role?: string } = {}) {
   const id = nextId++;
   const address = email();
-  await run("INSERT INTO users (id, display_name, role, password_hash) VALUES (?, 'Switch Person', ?, ?)", id, ways.role ?? "user", ways.password ? await pbkdf2Hash(ways.password) : null);
+  await run("INSERT INTO users (id, display_name, role, password_hash) VALUES (?, 'Switch Person', ?, ?)", id, ways.role ?? "user", ways.password ? await hashPassword(ways.password) : null);
   if (ways.email || ways.password) await run("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (?, ?, ?, 1)", id, address, ways.email ? 1 : 0);
   if (ways.provider) await run("INSERT INTO identities (user_id, provider, subject) VALUES (?, ?, ?)", id, ways.provider, `sub-${id}`);
   return { id, email: address };
@@ -304,7 +304,7 @@ describe("admin switches", () => {
   it("ask for the typed number of locked-out accounts before switching off, then save and log the counts", async () => {
     const ad = await admin();
     await account({ password: "a long password" });
-    const passwordUsers = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE password_hash IS NOT NULL OR legacy_password_hash IS NOT NULL").first<number>("n");
+    const passwordUsers = await env.DB.prepare("SELECT COUNT(*) AS n FROM users WHERE password_hash IS NOT NULL").first<number>("n");
     const proposed = SIGN_IN_METHODS.filter((m) => m !== "password");
     const locked = await accountsLockedOut(env, proposed);
     expect(locked).toBeGreaterThan(0);

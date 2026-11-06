@@ -179,7 +179,7 @@ export async function decide(env: Env, id: number, decision: Decision, notes: st
   await db.batch(statements);
 
   const submitter = await db
-    .prepare("SELECT COALESCE((SELECT email FROM user_emails WHERE user_id = u.id AND verified = 1 ORDER BY is_primary DESC, id LIMIT 1), u.legacy_email) AS email FROM users u WHERE u.id = ?")
+    .prepare("SELECT email FROM user_emails WHERE user_id = ? AND verified = 1 ORDER BY is_primary DESC, id LIMIT 1")
     .bind(sub.submitted_by)
     .first<string>("email");
   if (submitter) await sendEmail(env, { to: submitter, ...MESSAGES[decision](spectrum.title, notes) });

@@ -34,5 +34,4 @@ The most important promise is that old API clients see no change ([ADR 0008](/do
 - Vitest loads `worker/.env`, so real local keys can change test results. `vitest.config.ts` pins the Turnstile, email and ORCID bindings.
 - Test users have made-up data and ids from 9910000. The tests delete them afterwards.
 - Test users are not marked as test accounts. Leftover test users therefore appear on public pages, such as the moderators page.
-- We generated the password hash test vectors independently, with passlib and bcrypt. We did not use the code under test.
 - A browser can keep an old script or stylesheet in its cache and run it. Do a hard reload before you treat a failure as real.

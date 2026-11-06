@@ -27,7 +27,7 @@ async function mkUser(opts: { role?: string; allMethods?: boolean; password?: st
   const email = `two-${unique()}@example.invalid`;
   const secret = base32Encode(crypto.getRandomValues(new Uint8Array(20)));
   const id = (await env.DB.prepare("INSERT INTO users (display_name, role, mfa_all_methods, password_hash) VALUES ('Two Step', ?, ?, ?) RETURNING id")
-    .bind(opts.role ?? "user", opts.allMethods ? 1 : 0, opts.password ? await (await import("../src/legacy-password")).pbkdf2Hash(opts.password) : null).first<number>("id"))!;
+    .bind(opts.role ?? "user", opts.allMethods ? 1 : 0, opts.password ? await (await import("../src/password")).hashPassword(opts.password) : null).first<number>("id"))!;
   await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified) VALUES (?, ?, 1)").bind(id, email).run();
   if (opts.totp !== false) await env.DB.prepare("INSERT INTO user_totp (user_id, secret, enabled_at) VALUES (?, ?, datetime('now'))").bind(id, secret).run();
   return { id, email, secret };

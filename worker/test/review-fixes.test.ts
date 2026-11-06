@@ -141,19 +141,6 @@ describe("code review fixes", () => {
     expect((await page(`/admin/submissions/${subId}/`, mod)).status).toBe(200);
   });
 
-  it("locks old-password sign-in after repeated failures", async () => {
-    await env.DB.prepare("INSERT INTO users (id, display_name, legacy_login, legacy_password_hash) VALUES (7400002, 'Locked', 'lockme', '$P$BabcdefghKfdE7H4Uy7ajxpijsjAJW0')").run();
-    const attempt = (password: string) =>
-      exports.default.fetch(`${SITE}/login/password/`, {
-        method: "POST",
-        redirect: "manual",
-        headers: { Origin: SITE, "Content-Type": "application/x-www-form-urlencoded" },
-        body: new URLSearchParams({ login: "lockme", password }).toString(),
-      });
-    for (let i = 0; i < 10; i++) await attempt("wrong");
-    expect((await attempt("correct horse")).headers.get("location")).toBe("/login/?error=locked");
-  });
-
   it("links other people's spectra one way only", async () => {
     const owner = await sessionFor({ id: 6400011, display_name: "Linker" }, { email: true });
     await post("/submit-data/", owner, submission({ title: "Linking", associated: "mlc-nanotube-ylas-tas2" }));

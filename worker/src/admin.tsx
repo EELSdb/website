@@ -138,7 +138,7 @@ function lockedOutText(n: number, on: SwitchableMethod[], today = false) {
 
 /** Accounts that can take each first step today, whether or not it is switched on. */
 async function usage(env: Env) {
-  const rows = await env.DB.batch<{ n: number }>(SIGN_IN_METHODS.map((m) => env.DB.prepare(`SELECT COUNT(*) AS n FROM users u WHERE ${wayInSql(m, env)}`)));
+  const rows = await env.DB.batch<{ n: number }>(SIGN_IN_METHODS.map((m) => env.DB.prepare(`SELECT COUNT(*) AS n FROM users u WHERE ${wayInSql(m)}`)));
   return Object.fromEntries(SIGN_IN_METHODS.map((m, i) => [m, rows[i].results[0].n])) as Record<SwitchableMethod, number>;
 }
 

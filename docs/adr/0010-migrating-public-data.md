@@ -59,7 +59,7 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
 
 ## Cut-over (human tasks)
 
-1. Make the WordPress site read-only. Record the API and run the imports one final time.
+1. Make the WordPress site read-only. Record the API and run the imports one final time. The account export no longer writes old logins or password hashes, and it rewrites `data/private/accounts.sql` in full ([ADR 0011](/docs/adr/0011-migrating-accounts/)).
 2. Copy `wp-content/uploads` from the host.
 3. Create the Cloudflare resources in the EU jurisdiction ([ADR 0001](/docs/adr/0001-cloudflare-workers-d1-r2/)): `npx wrangler d1 create eelsdb --jurisdiction eu` and `npx wrangler r2 bucket create eelsdb-files --jurisdiction eu`. Put the new database ID in `wrangler.jsonc`, and add `"jurisdiction": "eu"` to the `eelsdb-files` binding, or the Worker cannot find the bucket. Then deploy. DNS for `eelsdb.eu` is already on Cloudflare (moved on 2026-11-05, still pointing at the old host): replace the `eelsdb.eu`, `www` and `api` records with the Worker's custom domains. Then turn on Cloudflare Web Analytics for `eelsdb.eu` in the dashboard (automatic setup, no code; [ADR 0037](/docs/adr/0037-usage-analytics/)).
 4. Set up the redirects. `/forum/…`, `/jobs/…` and `/registered-users/` return 410. `/wp-login.php` redirects to the new sign-in.
@@ -69,5 +69,22 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
    - OAuth client IDs.
    - A Cloudflare API token with only the Account Analytics Read permission. Set it and the account ID as the secrets `ANALYTICS_API_TOKEN` and `ANALYTICS_ACCOUNT_ID`, so the daily cron copies usage counts into D1 ([ADR 0037](/docs/adr/0037-usage-analytics/)).
    - Two-step sign-in on the admin account of the owner. With the defaults, an admin without two-step sign-in has no powers, and contact messages reach nobody.
-6. Watch 404s and failed sign-ins for a few weeks. Email the kept accounts. Announce the new site on HyperSpy channels.
-7. Decommission the old host and rotate its credentials. DNS and `info@eelsdb.eu` mail no longer go through it. The domain stays registered at 123-reg, because Cloudflare Registrar does not offer `.eu`; only its nameservers point at Cloudflare.
+6. Give the Corex spectra ([ADR 0024](/docs/adr/0024-scope-gas-phase-and-xas/)) an account their author can take over. Create it with only a display name, the username `adam-hitchcock` and his current address as `legacy_email`, and make it the owner of those spectra:
+
+   ```sql
+   INSERT INTO users (display_name, slug, legacy_email) VALUES ('Adam Hitchcock', 'adam-hitchcock', '<his address>');
+   UPDATE spectra SET owner_id = (SELECT id FROM users WHERE slug = 'adam-hitchcock') WHERE author_slug = 'adam-hitchcock' AND owner_id IS NULL;
+   ```
+
+   He then takes them over like any old account: with an email link to that address, or Google or GitHub with it.
+7. Email the contributors who own spectra (about 42 accounts) yourself, from your own address rather than through the site, so that old addresses that bounce do not hurt the sending reputation of `eelsdb.eu`. Tell them their spectra are on the new site, and that an email link to that address signs them straight in to them. If they sign in another way, such as ORCID, they confirm that address under **Settings**, **Email addresses** to take the spectra over. Anyone whose address no longer works can reply, and an administrator merges their account. This lists them:
+
+   ```sql
+   SELECT u.display_name, u.legacy_email, COUNT(s.id) AS spectra FROM users u JOIN spectra s ON s.owner_id = u.id
+   WHERE u.legacy_email IS NOT NULL AND NOT EXISTS (SELECT 1 FROM identities i WHERE i.user_id = u.id)
+   GROUP BY u.id ORDER BY spectra DESC;
+   ```
+
+   Invite the other kept accounts later, when the site has its newsletter.
+8. Watch 404s and failed sign-ins for a few weeks. Announce the new site on HyperSpy channels.
+9. Decommission the old host and rotate its credentials. DNS and `info@eelsdb.eu` mail no longer go through it. The domain stays registered at 123-reg, because Cloudflare Registrar does not offer `.eu`; only its nameservers point at Cloudflare.
