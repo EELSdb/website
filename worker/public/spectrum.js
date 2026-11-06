@@ -123,7 +123,11 @@ async function main() {
   let yLabel = versions[0]?.axis ?? (el.dataset.type === "xrayabs" ? "Intensity" : "Counts");
   const title = document.querySelector("h1")?.textContent ?? "";
   const unit = () => (normalise?.value ? "Normalised intensity" : yLabel);
-  const seriesName = () => `${title} (${unit()[0].toLowerCase()}${unit().slice(1)})`;
+  const withUnit = (name, u) => `${name} (${u[0].toLowerCase()}${u.slice(1)})`;
+  const seriesName = () => withUnit(title, unit());
+  // Compared spectra are raw files, not the processed versions "Show" can switch to.
+  const baseLabel = yLabel;
+  const compareName = (c) => withUnit(c.name, normalise?.value ? "Normalised intensity" : baseLabel);
   // The y axis names the spectrum unless compared spectra share it.
   const axisName = () => (compares.length && !separate() ? unit() : seriesName());
   let data;
@@ -177,7 +181,14 @@ async function main() {
   }
   const bgText = [document.getElementById("bg-from-text"), document.getElementById("bg-to-text")];
   const smoothText = document.getElementById("smooth-text");
-  const fitWidth = (t) => (t.style.width = `${(t.value || t.placeholder).length + 0.5}ch`);
+  // Size each plain-text number field to its text, measured in the same font. Only works while it is shown.
+  const sizer = Object.assign(document.createElement("span"), { style: "position: absolute; visibility: hidden; white-space: pre" });
+  const fitWidth = (t) => {
+    t.after(sizer);
+    sizer.textContent = t.value || t.placeholder;
+    t.style.width = `${sizer.offsetWidth + 1}px`;
+    sizer.remove();
+  };
   const showValues = () => {
     if (bgFrom) {
       const frac = (r) => (r.value - r.min) / (r.max - r.min);
@@ -401,6 +412,12 @@ async function main() {
       },
     },
   };
+  // The legend names the spectra only; a fit shares its spectrum's colour. Its rows follow the series after x.
+  const legendSpectra = {
+    hooks: {
+      ready: (u) => u.root.querySelectorAll(".u-legend .u-series").forEach((row, k) => u.series[k + 1].isFit && (row.style.display = "none")),
+    },
+  };
   // Drag a box to zoom to it. Setting x re-ranges y, and the compared scales after it.
   const boxZoom = {
     hooks: {
@@ -528,19 +545,19 @@ async function main() {
         values: format(view.y),
       },
       ...(dual
-        ? compares.map((c, i) => ({ ...axis(), scale: scaleOf(i), side: 1, stroke: colour(i), grid: { show: false }, size: ySize, label: c.name, values: format(view.compares[i]) }))
+        ? compares.map((c, i) => ({ ...axis(), scale: scaleOf(i), side: 1, stroke: colour(i), grid: { show: false }, size: ySize, label: compareName(c), values: format(view.compares[i]) }))
         : []),
     ],
     series: [
       { label: "Energy (eV)" },
-      { label: seriesName(), stroke: paint("--plot"), width: 1.5, points: { show: false } },
-      ...(view.fit ? [{ label: compares.length ? `${title} fit` : "Power-law fit", stroke: paint("--plot"), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
+      { label: title, stroke: paint("--plot"), width: 1.5, points: { show: false } },
+      ...(view.fit ? [{ label: compares.length ? `${title} fit` : "Power-law fit", stroke: paint("--plot"), width: 1.5, dash: [6, 4], points: { show: false }, isFit: true }] : []),
       ...compares.flatMap((c, i) => [
         { label: c.name, scale: scaleOf(i), stroke: colour(i), width: 1.5, points: { show: false }, spanGaps: true },
-        ...(view.compareFits[i] ? [{ label: `${c.name} fit`, scale: scaleOf(i), stroke: colour(i), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
+        ...(view.compareFits[i] ? [{ label: `${c.name} fit`, scale: scaleOf(i), stroke: colour(i), width: 1.5, dash: [6, 4], points: { show: false }, isFit: true }] : []),
       ]),
     ],
-    legend: { show: compares.length > 0 || !!view.fit, live: false },
+    legend: { show: compares.length > 0, live: false },
     cursor: {
       drag: { x: true, y: true, setScale: false },
       points: { show: false },
@@ -551,7 +568,7 @@ async function main() {
         },
       },
     },
-    plugins: [windowPlugin, edgePlugin, axisDrag, tooltip, boxZoom],
+    plugins: [windowPlugin, edgePlugin, axisDrag, tooltip, boxZoom, legendSpectra],
     };
   };
 
@@ -574,6 +591,7 @@ async function main() {
   };
   const proc = document.getElementById("process");
   if (proc) proc.hidden = false;
+  showValues();
   // Normalised spectra share units, so separate axes stop making sense. Bring them back if normalising is turned off.
   let unscaled = false;
   normalise?.addEventListener("input", () => {
@@ -844,7 +862,7 @@ async function main() {
     };
   }
 
-  const legendItems = (u) => u.series.slice(1).map((s) => ({ label: s.label, colour: s._stroke ?? s.stroke }));
+  const legendItems = (u) => u.series.slice(1).filter((s) => !s.isFit).map((s) => ({ label: s.label, colour: s._stroke ?? s.stroke }));
 
   async function savePng(theme) {
     const { u, colours, done } = await themedPlot(theme);

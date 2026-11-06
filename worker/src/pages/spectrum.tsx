@@ -402,7 +402,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                         <input type="range" id="bg-to" step="0.1" aria-label="Fit window end (eV)" />
                       </span>
                       <span class="fit-text">
-                        <input type="number" class="inline-num" id="bg-from-text" step="any" aria-label="Fit window start (eV)" />–<input type="number" class="inline-num" id="bg-to-text" step="any" aria-label="Fit window end (eV)" /> eV
+                        <input type="number" class="inline-num" id="bg-from-text" step="any" aria-label="Fit window start (eV)" /> to <input type="number" class="inline-num" id="bg-to-text" step="any" aria-label="Fit window end (eV)" /> eV
                       </span>
                       <button type="button" class="icon-button" id="bg-reset" title="Reset the fit window" aria-label="Reset the fit window">
                         <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
