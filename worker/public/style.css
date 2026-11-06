@@ -1261,8 +1261,9 @@ html:not(.js) .picture-file label { display: none; }
 .lockout-confirm .settings-form { margin-top: 1.5rem; }
 .settings-log { padding-left: 1.1rem; font-size: 0.93rem; }
 .link-services { display: flex; flex-wrap: wrap; gap: 0.5rem; margin: 0.75rem 0 0; }
-.orcid-required p { margin: 0 0 0.75rem; }
-.orcid-required p:last-child { margin: 0; }
+.submit-blocked p { margin: 0 0 0.75rem; }
+.submit-blocked p:last-child { margin: 0; }
+.submit-blocked + .submit-blocked { margin-top: 0.75rem; }
 
 .contact form { max-width: 36rem; margin-top: 1.25rem; }
 .contact .field :is(input, select, textarea) { width: 100%; }

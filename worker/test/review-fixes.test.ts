@@ -25,7 +25,7 @@ const submittedId = (res: Response) => Number(new URL(res.headers.get("location"
 
 describe("code review fixes", () => {
   it("never serves an upload with the type its uploader claimed", async () => {
-    const owner = await sessionFor({ id: 6400001, display_name: "Html Uploader" });
+    const owner = await sessionFor({ id: 6400001, display_name: "Html Uploader" }, { email: true });
     const evil = new File(["1 2\n<script>alert(1)</script>"], "x.txt", { type: "text/html" });
     const id = submittedId(await post("/submit-data/", owner, submission({ title: "Evil text" }, evil)));
     const key = await env.DB.prepare("SELECT r2_key FROM files WHERE spectrum_id = ?").bind(id).first<string>("r2_key");
@@ -53,8 +53,8 @@ describe("code review fixes", () => {
   });
 
   it("returns a corrected submission to the queue", async () => {
-    const owner = await sessionFor({ id: 6400002, display_name: "Fixer" });
-    const mod = await sessionFor({ id: 6400003, display_name: "Mod", role: "moderator" });
+    const owner = await sessionFor({ id: 6400002, display_name: "Fixer" }, { email: true });
+    const mod = await sessionFor({ id: 6400003, display_name: "Mod", role: "moderator" }, { email: true });
     const id = submittedId(await post("/submit-data/", owner, submission({ title: "Needs work" })));
     const subId = await env.DB.prepare("SELECT id FROM submissions WHERE spectrum_id = ?").bind(id).first<number>("id");
     await post(`/admin/submissions/${subId}/`, mod, { decision: "request_changes", notes: "Add a description." });
@@ -65,7 +65,7 @@ describe("code review fixes", () => {
 
   it("keeps earlier submissions when a migrated account is merged in", async () => {
     await env.DB.prepare("INSERT INTO users (id, display_name, legacy_email) VALUES (7400001, 'Old Me', 'oldme@lab.org')").run();
-    const cookie = await sessionFor({ id: 6400004, display_name: "New Me" });
+    const cookie = await sessionFor({ id: 6400004, display_name: "New Me" }, { email: true });
     await env.DB.prepare("INSERT INTO identities (user_id, provider, subject) VALUES (6400004, 'orcid', '0000-0000-0000-0004')").run();
     await post("/submit-data/", cookie, submission({ title: "Before merging" }));
     await post("/account/settings/emails/", cookie, { email: "oldme@lab.org" });
@@ -76,8 +76,8 @@ describe("code review fixes", () => {
   });
 
   it("applies only the measurement when an edit is approved, and allows one waiting at a time", async () => {
-    const owner = await sessionFor({ id: 6400005, display_name: "Editor" });
-    const mod = await sessionFor({ id: 6400006, display_name: "Mod Two", role: "moderator" });
+    const owner = await sessionFor({ id: 6400005, display_name: "Editor" }, { email: true });
+    const mod = await sessionFor({ id: 6400006, display_name: "Mod Two", role: "moderator" }, { email: true });
     const id = submittedId(await post("/submit-data/", owner, submission({ title: "Edited twice" })));
     const subId = await env.DB.prepare("SELECT id FROM submissions WHERE spectrum_id = ?").bind(id).first<number>("id");
     await post(`/admin/submissions/${subId}/`, mod, { decision: "approve" });
@@ -92,8 +92,8 @@ describe("code review fixes", () => {
   });
 
   it("shows reviewers the new file in an edit, and stages processed files until approval", async () => {
-    const owner = await sessionFor({ id: 6400007, display_name: "File Editor" });
-    const modCookie = await sessionFor({ id: 6400008, display_name: "Mod Three", role: "moderator" });
+    const owner = await sessionFor({ id: 6400007, display_name: "File Editor" }, { email: true });
+    const modCookie = await sessionFor({ id: 6400008, display_name: "Mod Three", role: "moderator" }, { email: true });
     const id = submittedId(await post("/submit-data/", owner, submission({ title: "New data" })));
     const subId = await env.DB.prepare("SELECT id FROM submissions WHERE spectrum_id = ?").bind(id).first<number>("id");
     await post(`/admin/submissions/${subId}/`, modCookie, { decision: "approve" });
@@ -122,8 +122,8 @@ describe("code review fixes", () => {
   });
 
   it("keeps a submitted title inside the review page's data", async () => {
-    const owner = await sessionFor({ id: 6400011, display_name: "Script Title" });
-    const mod = await sessionFor({ id: 6400012, display_name: "Mod Five", role: "moderator" });
+    const owner = await sessionFor({ id: 6400011, display_name: "Script Title" }, { email: true });
+    const mod = await sessionFor({ id: 6400012, display_name: "Mod Five", role: "moderator" }, { email: true });
     const title = "C </script><script>alert(1)</script>";
     const id = submittedId(await post("/submit-data/", owner, submission({ title })));
     const subId = await env.DB.prepare("SELECT id FROM submissions WHERE spectrum_id = ?").bind(id).first<number>("id");
@@ -133,8 +133,8 @@ describe("code review fixes", () => {
   });
 
   it("survives malformed stored browser checks on the review page", async () => {
-    const owner = await sessionFor({ id: 6400009, display_name: "Bad Checks" });
-    const mod = await sessionFor({ id: 6400010, display_name: "Mod Four", role: "moderator" });
+    const owner = await sessionFor({ id: 6400009, display_name: "Bad Checks" }, { email: true });
+    const mod = await sessionFor({ id: 6400010, display_name: "Mod Four", role: "moderator" }, { email: true });
     const id = submittedId(await post("/submit-data/", owner, submission({ title: "Bad checks" })));
     await env.DB.prepare("UPDATE submissions SET browser_checks_json = '{broken' WHERE spectrum_id = ?").bind(id).run();
     const subId = await env.DB.prepare("SELECT id FROM submissions WHERE spectrum_id = ?").bind(id).first<number>("id");
@@ -155,7 +155,7 @@ describe("code review fixes", () => {
   });
 
   it("links other people's spectra one way only", async () => {
-    const owner = await sessionFor({ id: 6400011, display_name: "Linker" });
+    const owner = await sessionFor({ id: 6400011, display_name: "Linker" }, { email: true });
     await post("/submit-data/", owner, submission({ title: "Linking", associated: "mlc-nanotube-ylas-tas2" }));
     const target = await env.DB.prepare("SELECT id FROM spectra WHERE slug = 'mlc-nanotube-ylas-tas2'").first<number>("id");
     const mine = await env.DB.prepare("SELECT id FROM spectra WHERE slug = 'linking'").first<number>("id");
@@ -164,15 +164,15 @@ describe("code review fixes", () => {
   });
 
   it("rejects an unapproved instrument profile without leaving a half-made spectrum", async () => {
-    const owner = await sessionFor({ id: 6400012, display_name: "Profile Faker" });
+    const owner = await sessionFor({ id: 6400012, display_name: "Profile Faker" }, { email: true });
     const res = await post("/submit-data/", owner, submission({ title: "Fake profile", instrument: "999:1" }));
     expect(res.status).toBe(422);
     expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM spectra WHERE slug = 'fake-profile'").first("n")).toBe(0);
   });
 
   it("does not roll an instrument back when an older version is approved late", async () => {
-    const staff = await sessionFor({ id: 6400013, display_name: "Staff" });
-    const mod = await sessionFor({ id: 6400014, display_name: "Mod Five", role: "moderator" });
+    const staff = await sessionFor({ id: 6400013, display_name: "Staff" }, { email: true });
+    const mod = await sessionFor({ id: 6400014, display_name: "Mod Five", role: "moderator" }, { email: true });
     const created = await post("/instruments/new/", staff, { name: "Scope v1" });
     const id = Number(created.headers.get("location")!.split("/")[2]);
     await post(`/instruments/${id}/edit/`, staff, { name: "Scope v2" });

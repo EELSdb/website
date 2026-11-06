@@ -26,7 +26,7 @@ Give the token to the assistant in an environment variable or a file, not in the
 
 ## Check and submit
 
-If the site requires a [linked ORCID iD](/docs/share/submit/#orcid-id) to submit, you need one to submit a draft. Making drafts, and checking them, does not need it. The drafts page and the check page show a **Link ORCID** button when it is missing.
+To submit a draft you need a [confirmed email address](/docs/share/submit/#confirmed-email-address), and a [linked ORCID iD](/docs/share/submit/#orcid-id) if the site requires one. Making drafts, and checking them, does not need either. The drafts page and the check page say what is missing, with a button to fix it.
 
 1. Open [Your drafts](/account/drafts/). The table shows each draft with its file, beam energy and angles, and where each value came from. "Unknown" means the assistant did not find the value.
 2. Click a draft to open it in the submit form. The form plots the spectrum and runs the [file checks](/docs/share/checks/) in your browser. Correct what is wrong.

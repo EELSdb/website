@@ -99,7 +99,7 @@ describe("upload checks", () => {
 
 describe("submitting", () => {
   it("stores a pending spectrum, its files and the submission", async () => {
-    const cookie = await sessionFor({ id: 6000001, display_name: "Sub Mitter" });
+    const cookie = await sessionFor({ id: 6000001, display_name: "Sub Mitter" }, { email: true });
     const res = await postSubmit(cookie, formData({ ...fields, browser_checks: '{"findings":[]}' }));
     expect(res.status).toBe(302);
     const id = Number(new URL(res.headers.get("location")!, "https://x").searchParams.get("submitted"));
@@ -126,7 +126,7 @@ describe("submitting", () => {
   });
 
   it("asks for and stores the licence an admin agreed with the person", async () => {
-    const cookie = await sessionFor({ id: 6000010, display_name: "Licence Person" });
+    const cookie = await sessionFor({ id: 6000010, display_name: "Licence Person" }, { email: true });
     expect(await (await exports.default.fetch("https://eelsdb.eu/submit-data/", { headers: { Cookie: cookie } })).text()).toContain("contact the administrators");
     await env.DB.prepare("UPDATE users SET licence = 'CC-BY-4.0' WHERE id = 6000010").run();
     const form = await (await exports.default.fetch("https://eelsdb.eu/submit-data/", { headers: { Cookie: cookie } })).text();
@@ -137,7 +137,7 @@ describe("submitting", () => {
   });
 
   it("stores processed versions next to the spectrum", async () => {
-    const cookie = await sessionFor({ id: 6000009, display_name: "Variant Web" });
+    const cookie = await sessionFor({ id: 6000009, display_name: "Variant Web" }, { email: true });
     const fd = formData(fields);
     fd.append("variant_os_smoothed_file", new File([MSA], "os-smooth.msa"));
     const id = Number(new URL((await postSubmit(cookie, fd)).headers.get("location")!, "https://x").searchParams.get("submitted"));
@@ -147,7 +147,7 @@ describe("submitting", () => {
   });
 
   it("shows errors, keeps typed values and stores nothing", async () => {
-    const cookie = await sessionFor({ id: 6000002, display_name: "Err Or" });
+    const cookie = await sessionFor({ id: 6000002, display_name: "Err Or" }, { email: true });
     const res = await postSubmit(cookie, formData({ ...fields, title: "", agreement: "" }, null));
     expect(res.status).toBe(422);
     const html = await res.text();
@@ -158,7 +158,7 @@ describe("submitting", () => {
   });
 
   it("answers the stepped form's background posts with JSON", async () => {
-    const cookie = await sessionFor({ id: 6000004, display_name: "Json Sender" });
+    const cookie = await sessionFor({ id: 6000004, display_name: "Json Sender" }, { email: true });
     const post = (fd: FormData) =>
       exports.default.fetch("https://eelsdb.eu/submit-data/", {
         method: "POST",
@@ -174,7 +174,7 @@ describe("submitting", () => {
   });
 
   it("limits submissions per hour", async () => {
-    const cookie = await sessionFor({ id: 6000003, display_name: "Busy Bee" });
+    const cookie = await sessionFor({ id: 6000003, display_name: "Busy Bee" }, { email: true });
     await env.DB.batch(
       Array.from({ length: MAX_PER_HOUR }, () =>
         env.DB.prepare("INSERT INTO submissions (spectrum_id, submitted_by, status) VALUES (22236, 6000003, 'rejected')"),
@@ -193,7 +193,7 @@ describe("X-ray absorption", () => {
   const XDI = "# XDI/1.0\n# Column.1: energy eV\n# Column.2: mutrans\n# Facility.name: APS\n#----\n8779 1.0\n8789 1.1\n8799 1.3\n";
 
   it("accepts XDI files and stores the XAS fields", async () => {
-    const cookie = await sessionFor({ id: 6000010, display_name: "Xas Person" });
+    const cookie = await sessionFor({ id: 6000010, display_name: "Xas Person" }, { email: true });
     const fd = new FormData();
     for (const [k, v] of Object.entries({
       title: "Cu foil", type: "xrayabs", formula: "Cu", edges: "Cu_K", intensity_units: "mu", agreement: "1",
@@ -215,5 +215,35 @@ describe("X-ray absorption", () => {
 
   it("rejects a file named .xdi that is not XDI", async () => {
     expect(await checkUpload(new File(["1 2\n3 4\n"], "a.xdi"), ["xdi"], "File")).toMatch(/not an XDI file/);
+  });
+});
+
+describe("submitting needs a confirmed email address", () => {
+  const page = (cookie: string) => exports.default.fetch("https://eelsdb.eu/submit-data/", { headers: { Cookie: cookie } }).then((r) => r.text());
+
+  it("asks for one in place of the form, refuses posts, and opens once the address is confirmed", async () => {
+    const cookie = await sessionFor({ id: 9957001, display_name: "Unconfirmed Submitter" });
+    const none = await page(cookie);
+    expect(none).toContain("Confirm your email address first.");
+    expect(none).toContain('action="/account/welcome/email/"');
+    expect(none).not.toContain('id="submit-form"');
+
+    const row = (await env.DB.prepare("INSERT INTO user_emails (user_id, email, is_primary) VALUES (9957001, 'sub@example.invalid', 1) RETURNING id").first<number>("id"))!;
+    const unconfirmed = await page(cookie);
+    expect(unconfirmed).toContain("We sent a link to sub@example.invalid");
+    expect(unconfirmed).toContain(`action="/account/settings/emails/${row}/send/"`);
+    expect(unconfirmed).toContain('name="next" value="/submit-data/"');
+    expect(unconfirmed).not.toContain('class="email-banner"');
+
+    expect((await postSubmit(cookie, formData(fields))).status).toBe(403);
+    const json = await exports.default.fetch("https://eelsdb.eu/submit-data/", {
+      method: "POST", headers: { Cookie: cookie, Origin: "https://eelsdb.eu", Accept: "application/json" }, body: formData(fields),
+    });
+    expect((await json.json<any>()).errors.email).toContain("Confirm your email address first.");
+    expect(await env.DB.prepare("SELECT COUNT(*) AS n FROM submissions WHERE submitted_by = 9957001").first("n")).toBe(0);
+
+    await env.DB.prepare("UPDATE user_emails SET verified = 1 WHERE id = ?").bind(row).run();
+    expect(await page(cookie)).toContain('id="submit-form"');
+    expect((await postSubmit(cookie, formData(fields))).status).toBe(302);
   });
 });

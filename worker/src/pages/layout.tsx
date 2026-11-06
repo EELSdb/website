@@ -37,11 +37,15 @@ const LAST_METHOD_SCRIPT = `try{var m=document.cookie.match(/(?:^|; )${LAST_METH
 // Right after the banner, so a hidden banner never paints. The link returns to the exact page.
 const ORCID_BANNER_SCRIPT = `(function(){var b=document.querySelector(".orcid-banner"),k="orcid-banner-hidden";b.querySelector("a").href="/auth/orcid/link?next="+encodeURIComponent(location.pathname+location.search);if(!b.querySelector("button"))return;try{if(Number(localStorage.getItem(k))>Date.now())b.hidden=true}catch(e){}b.querySelector("button").addEventListener("click",function(){b.hidden=true;try{localStorage.setItem(k,Date.now()+30*864e5)}catch(e){}})})()`;
 
-// Right after the banner, so a hidden banner never paints. The resend form returns to the exact page.
-const EMAIL_BANNER_SCRIPT = `(function(){var b=document.querySelector(".email-banner"),k="email-banner-hidden",n=b.querySelector("input[name=next]");if(n)n.value=location.pathname+location.search;try{if(Number(localStorage.getItem(k))>Date.now())b.hidden=true}catch(e){}b.querySelector("button[type=button]").addEventListener("click",function(){b.hidden=true;try{localStorage.setItem(k,Date.now()+7*864e5)}catch(e){}});var f=b.querySelector("form");if(f)f.addEventListener("submit",function(e){e.preventDefault();var s=f.querySelector("button");s.disabled=true;fetch(f.action,{method:"POST",body:new FormData(f),headers:{Accept:"application/json"}}).then(function(r){return r.json()}).then(function(j){b.querySelector("p").textContent=j.sent?"Sent. Check your inbox, and your spam folder, for the link from EELSdb.":"No new link was sent: you have asked for several today. Please use the last one, or try again tomorrow.";f.remove()}).catch(function(){f.submit()})})})()`;
+// Sends a `form.resend` in the background and puts the answer in place of the first <p> beside it, without a reload.
+// `onsubmit`, not addEventListener: the banner and the submit page can both run this on one page, and must not send twice.
+export const RESEND_SCRIPT = `;document.querySelectorAll("form.resend").forEach(function(f){f.onsubmit=function(e){e.preventDefault();f.querySelector("button").disabled=true;fetch(f.action,{method:"POST",body:new FormData(f),headers:{Accept:"application/json"}}).then(function(r){return r.json()}).then(function(j){f.parentNode.querySelector("p").textContent=j.sent?"Sent. Check your inbox, and your spam folder, for the link from EELSdb.":"No new link was sent: you have asked for several today. Please use the last one, or try again tomorrow.";f.remove()}).catch(function(){f.submit()})}})`;
 
-// Not shown where the person is already adding or confirming an address.
-const NO_EMAIL_BANNER = /^\/(?:login|account\/welcome\/email\/|account\/settings\/emails\/)/;
+// Right after the banner, so a hidden banner never paints. The resend form returns to the exact page.
+const EMAIL_BANNER_SCRIPT = `(function(){var b=document.querySelector(".email-banner"),k="email-banner-hidden",n=b.querySelector("input[name=next]");if(n)n.value=location.pathname+location.search;try{if(Number(localStorage.getItem(k))>Date.now())b.hidden=true}catch(e){}b.querySelector("button[type=button]").addEventListener("click",function(){b.hidden=true;try{localStorage.setItem(k,Date.now()+7*864e5)}catch(e){}})})()${RESEND_SCRIPT}`;
+
+// Not shown where the person is already adding or confirming an address, or where the submit page asks for it in place of the form.
+const NO_EMAIL_BANNER = /^\/(?:login|account\/welcome\/email\/|account\/settings\/emails\/|submit-data\/$)/;
 
 // Flips light and dark, remembers it in this browser, and saves it to the account when signed in.
 const TOGGLE_SCRIPT = `document.querySelectorAll(".theme-toggle").forEach(function(b){b.addEventListener("click",function(){var r=document.documentElement,d=r.dataset.theme||(matchMedia("(prefers-color-scheme: dark)").matches?"dark":"light"),n=d==="dark"?"light":"dark";r.dataset.theme=n;try{localStorage.setItem("theme",n)}catch(e){}if(this.dataset.save)fetch("/account/settings/theme/",{method:"POST",body:new URLSearchParams({theme:n})})})})`;
@@ -133,7 +137,7 @@ export function Layout(props: {
                     <p>Add an email address so we can send you sign-in links and news about your submissions.</p>
                   )}
                   {emailBanner.address ? (
-                    <form method="post" action={`/account/settings/emails/${emailBanner.id}/send/`}>
+                    <form class="resend" method="post" action={`/account/settings/emails/${emailBanner.id}/send/`}>
                       <input type="hidden" name="next" value={props.path || "/account/"} />
                       <button class="button" type="submit">Send it again</button>
                     </form>

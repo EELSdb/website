@@ -40,7 +40,7 @@ EELSdb knows your account already when the service gives an email address that y
 
 EELSdb sends sign-in links, emails about your submissions and the messages that get you back into your account to your confirmed email address. ORCID rarely shares one, so right after a new account is made with ORCID, Google or GitHub that has no confirmed address, EELSdb asks for it on a page called **One more step: add your email address**. Type your address and click **Send confirmation link**, then open the link in the email while you are signed in. The page has no skip button, and you see it once for each new account. If you leave it, you can add the address any time under **Email addresses** in your account settings.
 
-Until an address is confirmed, a banner at the top of each page asks you to add one, or to confirm the one you gave (**Send it again** sends a new link). You can hide the banner for 7 days. It takes the place of the ORCID banner, so you see one banner at a time.
+Until an address is confirmed, a banner at the top of each page asks you to add one, or to confirm the one you gave (**Send it again** sends a new link). You can hide the banner for 7 days. It takes the place of the ORCID banner, so you see one banner at a time. You cannot [submit spectra](/docs/share/submit/#confirmed-email-address) until an address is confirmed.
 
 The sign-in page marks the way you used last in this browser with **Last used** and a coloured border. **Continue with ORCID** stays the main button. With a password, the password form is open when you come back. EELSdb keeps only the name of the method in the browser, not your address, and the other ways stay on the page.
 

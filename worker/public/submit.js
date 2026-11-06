@@ -1034,7 +1034,7 @@ function showErrors(errors) {
   let first = null;
   for (const [key, message] of Object.entries(errors)) {
     const control = field(key) ?? $(`#f-${key}`);
-    if (!control || ["rate", "turnstile", "agreement", "orcid"].includes(key)) {
+    if (!control || ["rate", "turnstile", "agreement", "orcid", "email"].includes(key)) {
       general.hidden = false;
       general.textContent = message;
       first ??= "review";

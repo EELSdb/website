@@ -2,9 +2,9 @@ import { Hono, type Context } from "hono";
 import { turnstileOk } from "../turnstile";
 import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
-import { requireUser, type AppEnv } from "../auth";
+import { requireUser, type AppEnv, type User } from "../auth";
 import { ELEMENTS } from "../elements";
-import { AccountLayout, Layout, TYPE_NAMES } from "../pages/layout";
+import { AccountLayout, Layout, RESEND_SCRIPT, TYPE_NAMES } from "../pages/layout";
 import { BEAM_ENERGIES, COMPANION_EXTENSIONS, MAX_FILE_BYTES, SPECTRUM_EXTENSIONS, UNIT_LABELS, VARIANTS, cleanBrowserChecks, collectUploads, parseForm } from "./form";
 import { createSpectrum, instrumentOk, storeFile } from "./store";
 import { DEFAULT_LICENCE, licenceOf } from "../api/metadata";
@@ -142,6 +142,48 @@ export function LicenceAgreement(props: { licence: string | null; lead: string; 
 }
 
 export const ORCID_REQUIRED_MESSAGE = "Submitting spectra needs an ORCID iD linked to your account, so your spectra are credited to you. Link your ORCID iD and then submit.";
+export const EMAIL_REQUIRED_MESSAGE = "Confirm your email address first. Moderators email you about your submissions, so submitting needs a confirmed address.";
+
+/** Why this person cannot send spectra for review yet, keyed like form errors; null when they can. */
+export function submitBlock(user: User) {
+  const block: Record<string, string> = {};
+  if (user.orcid_prompt === "required") block.orcid = ORCID_REQUIRED_MESSAGE;
+  if (user.email_prompt) block.email = EMAIL_REQUIRED_MESSAGE;
+  return Object.keys(block).length ? block : null;
+}
+
+/** Stands in for the form or submit button while `submitBlock` is set. `next` is where to come back to. */
+export function SubmitBlocked({ user, next }: { user: User; next: string }) {
+  const email = user.email_prompt;
+  return (
+    <>
+      {user.orcid_prompt === "required" && (
+        <div class="notice submit-blocked" role="status">
+          <p>{ORCID_REQUIRED_MESSAGE}</p>
+          <p><a class="button" href={`/auth/orcid/link?next=${encodeURIComponent(next)}`}>Link ORCID</a></p>
+        </div>
+      )}
+      {email && (
+        <div class="notice submit-blocked" role="status">
+          <p aria-live="polite">{EMAIL_REQUIRED_MESSAGE}{email.address && ` We sent a link to ${email.address}: open it in this browser.`}</p>
+          {email.address ? (
+            <form class="resend" method="post" action={`/account/settings/emails/${email.id}/send/`}>
+              <input type="hidden" name="next" value={next} />
+              <button class="button" type="submit">Send the confirmation email</button>
+            </form>
+          ) : (
+            <form class="inline-form" method="post" action="/account/welcome/email/">
+              <input type="hidden" name="next" value={next} />
+              <input type="email" name="email" autocomplete="email" required aria-label="Email address" placeholder="name@example.org" />
+              <button class="button" type="submit">Send the confirmation email</button>
+            </form>
+          )}
+        </div>
+      )}
+      {email?.address && <script>{raw(RESEND_SCRIPT)}</script>}
+    </>
+  );
+}
 
 export function SubmitPage(props: { c: C; v: Values; errors: Record<string, string>; instruments: Instrument[]; edit?: { slug: string; title: string; draft?: boolean; file?: { url: string; name: string } | null } }) {
   const { c, v, errors } = props;
@@ -149,7 +191,8 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
   const choice = v.beam_energy_choice ?? "";
   const count = Object.keys(errors).length;
   const accept = SPECTRUM_EXTENSIONS.map((e) => `.${e}`).join(",");
-  const blocked = c.get("user")?.orcid_prompt === "required" && (!props.edit || props.edit.draft);
+  const user = c.get("user")!;
+  const blocked = (!props.edit || props.edit.draft) && submitBlock(user) !== null;
   return (
     <Layout
       title={props.edit ? `${props.edit.draft ? "Check" : "Edit"} ${props.edit.title}` : "Submit a spectrum"}
@@ -184,12 +227,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
           ? "Changes to the title, description, keywords, reference and links are published straight away. Changes to the data file, the specimen or how it was measured go to a moderator first."
           : "A moderator checks every submission before it is published."}
       </p>
-      {blocked && (
-        <div class="notice orcid-required" role="status">
-          <p>{ORCID_REQUIRED_MESSAGE}</p>
-          <p><a class="button" href={`/auth/orcid/link?next=${encodeURIComponent(props.edit ? `/spectra/${props.edit.slug}/edit/` : "/submit-data/")}`}>Link ORCID</a></p>
-        </div>
-      )}
+      {blocked && <SubmitBlocked user={user} next={props.edit ? `/spectra/${props.edit.slug}/edit/` : "/submit-data/"} />}
       {!blocked && count > 0 && (
         <div class="notice error-summary" role="alert" tabindex={-1} id="errors">
           <strong>{count === 1 ? "One field needs attention" : `${count} fields need attention`}.</strong> Files are not kept after an
@@ -509,7 +547,8 @@ submit.get("/submit-data/", requireUser, async (c) =>
 
 submit.post("/submit-data/", requireUser, async (c) => {
   const user = c.get("user")!;
-  if (user.orcid_prompt === "required") return wantsJson(c) ? c.json({ errors: { orcid: ORCID_REQUIRED_MESSAGE } }, 403) : c.html(<SubmitPage c={c} v={{}} errors={{}} instruments={[]} />, 403);
+  const block = submitBlock(user);
+  if (block) return wantsJson(c) ? c.json({ errors: block }, 403) : c.html(<SubmitPage c={c} v={{}} errors={{}} instruments={[]} />, 403);
   const body = await c.req.parseBody();
   const { form, errors } = parseForm(body as any);
   const uploads = await collectUploads(body, errors);

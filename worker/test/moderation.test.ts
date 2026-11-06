@@ -46,8 +46,9 @@ function submission(title: string) {
 describe("review", () => {
   it("runs from submission through review in the browser to publication", async () => {
     const submitterCookie = await sessionFor({ id: 6300002, display_name: "Web Submitter" });
-    await env.DB.prepare("INSERT INTO identities (user_id, provider, subject, email, email_verified) VALUES (6300002, 'github', 'web-1', 'web@lab.org', 1)").run();
-    const modCookie = await sessionFor({ id: 6300003, display_name: "Mod Reviewer", role: "moderator" });
+    // Confirmed by an email link, so no linked service carries the address: the decision email must still reach it.
+    await env.DB.prepare("INSERT INTO user_emails (user_id, email, verified, is_primary) VALUES (6300002, 'web@lab.org', 1, 1)").run();
+    const modCookie = await sessionFor({ id: 6300003, display_name: "Mod Reviewer", role: "moderator" }, { email: true });
     const { id: spectrumId, slug, subId } = await submit(submitterCookie, submission("Web carbon"));
 
     // Not public yet, but the submitter can preview it.
@@ -80,8 +81,8 @@ describe("review", () => {
   });
 
   it("keeps processed versions and the file's metadata", async () => {
-    const submitter = await sessionFor({ id: 6300020, display_name: "Variant Submitter" });
-    const mod = await sessionFor({ id: 6300021, display_name: "Variant Mod", role: "moderator" });
+    const submitter = await sessionFor({ id: 6300020, display_name: "Variant Submitter" }, { email: true });
+    const mod = await sessionFor({ id: 6300021, display_name: "Variant Mod", role: "moderator" }, { email: true });
     const fd = submission("Gas NO");
     fd.append("variant_os_file", new File([MSA], "no-os.msa"));
     fd.append("variant_smoothed_file", new File([MSA], "no-smoothed.msa"));
@@ -105,8 +106,8 @@ describe("review", () => {
   });
 
   it("uses the admin pages to request changes, reject and apply edits", async () => {
-    const owner = await sessionFor({ id: 6300004, display_name: "Page Submitter" });
-    const mod = await sessionFor({ id: 6300005, display_name: "Page Mod", role: "moderator" });
+    const owner = await sessionFor({ id: 6300004, display_name: "Page Submitter" }, { email: true });
+    const mod = await sessionFor({ id: 6300005, display_name: "Page Mod", role: "moderator" }, { email: true });
     const fd = submission("Admin carbon");
     fd.append("agreement", "1");
     const res = await exports.default.fetch(`${SITE}/submit-data/`, { method: "POST", redirect: "manual", headers: { Cookie: owner, Origin: SITE }, body: fd });
@@ -141,8 +142,8 @@ describe("review", () => {
   });
 
   it("rejecting a new submission keeps it unpublished", async () => {
-    const owner = await sessionFor({ id: 6300006, display_name: "Rejected Person" });
-    const mod = await sessionFor({ id: 6300007, display_name: "Mod Three", role: "admin" });
+    const owner = await sessionFor({ id: 6300006, display_name: "Rejected Person" }, { email: true });
+    const mod = await sessionFor({ id: 6300007, display_name: "Mod Three", role: "admin" }, { email: true });
     const { id: spectrumId, slug, subId } = await submit(owner, submission("Spam carbon"));
     await form(`/admin/submissions/${subId}/`, mod, { decision: "reject", notes: "Not a spectrum." });
     expect(await env.DB.prepare("SELECT status FROM spectra WHERE id = ?").bind(spectrumId).first("status")).toBe("rejected");
@@ -152,8 +153,8 @@ describe("review", () => {
 
 describe("roles", () => {
   it("only admins change roles, and not their own admin role", async () => {
-    const adminCookie = await sessionFor({ id: 6300008, display_name: "The Admin", role: "admin" });
-    const modCookie = await sessionFor({ id: 6300009, display_name: "A Mod", role: "moderator" });
+    const adminCookie = await sessionFor({ id: 6300008, display_name: "The Admin", role: "admin" }, { email: true });
+    const modCookie = await sessionFor({ id: 6300009, display_name: "A Mod", role: "moderator" }, { email: true });
     expect((await page("/admin/users/", modCookie)).status).toBe(403);
     expect((await page("/admin/users/", adminCookie)).status).toBe(200);
     await form("/admin/users/6300009/", adminCookie, { role: "user" });
@@ -165,8 +166,8 @@ describe("roles", () => {
 describe("bulk export", () => {
   it("is uploaded by admins and offered on the Downloads page", async () => {
     expect(await (await page("/downloads/")).text()).toContain("has not been made yet");
-    const adminCookie = await sessionFor({ id: 6300010, display_name: "Export Admin", role: "admin" });
-    const modCookie = await sessionFor({ id: 6300011, display_name: "Export Mod", role: "moderator" });
+    const adminCookie = await sessionFor({ id: 6300010, display_name: "Export Admin", role: "admin" }, { email: true });
+    const modCookie = await sessionFor({ id: 6300011, display_name: "Export Mod", role: "moderator" }, { email: true });
     const zip = new Uint8Array(64).fill(1);
     zip.set([0x50, 0x4b, 3, 4]);
     const upload = (cookie: string, bytes: Uint8Array) => {

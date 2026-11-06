@@ -5,7 +5,7 @@ import { getSettings, twoStepRequired } from "../settings";
 import { requireUser, sha256, type AppEnv } from "../auth";
 import { SITE } from "../api/format";
 import { AccountLayout, TypeBadge } from "../pages/layout";
-import { LicenceAgreement, ORCID_REQUIRED_MESSAGE } from "./index";
+import { LicenceAgreement, SubmitBlocked, submitBlock } from "./index";
 import { DEFAULT_LICENCE } from "../api/metadata";
 import { collectUploads, parseForm } from "./form";
 import { createSpectrum, instrumentOk, storeFile } from "./store";
@@ -114,12 +114,7 @@ async function draftsPage(c: Context<AppEnv>, notice?: string, status: 200 | 403
         submit it for review. Drafts are deleted after {DRAFT_DAYS} days. See <a href="/docs/share/drafts/">Prepare drafts with an assistant</a>.
       </p>
       {notice && <p class="notice" role="status">{notice}</p>}
-      {user.orcid_prompt === "required" && (
-        <div class="notice orcid-required" role="status">
-          <p>{ORCID_REQUIRED_MESSAGE}</p>
-          <p><a class="button" href="/auth/orcid/link?next=%2Faccount%2Fdrafts%2F">Link ORCID</a></p>
-        </div>
-      )}
+      <SubmitBlocked user={user} next="/account/drafts/" />
       {list.length ? (
         <form method="post" action="/account/drafts/">
           <div class="table-scroll">
@@ -176,7 +171,8 @@ drafts.post("/account/drafts/", requireUser, async (c) => {
     const n = await deleteDrafts(c.env, `owner_id = ? AND id IN (${marks})`, user.id, ...ids);
     return draftsPage(c, `Deleted ${n === 1 ? "one draft" : `${n} drafts`}.`);
   }
-  if (user.orcid_prompt === "required") return draftsPage(c, ORCID_REQUIRED_MESSAGE, 403);
+  const block = submitBlock(user);
+  if (block) return draftsPage(c, Object.values(block).join(" "), 403);
   if (!body.agreement) return draftsPage(c, "Please confirm that you checked the drafts and agree to the licence.");
   const { results } = await db.prepare(`SELECT id, slug FROM spectra WHERE owner_id = ? AND status = 'draft' AND id IN (${marks})`)
     .bind(user.id, ...ids).all<{ id: number; slug: string }>();

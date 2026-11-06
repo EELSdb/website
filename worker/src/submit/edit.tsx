@@ -4,7 +4,7 @@ import { requireUser, type AppEnv } from "../auth";
 import { isModerator } from "../instruments";
 import { SPECTRUM_EXTENSIONS, XAS_FIELDS, checkUpload, cleanBrowserChecks, completeness, parseForm, type ParsedForm } from "./form";
 import { submitDraftStatements } from "./drafts";
-import { SubmitPage, approvedInstruments, finishForm, formValues, rejectForm, wantsJson, ORCID_REQUIRED_MESSAGE } from "./index";
+import { SubmitPage, approvedInstruments, finishForm, formValues, rejectForm, wantsJson, submitBlock } from "./index";
 import { mediaType } from "../files";
 import { Layout } from "../pages/layout";
 import { coreStatements, instrumentOk, textColumnsStatement, textStatements } from "./store";
@@ -125,8 +125,9 @@ edit.post("/spectra/:slug/edit/", requireUser, async (c) => {
   const s = bundle.spectrum;
   const user = c.get("user")!;
   const db = c.env.DB;
-  if (status === "draft" && user.orcid_prompt === "required") {
-    return wantsJson(c) ? c.json({ errors: { orcid: ORCID_REQUIRED_MESSAGE } }, 403) : c.html(<SubmitPage c={c} v={valuesFromBundle(bundle)} errors={{}} instruments={await approvedInstruments(db)} edit={editInfo(bundle)} />, 403);
+  const block = status === "draft" && submitBlock(user);
+  if (block) {
+    return wantsJson(c) ? c.json({ errors: block }, 403) : c.html(<SubmitPage c={c} v={valuesFromBundle(bundle)} errors={{}} instruments={await approvedInstruments(db)} edit={editInfo(bundle)} />, 403);
   }
   const body = await c.req.parseBody();
   const { form, errors } = parseForm(body as any);

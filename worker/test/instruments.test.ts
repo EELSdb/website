@@ -22,9 +22,9 @@ const PROFILE = {
 
 describe("instrument profiles", () => {
   it("are created pending, approved by a moderator, and versioned", async () => {
-    const staff = await sessionFor({ id: 6100001, display_name: "Facility Staff" });
-    const mod = await sessionFor({ id: 6100002, display_name: "Mod Erator", role: "moderator" });
-    const visitor = await sessionFor({ id: 6100003, display_name: "Visitor" });
+    const staff = await sessionFor({ id: 6100001, display_name: "Facility Staff" }, { email: true });
+    const mod = await sessionFor({ id: 6100002, display_name: "Mod Erator", role: "moderator" }, { email: true });
+    const visitor = await sessionFor({ id: 6100003, display_name: "Visitor" }, { email: true });
 
     const created = await post("/instruments/new/", staff, PROFILE);
     expect(created.status).toBe(302);
@@ -55,7 +55,7 @@ describe("instrument profiles", () => {
   });
 
   it("validates the profile form", async () => {
-    const staff = await sessionFor({ id: 6100004, display_name: "Staff Two" });
+    const staff = await sessionFor({ id: 6100004, display_name: "Staff Two" }, { email: true });
     const res = await post("/instruments/new/", staff, { name: "", voltages: "lots", cal_value_0: "abc" });
     expect(res.status).toBe(422);
     const html = await res.text();

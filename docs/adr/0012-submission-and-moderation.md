@@ -15,7 +15,7 @@ Contributors are experimentalists. They submit rarely, and often send a backlog 
 
 The contributor flow at `/submit-data/` has these steps:
 
-1. The contributor signs in. The site does not accept anonymous submissions. A site setting can require a linked ORCID iD ([ADR 0018](/docs/adr/0018-sign-in/)).
+1. The contributor signs in. The site does not accept anonymous submissions. Submitting needs a confirmed email address, so the moderation emails reach the contributor. A site setting can also require a linked ORCID iD ([ADR 0018](/docs/adr/0018-sign-in/)).
 2. The contributor drops one or more files. Pyodide starts to load when the page opens. Each file gets a card with the check result and a plot. The page assigns roles automatically.
 3. The form pre-fills fields from the file: the MSA or XDI header, DM tags and the energy range. Pre-filled fields stay tinted until the contributor edits them.
 4. The form has steps, and it validates each step. The XAS step appears only for XAS. A review step runs the checks again.

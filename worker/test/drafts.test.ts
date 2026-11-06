@@ -31,9 +31,9 @@ async function tokenFor(cookie: string) {
 
 describe("drafts", () => {
   it("are made with a drafts token and stay private until the owner submits them", async () => {
-    const owner = await sessionFor({ id: 6500001, display_name: "Draft Owner" });
-    const other = await sessionFor({ id: 6500002, display_name: "Someone Else" });
-    const mod = await sessionFor({ id: 6500003, display_name: "Draft Mod", role: "moderator" });
+    const owner = await sessionFor({ id: 6500001, display_name: "Draft Owner" }, { email: true });
+    const other = await sessionFor({ id: 6500002, display_name: "Someone Else" }, { email: true });
+    const mod = await sessionFor({ id: 6500003, display_name: "Draft Mod", role: "moderator" }, { email: true });
     const token = await tokenFor(owner);
 
     expect((await createDraft(null, { type: "coreloss", formula: "C" })).status).toBe(401);
@@ -78,7 +78,7 @@ describe("drafts", () => {
   });
 
   it("can be submitted or deleted several at a time", async () => {
-    const owner = await sessionFor({ id: 6500004, display_name: "Bulk Owner" });
+    const owner = await sessionFor({ id: 6500004, display_name: "Bulk Owner" }, { email: true });
     const token = await tokenFor(owner);
     const ids: number[] = [];
     for (const title of ["Bulk one", "Bulk two", "Bulk three"]) {
@@ -96,7 +96,7 @@ describe("drafts", () => {
     expect(statuses.results.map((r) => `${r.status} ${r.licence}`)).toEqual(["pending CC0-1.0", "pending CC0-1.0", "draft ODbL-1.0"]);
 
     // Another user cannot delete or submit them.
-    const stranger = await sessionFor({ id: 6500005, display_name: "Stranger" });
+    const stranger = await sessionFor({ id: 6500005, display_name: "Stranger" }, { email: true });
     await post("/account/drafts/", stranger, { action: "delete", id: String(ids[2]) });
     expect(await env.DB.prepare("SELECT status FROM spectra WHERE id = ?").bind(ids[2]).first("status")).toBe("draft");
 
@@ -110,7 +110,7 @@ describe("drafts", () => {
   });
 
   it("are deleted after 30 days, and limited per hour", async () => {
-    const owner = await sessionFor({ id: 6500006, display_name: "Old Drafts" });
+    const owner = await sessionFor({ id: 6500006, display_name: "Old Drafts" }, { email: true });
     const token = await tokenFor(owner);
     const old = (await (await createDraft(token, { title: "Old draft", type: "coreloss", formula: "C" })).json<any>()).id;
     const fresh = (await (await createDraft(token, { title: "Fresh draft", type: "coreloss", formula: "C" })).json<any>()).id;
