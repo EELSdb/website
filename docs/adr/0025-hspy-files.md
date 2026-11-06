@@ -16,6 +16,7 @@ HyperSpy users want spectra with the metadata filled in. The Worker cannot write
 - `uv run python/hspy_files.py` writes a file for every seeded spectrum (290 migrated, 666 Corex). It uses the same function on the cached files. `data/fixtures/hspy.json` lists the files. `build_seed.py` adds the `files` rows and the R2 uploads. A second run gives identical bytes. When the cached files change, run `hspy_files.py` before `build_seed.py`.
 - `package_info` names exSpy, which provides `EELSSpectrum`. If `package_info` names another package, HyperSpy warns on load.
 - `write_hspy` writes X-ray absorption spectra as plain signals with an "Energy" axis and no TEM block. HyperSpy has no XAS signal type.
+- `/spectra/{slug}/download/hspy` serves the stored HSPY file, so it has an address of the same form as the other formats. The download dialog and the "Use in HyperSpy" snippet use it.
 - The "Use in HyperSpy" snippet loads the HSPY file when one exists. Otherwise it loads the MSA download. It adds `signal_type="EELS"` only for EELS spectra.
 - The Worker makes the other download formats (`/spectra/{slug}/download/{msa|csv|json}`) on request from the stored MSA or text file. The JSON format is the API v2 record plus the data.
 

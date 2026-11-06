@@ -97,7 +97,7 @@ import hyperspy.api as hs
 s = hs.load(name, signal_type="EELS")
 ```
 
-MSA headers carry the beam energy and angles only when the file has them. Take them from the record otherwise, or use `https://eelsdb.eu/spectra/{slug}/download/msa`: every published spectrum as an MSA file with the beam energy and angles from the record in its header (`/download/csv` and `/download/json` also exist). Spectra published after review also have a `hspy` file in `files`, with the DOI in its metadata.
+MSA headers carry the beam energy and angles only when the file has them. Take them from the record otherwise, or use `https://eelsdb.eu/spectra/{slug}/download/msa`: every published spectrum as an MSA file with the beam energy and angles from the record in its header (`/download/csv` and `/download/json` also exist). `/download/hspy` is the spectrum's HyperSpy file, with the DOI in its metadata.
 
 Other options:
 

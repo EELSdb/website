@@ -43,4 +43,4 @@ The rebuild needs 10–15 pages of documentation. They cover the API, loading sp
   - `wrangler dev` can miss a docs rebuild in `public/`. Touch any file there to fix it.
 - In the docs, use "term: explanation" lists instead of tables. Tables become too narrow on phones.
 - Code blocks link names to the HyperSpy and eXSpy Sphinx inventories (`objects.inv`). Only names that the block imports get links.
-- The HyperSpy snippets on main-site pages copy the code style of the docs by hand. One `HyperSpySnippet` component does this with Night Owl token spans. Expressive Code at build time would add tens of KB to each page. Review this choice if the site gets many code blocks.
+- The HyperSpy snippets on main-site pages copy the code style of the docs by hand. `worker/public/snippet.js` builds the code as plain text and colours it with Night Owl token spans. Its highlighter knows only the Python the snippets use. The server (`HyperSpySnippet`) and the spectrum page share it. Expressive Code at build time, or a highlighter such as highlight.js, would add tens of KB to each page. Review this choice if the site gets many code blocks.

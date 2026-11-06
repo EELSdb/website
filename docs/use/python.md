@@ -5,7 +5,7 @@ description: Load EELSdb spectra into HyperSpy, query the API with requests, or 
 
 You do not need an EELSdb package to use the spectra in Python. Use standard tools:
 
-- HyperSpy reads the MSA file of every spectrum, with the beam energy and angles.
+- HyperSpy reads the MSA and HyperSpy files of every spectrum, with the beam energy and angles. Install [exSpy](https://hyperspy.org/exspy/) too, so that EELS spectra load as `EELSSpectrum`.
 - `requests` and [API v2](/docs/use/api/) give JSON records with every field, where each acquisition value came from, and links to the files.
 - `exspy.data.eelsdb()` searches and downloads in one call. It uses the deprecated API v1, so the signals carry less metadata.
 
@@ -25,19 +25,26 @@ print(s.metadata.Acquisition_instrument.TEM.beam_energy)
 s.plot()
 ```
 
-Spectra also have a HyperSpy (`.hspy`) file, which loads as an `EELSSpectrum` with the DOI of the reference in `metadata.General.doi`. Its energy axis is exact, also when the steps are not even. Find it in the record's `files`, with the role `hspy`:
+Every spectrum also has a HyperSpy (`.hspy`) file at `https://eelsdb.eu/spectra/{slug}/download/hspy`.
+It loads as an `EELSSpectrum` with the DOI of the reference in `metadata.General.doi`, so it needs no `signal_type`.
+Its energy axis is exact, also when the steps are not even.
+The record's `files` also lists it, with the role `hspy`.
 
 ```py
 import hyperspy.api as hs
-import requests
 from urllib.request import urlretrieve
 
-record = requests.get("https://api.eelsdb.eu/v2/spectra/iron-iii-oxide-hematite").json()
-hspy = next((f for f in record["files"] if f["role"] == "hspy"), None)
-if hspy:
-    path, _ = urlretrieve(hspy["url"], hspy["filename"])
-    s = hs.load(path)
+url = "https://eelsdb.eu/spectra/iron-iii-oxide-hematite/download/hspy"
+path, _ = urlretrieve(url, "hematite.hspy")
+s = hs.load(path)
+print(s.metadata.General.doi)
 ```
+
+## Copy the code from a spectrum page
+
+Each spectrum page has a **Use in HyperSpy** tab with code for that spectrum.
+It also loads the spectra you compare with it and repeats your settings from **Adjust the plot** (see [View a spectrum](/docs/use/view/#use-in-hyperspy)).
+The code starts with a header that lists HyperSpy and exSpy, so you can save it as a file and run it with `uv run spectrum.py`.
 
 ## Query the API with requests
 

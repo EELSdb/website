@@ -216,13 +216,18 @@ describe("pages", () => {
     const json = await (await get("json")).json<any>();
     expect(json.data.energy_ev).toHaveLength(rows.length - 1);
     expect(json.title).toBeTruthy();
+    await env.FILES.put("files/22236/mlc-nanotube-ylas-tas2.hspy", "HDF5 bytes");
+    const hspy = await get("hspy");
+    expect(hspy.headers.get("content-type")).toBe("application/x-hdf5");
+    expect(hspy.headers.get("content-disposition")).toContain('filename="mlc-nanotube-ylas-tas2.hspy"');
+    expect(await hspy.text()).toBe("HDF5 bytes");
     expect((await get("xlsx")).status).toBe(404);
     expect((await exports.default.fetch("https://eelsdb.eu/spectra/no-such-spectrum/download/csv")).status).toBe(404);
     const html = await (await page("/spectra/mlc-nanotube-ylas-tas2/")).html;
     expect(html).toContain('name="download-format" value="/spectra/mlc-nanotube-ylas-tas2/download/msa"');
     expect(html).toContain('data-save-plot="svg-dark"');
-    expect(html).toContain('value="/files/22236/mlc-nanotube-ylas-tas2.hspy"');
-    expect(html).toContain("https://eelsdb.eu/files/22236/mlc-nanotube-ylas-tas2.hspy");
+    expect(html).toContain('value="/spectra/mlc-nanotube-ylas-tas2/download/hspy"');
+    expect(html).toContain("https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/hspy");
     expect(html).not.toContain('signal_type');
   });
 

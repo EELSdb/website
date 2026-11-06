@@ -1,6 +1,7 @@
 // Spectrum page: plot the data file with uPlot and mark exSpy edge onsets for the spectrum's elements.
 
 import { processSpectrum } from "/process.js";
+import { highlightPython, hyperspyCode } from "/snippet.js";
 
 for (const button of document.querySelectorAll("[data-open]")) {
   button.addEventListener("click", (e) => {
@@ -165,7 +166,7 @@ async function main() {
   const logY = document.getElementById("log-y");
   const procStatus = document.getElementById("process-status");
   const PROC_NOTE = procStatus?.textContent;
-  const snippet = document.getElementById("snippet-process");
+  const snippet = document.getElementById("snippet-code");
   if (bgFrom) {
     // From the start of the data to just before the first major edge, where the pre-edge background usually is.
     const span = xmax - xmin;
@@ -219,19 +220,25 @@ async function main() {
     if (o.normalise) parts.push(`normalised to ${o.normalise === "max" ? "maximum" : "area"}`);
     return parts.length ? `Processed: ${parts.join(", ")}` : "";
   };
-  const tok = (c, t) => `<span class="t-${c}">${t}</span>`;
-  const num = (v) => (Number.isInteger(v) ? v.toFixed(1) : String(v));
-  // The HyperSpy lines that give the same result as the processed view, in the "Use in HyperSpy" snippet.
-  const pythonLines = (o, fitted) => {
-    const lines = [];
-    const eq = ` ${tok("k", "=")} `;
-    if (o.background === "subtract" && fitted)
-      lines.push(`s${eq}s.${tok("f", "remove_background")}(${tok("a", "signal_range")}${tok("k", "=")}(${num(o.window[0])}${tok("p", ",")} ${num(o.window[1])}))`);
-    if (o.smooth)
-      lines.push(`s.${tok("f", "smooth_savitzky_golay")}(${tok("a", "window_length")}${tok("k", "=")}${o.smooth}${tok("p", ",")} ${tok("a", "polynomial_order")}${tok("k", "=")}2)`);
-    if (o.normalise) lines.push(`s${eq}s ${tok("k", "/")} s.data.${tok("f", o.normalise === "max" ? "max" : "sum")}()`);
-    return lines.map((l) => `${l}\n`).join("");
+  // "Use in HyperSpy": code that loads every plotted spectrum and gives the same processing as the plot.
+  const writeSnippet = (o, main, procs) => {
+    const d = snippet.dataset;
+    const sub = o.background === "subtract";
+    const spectra = [
+      { name: title, url: d.url, file: d.file, signalType: d.signalType, window: sub && main.fit ? o.window : null },
+      ...compares.map((c, j) => ({
+        name: c.name,
+        ...(c.slug
+          ? { url: `${new URL(d.url).origin}/spectra/${c.slug}/download/hspy`, file: `${c.slug}.hspy` }
+          : { file: c.name }),
+        window: sub && procs[j].fit ? procs[j].window : null,
+        shift: +c.shift || 0,
+      })),
+    ];
+    const edges = el.dataset.type !== "xrayabs" && showEdges.checked ? { elements, minor: showMinor.checked } : null;
+    snippet.innerHTML = highlightPython(hyperspyCode(spectra, { smooth: o.smooth, normalise: o.normalise, log: log(), edges }));
   };
+  let snippetArgs;
   const family = getComputedStyle(document.body).fontFamily;
   // "Ti L2,3" draws as "Ti L" plus a subscript "2,3", like the typeset edge names elsewhere.
   const drawLabel = (ctx, label, x, y, dpr, alignRight) => {
@@ -324,7 +331,7 @@ async function main() {
     };
     const procs = compares.map((c) => {
       const opts = clipped(c.x);
-      return { ...processSpectrum(c.x, c.y, opts), from: opts.window[0] };
+      return { ...processSpectrum(c.x, c.y, opts), from: opts.window[0], window: opts.window };
     });
     // The fit is drawn from the window start onwards; before it, it is extrapolation.
     const shownFit = (x, fit, from) => (o.background === "fit" && fit ? fit.map((v, i) => (x[i] < from ? null : v)) : null);
@@ -335,7 +342,8 @@ async function main() {
       compareFits: procs.map((p, j) => shownFit(compares[j].x, p.fit, p.from)),
     };
     if (procStatus) procStatus.textContent = o.background && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies." : PROC_NOTE;
-    if (snippet) snippet.innerHTML = pythonLines(o, main.fit);
+    snippetArgs = [o, main, procs];
+    if (snippet) writeSnippet(...snippetArgs);
     showValues();
   };
   // Log axes cannot show zero or below.
@@ -576,8 +584,11 @@ async function main() {
   compute();
   let plot = new uPlot(opts(), plotData(), el);
   const redraw = () => plot.redraw(false);
-  showEdges.addEventListener("change", redraw);
-  showMinor.addEventListener("change", redraw);
+  for (const box of [showEdges, showMinor])
+    box.addEventListener("change", () => {
+      redraw();
+      if (snippet) writeSnippet(...snippetArgs);
+    });
   new ResizeObserver(() => plot.setSize({ width: el.clientWidth, height: opts().height })).observe(el);
   // Canvas colours are resolved once, so rebuild when the scheme changes.
   const rebuild = (keepZoom) => {
@@ -719,7 +730,7 @@ async function main() {
         const res = await fetch(`/spectra/${encodeURIComponent(s.slug)}/download/json?preview`);
         if (!res.ok) throw new Error(`download failed (${res.status})`);
         const { data: d } = await res.json();
-        compares.push({ name: s.title, slug: s.slug, x: d.energy_ev, y: d.intensity });
+        compares.push({ name: s.title, slug: s.slug, type: s.type, x: d.energy_ev, y: d.intensity });
         update();
         status.textContent = NOTE;
       } catch (e) {

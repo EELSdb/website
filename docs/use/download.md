@@ -23,6 +23,7 @@ The formats are:
 
 EELSdb makes the MSA, CSV and JSON files from the stored data when you download them, so every spectrum has them, whatever format it was uploaded in.
 Their addresses do not change, so you can use them in scripts: for example `https://eelsdb.eu/spectra/graphite/download/csv`.
+The HyperSpy file has an address of the same form: `https://eelsdb.eu/spectra/graphite/download/hspy`.
 
 ## Download everything
 

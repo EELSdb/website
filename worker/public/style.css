@@ -328,6 +328,7 @@ a.el:hover { box-shadow: 0 0 0 2px var(--ink); z-index: 1; }
 .t-f { color: light-dark(#096e72, #b2ccd6); }
 .t-v { color: light-dark(#3b61b0, #82aaff); }
 .t-a { color: light-dark(#403f53, #d7dbe0); }
+.t-c { color: var(--muted); font-style: italic; }
 .code-copy { position: absolute; top: calc(1px + 0.4rem); right: calc(1px + 0.5rem); display: flex; gap: 0.25rem; }
 .code-copy button { position: relative; width: 2.5rem; height: 2.5rem; padding: 0; border: 1px solid color-mix(in srgb, var(--ink) 40%, transparent); border-radius: 0.2rem;
   background: var(--code-bg); opacity: 0.75; cursor: pointer; transition: opacity 0.2s, background 0.2s; }

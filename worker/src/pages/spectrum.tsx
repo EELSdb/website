@@ -170,7 +170,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           { id: "json", label: "JSON", hint: "The data with all the metadata on this page, as in API v2.", href: `${base}/json`, name: `${s.slug}.json` },
         ]
       : []),
-    ...(hspy ? [{ id: "hspy", label: "HyperSpy", hint: "HDF5 for HyperSpy, with the beam energy, angles and DOI in its metadata.", href: href(hspy.r2_key), name: hspy.filename }] : []),
+    ...(hspy ? [{ id: "hspy", label: "HyperSpy", hint: "HDF5 for HyperSpy, with the beam energy, angles and DOI in its metadata.", href: `${base}/hspy`, name: `${s.slug}.hspy` }] : []),
     ...(original ? [{ id: "original", label: "Original file", hint: <>As the contributor uploaded it: <code>{original.filename}</code></>, href: href(original.r2_key), name: original.filename }] : []),
   ];
   const variants = b.files.filter((f) => f.role === "variant");
@@ -435,9 +435,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
             {s.status === "published" && (
               <div class="tool-panel snippet-panel">
                 {hspy ? (
-                  <HyperSpySnippet url={`${SITE}${href(hspy.r2_key)}`} file="spectrum.hspy" process />
+                  <HyperSpySnippet url={`${SITE}/spectra/${s.slug}/download/hspy`} file="spectrum.hspy" live />
                 ) : (
-                  <HyperSpySnippet url={`${SITE}/spectra/${s.slug}/download/msa`} file="spectrum.msa" signalType={s.technique === "eels" ? "EELS" : undefined} process />
+                  <HyperSpySnippet url={`${SITE}/spectra/${s.slug}/download/msa`} file="spectrum.msa" signalType={s.technique === "eels" ? "EELS" : undefined} live />
                 )}
                 <p class="hint">{hspy ? "The HyperSpy file loads with its metadata filled in." : "The MSA file has the beam energy and angles."} More in the <a href="/docs/use/python/">Python guide</a>.</p>
               </div>

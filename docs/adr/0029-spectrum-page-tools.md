@@ -50,7 +50,8 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 - The steps run in this order: background, smoothing, normalisation. Compared spectra get the same steps, each on its own data.
 - Normalisation clears "Independent y axes", because normalised spectra share units. If the page cleared it, turning normalisation off sets it again.
 - Processing never changes downloads.
-- The "Use in HyperSpy" snippet gets the equivalent lines, so the code reproduces the view. The lines are `s = s.remove_background(signal_range=(a, b))`, `s.smooth_savitzky_golay(...)` and `s = s / s.data.max()`.
+- The "Use in HyperSpy" snippet reproduces the view. It loads every plotted spectrum: EELSdb spectra from their HSPY download (`/spectra/{slug}/download/hspy`), which carries their metadata, and the viewer's files by file name, because a page cannot know a file's folder. HyperSpy cannot read TXT, CSV and XDI files, so the code names them in a comment and leaves them out. Each spectrum gets the processing lines (`remove_background(signal_range=(a, b))` with its own window, `smooth_savitzky_golay(...)`, `s / s.data.max()`), then its energy shift as an axis offset. The code ends with `s.plot()` for one spectrum or `hs.plot.plot_spectra([...])` for several, with a log y axis if the plot has one, then `plt.show()`. HyperSpy has no independent y axes, so the overlay shares one axis. For one EELS spectrum, `s.plot(plot_edges=[...], only_edges=...)` marks the edges that the plot shows; `plot_spectra` cannot draw edge markers.
+- The code starts with inline script metadata (PEP 723) that lists `hyperspy` and `exspy`, so `uv run` can run it as a file. exSpy provides `EELSSpectrum`: without it, HyperSpy loads EELS files as plain signals and warns.
 
 ## Alternatives considered
 

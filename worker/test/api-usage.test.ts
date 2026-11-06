@@ -35,7 +35,7 @@ it("counts downloads with their format and where they started, but not the site'
     blobs: ["download", route, "GET", client, expect.any(String), spectrum, format, via],
     doubles: [200],
   });
-  const route = "/spectra/:slug/download/:format{msa|csv|json}";
+  const route = "/spectra/:slug/download/:format{msa|csv|json|hspy}";
   expect(write.mock.calls.map(([p]) => p)).toEqual([
     point("/wp-content/uploads/*", "python-requests/2.32", "22236", "legacy", "direct"),
     point(route, "", "22236", "csv", "site"),

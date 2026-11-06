@@ -78,6 +78,14 @@ The steps run in this order: background, smoothing, normalisation.
 The **Use in HyperSpy** tab is next to **Adjust the plot**.
 It shows the Python code that downloads the spectrum as a HyperSpy file (or an MSA file, if there is none) and loads it in HyperSpy (see [Load spectra in Python](/docs/use/python/)).
 The code also has the HyperSpy lines that give the same result as your **Adjust the plot** settings, so you can do the same processing in a notebook.
+If you compare spectra, the code loads them too and plots them all on one axis, because HyperSpy has no independent y axes.
+Your own files load by their file name. Change the path if the file is in another folder.
+HyperSpy cannot read CSV, text and XDI files, so the code leaves them out.
+For one spectrum, the plot also marks the same edge onsets as the page, from the exSpy edge table.
+
+The code starts with a short header that lists HyperSpy and exSpy.
+Save the code as a file, for example `spectrum.py`, and run it with `uv run spectrum.py`: [uv](https://docs.astral.sh/uv/) installs both packages for you.
+In a notebook, install `hyperspy` and `exspy` first. Without exSpy, HyperSpy loads the files as plain spectra and gives a warning.
 
 ## Export an image of the plot
 

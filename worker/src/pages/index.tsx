@@ -66,7 +66,7 @@ pages.get("/spectra/:file{.+\\.md}", markdown(spectrumMarkdown));
 pages.get("/author/:file{.+\\.md}", markdown(authorMarkdown));
 pages.get("/search/spectra.json", suggestSpectra);
 pages.get("/spectra/:slug/", spectrumPage);
-pages.get("/spectra/:slug/download/:format{msa|csv|json}", downloadSpectrum);
+pages.get("/spectra/:slug/download/:format{msa|csv|json|hspy}", downloadSpectrum);
 pages.get("/spectra/:slug/usage/", spectrumUsagePage);
 pages.get("/spectra/:slug", (c) => c.redirect(`/spectra/${encodeURIComponent(c.req.param("slug"))}/`, 301));
 pages.get("/wp-content/uploads/*", serveFile);

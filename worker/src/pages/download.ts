@@ -1,4 +1,5 @@
-// A spectrum's data in other formats, converted on request from its stored MSA or two-column text file.
+// A spectrum's data in other formats, converted on request from its stored MSA or two-column text file, and its
+// stored HSPY file, so every format has an address made from the slug.
 import type { Context } from "hono";
 import type { AppEnv } from "../auth";
 import { SITE, loadBundle, type SpectrumBundle } from "../api/format";
@@ -9,8 +10,8 @@ import { parseSpectrum } from "../preview";
 import { recordDownload } from "../usage";
 import { visibleSpectrumId } from "./spectrum";
 
-export const FORMATS = ["msa", "csv", "json"] as const;
-const TYPES = { msa: "text/plain; charset=utf-8", csv: "text/csv; charset=utf-8", json: "application/json" };
+export const FORMATS = ["msa", "csv", "json", "hspy"] as const;
+const TYPES = { msa: "text/plain; charset=utf-8", csv: "text/csv; charset=utf-8", json: "application/json", hspy: "application/x-hdf5" };
 
 const UNITS: Record<string, string> = { counts: "counts", oscillator_strength: "oscillator strength", mu: "mu", optical_density: "optical density", normalised: "normalised" };
 
@@ -54,11 +55,16 @@ export async function downloadSpectrum(c: Context<AppEnv>) {
   const format = c.req.param("format") as (typeof FORMATS)[number];
   const id = await visibleSpectrumId(c, c.req.param("slug")!);
   const b = id === null ? null : await loadBundle(c.env.DB, id);
-  const object = b?.legacyFile ? await c.env.FILES.get(b.legacyFile) : null;
+  const hspy = b?.files.find((f) => f.role === "hspy");
+  const key = format === "hspy" ? hspy?.r2_key : b?.legacyFile;
+  const object = key ? await c.env.FILES.get(key) : null;
   if (!b || !object) return c.notFound();
-  const [x, y] = parseSpectrum(await object.text());
-  if (x.length < 2) return c.notFound();
-  const body = { msa: toMsa, csv: toCsv, json: toJson }[format](b, x, y);
+  let body: BodyInit = object.body;
+  if (format !== "hspy") {
+    const [x, y] = parseSpectrum(await object.text());
+    if (x.length < 2) return c.notFound();
+    body = { msa: toMsa, csv: toCsv, json: toJson }[format](b, x, y);
+  }
   const name = `${b.spectrum.slug}.${format}`;
   recordDownload(c, b.spectrum.id, format);
   return new Response(body, {
