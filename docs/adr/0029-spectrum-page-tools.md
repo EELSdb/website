@@ -20,7 +20,7 @@ The page draws the spectrum with uPlot. It shows the exSpy edge onsets for the s
 - Viewers can add their own files. They choose a file or drop it on the plot. The page reads MSA and text files in JS, and other formats with the shared Pyodide reader (`pyreader.js`). Files never leave the browser.
 - Viewers can also add other EELSdb spectra. A type-ahead searches `/search/spectra.json?overlaps={slug}`, which returns spectra with an overlapping energy range. It lists spectra that share an edge first, then spectra that share an element. The page draws each one from its `/download/json`.
 - The page draws compared spectra only within the energy range of the reference.
-- "Scale to match" gives each compared spectrum its own y scale. Each scale has a right-hand axis in the spectrum's colour (`--compare-1` to `--compare-4`).
+- "Independent y axes" gives each compared spectrum its own y scale. Each scale has a right-hand axis in the spectrum's colour (`--compare-1` to `--compare-4`).
 - Each compared scale keeps a linear map to the main scale (value = main × k + b, in log10 on a log axis). Zooming therefore keeps the overlays in place. A change to the processing settings resets the maps.
 - A drag on the top half of an axis moves its maximum. A drag on the bottom half moves its minimum. A double-click resets the axis.
 - The main scale comes first in `scales`, so uPlot knows its range first.
@@ -38,9 +38,9 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 - The two-area estimate matches exSpy's `remove_background(signal_range=…)`. Like exSpy, it treats EELS counts as binned: A comes from plain sums, and the model is multiplied by the channel width.
 - Savitzky–Golay smoothing uses order 2 and a window slider. It matches scipy's `savgol_filter` with mode "interp", which exSpy uses.
 - The viewer can normalise to the maximum or to the area.
-- A log scale labels only 1, 2 and 5 of each decade. With "Scale to match", each compared spectrum keeps its own axis, and that axis is logarithmic too.
+- A log scale labels only 1, 2 and 5 of each decade. With "Independent y axes", each compared spectrum keeps its own axis, and that axis is logarithmic too.
 - The steps run in this order: background, smoothing, normalisation. Compared spectra get the same steps, each on its own data.
-- Normalisation clears "Scale to match", because normalised spectra share units. If the page cleared it, turning normalisation off sets it again.
+- Normalisation clears "Independent y axes", because normalised spectra share units. If the page cleared it, turning normalisation off sets it again.
 - Processing never changes downloads.
 - The "Use in HyperSpy" snippet gets the equivalent lines, so the code reproduces the view. The lines are `s = s.remove_background(signal_range=(a, b))`, `s.smooth_savitzky_golay(...)` and `s = s / s.data.max()`.
 

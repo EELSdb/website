@@ -338,7 +338,6 @@ export async function spectrumPage(c: Context<AppEnv>) {
           )}
           <label><input type="checkbox" id="show-edges" checked /> Edge onsets (exSpy)</label>
           <label><input type="checkbox" id="show-minor" /> Minor edges</label>
-          {fileUrl && <label hidden><input type="checkbox" id="compare-scale" checked /> Scale to match</label>}
           <span class="plot-hint">Drag a box to zoom, double-click to reset</span>
         </div>
       </div>
@@ -387,6 +386,10 @@ export async function spectrumPage(c: Context<AppEnv>) {
             </div>
             <div class="tool-panel process-panel">
               <div class="process-controls">
+                <div class="scale-row" hidden>
+                  <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
+                  <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>
+                </div>
                 {s.type === "coreloss" && (
                   <div class="bg-row">
                     <label>

@@ -297,7 +297,7 @@ async function main() {
   // Spectra from the viewer's computer, drawn on top; never uploaded.
   const compares = [];
   const scaleBox = document.getElementById("compare-scale");
-  // With "Scale to match", each compared spectrum gets its own y scale and right-hand axis, in its colour.
+  // With "Independent y axes", each compared spectrum gets its own y scale and right-hand axis, in its colour.
   const separate = () => scaleBox.checked;
   const scaleOf = (i) => (separate() ? `c${i}` : "y");
   // What is drawn: the data after the processing settings; `fit` only while the fitted background is shown.
@@ -359,11 +359,18 @@ async function main() {
           const key = scaleOf(idx - 2);
           node.classList.add("axis-drag");
           node.title = "Drag the top half to move the maximum, the bottom half to move the minimum. Double-click to reset.";
+          node.style.color = colour(idx - 2);
+          const half = (e) => {
+            const box = node.getBoundingClientRect();
+            return e.clientY < box.top + box.height / 2 ? "top" : "bottom";
+          };
+          // Tint the half a drag would move; it stays put while dragging.
+          node.addEventListener("pointermove", (e) => node.hasPointerCapture(e.pointerId) || (node.dataset.half = half(e)));
+          node.addEventListener("pointerleave", () => delete node.dataset.half);
           node.addEventListener("pointerdown", (e) => {
             e.preventDefault();
             node.setPointerCapture(e.pointerId);
-            const box = node.getBoundingClientRect();
-            const top = e.clientY < box.top + box.height / 2;
+            const top = half(e) === "top";
             const [y0, min, max] = [e.clientY, ...mapped(c).map(tf)];
             const move = (m) => {
               const f = Math.exp((m.clientY - y0) / 150);
@@ -509,7 +516,7 @@ async function main() {
         values: format(view.y),
       },
       ...(dual
-        ? compares.map((c, i) => ({ ...axis(), scale: scaleOf(i), side: 1, stroke: colour(i), grid: { show: false }, size: ySize, values: format(view.compares[i]) }))
+        ? compares.map((c, i) => ({ ...axis(), scale: scaleOf(i), side: 1, stroke: colour(i), grid: { show: false }, size: ySize, label: c.name, values: format(view.compares[i]) }))
         : []),
     ],
     series: [
@@ -602,7 +609,7 @@ async function main() {
   if (box) box.hidden = false;
   const NOTE = status?.textContent;
   const update = () => {
-    scaleBox.parentElement.hidden = !compares.length;
+    scaleBox.closest(".scale-row").hidden = !compares.length;
     list.replaceChildren(
       ...compares.map((c, i) => {
         const li = document.createElement("li");
@@ -876,7 +883,8 @@ async function main() {
     ax.slice(2).forEach((a) => {
       const stroke = typeof a.stroke === "function" ? a.stroke(u, 0) : a.stroke;
       (a._splits ?? []).forEach((v, k) => text(right + 8, T + u.valToPos(v, a.scale) + 4, a._values?.[k] ?? v, `fill="${stroke}" font-size="12"`));
-      right += a._size;
+      text(0, 0, a.label, `transform="translate(${right + a._size + a.labelSize - 18} ${T + PH / 2}) rotate(90)" text-anchor="middle" fill="${stroke}" font-size="13"`);
+      right += a._size + a.labelSize;
     });
     text(L + PW / 2, T + PH + 44, "Energy (eV)", `text-anchor="middle" fill="${colours.muted}" font-size="13"`);
     text(0, 0, axisName(), `transform="translate(18 ${T + PH / 2}) rotate(-90)" text-anchor="middle" fill="${colours.muted}" font-size="13"`);

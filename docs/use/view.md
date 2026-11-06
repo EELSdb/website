@@ -31,14 +31,14 @@ Your browser reads the files. EELSdb does not upload them.
 
 Each compared spectrum has its own colour, and the list below the button shows them. Click **Remove** to take one away.
 
-With **Scale to match**, each compared spectrum has its own y axis on the right, in its colour:
+With **Independent y axes**, each compared spectrum has its own y axis on the right, in its colour:
 
 - Drag the top half of that axis up or down to move its maximum.
 - Drag the bottom half to move its minimum.
 - Double-click the axis to reset it.
 
 When you zoom, the compared spectra keep their position relative to the reference.
-Clear **Scale to match** to plot them on the same axis as the reference.
+Clear **Independent y axes** to plot them on the same axis as the reference.
 
 ## Export an image of the plot
 

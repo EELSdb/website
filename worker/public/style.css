@@ -1258,6 +1258,11 @@ html:not(.js) .picture-file label { display: none; }
 .save-plot p { margin: 0 0 1rem; }
 .save-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: 0.5rem 0.75rem; align-items: center; font-size: 0.875rem; }
 .plot .axis-drag { cursor: ns-resize; touch-action: none; }
+.plot .axis-drag::before { content: ""; position: absolute; left: 0; right: 0; height: 50%; background: currentColor; opacity: 0.1; pointer-events: none; visibility: hidden; }
+.plot .axis-drag[data-half="top"]::before { visibility: visible; top: 0; }
+.plot .axis-drag[data-half="bottom"]::before { visibility: visible; bottom: 0; }
+.scale-row { padding-bottom: 0.75rem; border-bottom: 1px solid var(--rule); width: 100%; }
+.tool-panel .scale-row .hint { margin: 0.25rem 0 0; }
 .plot-drop { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; text-align: center; padding: 1rem;
   border: 2px dashed var(--line); border-radius: 8px; background: color-mix(in oklab, var(--bg) 88%, transparent); font-weight: 600; }
 .plot-drop[hidden] { display: none; }
