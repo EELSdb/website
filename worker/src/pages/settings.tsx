@@ -501,14 +501,12 @@ settings.post("/account/settings/password/", requireUser, async (c) => {
   if (!(await methodsOn(c.env)).includes("password")) return back(c, "sign-in", "password-off");
   const to = await db.prepare("SELECT email FROM user_emails WHERE user_id = ? AND verified = 1 ORDER BY is_primary DESC, id LIMIT 1").bind(user.id).first<string>("email");
   if (!to) return c.redirect(pageUrl("sign-in"));
-  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) return back(c, "sign-in", "password-short");
+  if (typeof password !== "string" || password.length < MIN_PASSWORD_LENGTH || password.length > MAX_PASSWORD_LENGTH) return back(c, "sign-in", "password-short", "#h-password");
   if (!(await allowEmail(db, user.id))) return back(c, "sign-in", "password-limit", "#h-password");
   const token = crypto.randomUUID();
-  await db.batch([
-    db.prepare("DELETE FROM password_changes WHERE user_id = ?").bind(user.id),
-    db.prepare("INSERT INTO password_changes (token_hash, user_id, password_hash, session_id, expires_at) VALUES (?, ?, ?, ?, ?)")
-      .bind(await sha256(token), user.id, await hashPassword(password), await sessionId(c), new Date(Date.now() + PASSWORD_LINK_MINUTES * 60_000).toISOString()),
-  ]);
+  await db.prepare("INSERT OR REPLACE INTO password_changes (user_id, token_hash, password_hash, session_id, expires_at) VALUES (?, ?, ?, ?, ?)")
+    .bind(user.id, await sha256(token), await hashPassword(password), await sessionId(c), new Date(Date.now() + PASSWORD_LINK_MINUTES * 60_000).toISOString())
+    .run();
   await sendEmail(c.env, {
     to,
     subject: "Confirm your new EELS Data Base password",
@@ -527,6 +525,9 @@ settings.post("/account/settings/password/remove/", requireUser, async (c) => {
   await signOutOtherSessions(c, user.id);
   return back(c, "sign-in", "password-removed");
 });
+
+export const deleteExpiredPasswordChanges = (env: Env) =>
+  env.DB.prepare("DELETE FROM password_changes WHERE expires_at <= ?").bind(new Date().toISOString()).run();
 
 const DeadPasswordLink = () => (
   <AuthPage title="Link no longer works">

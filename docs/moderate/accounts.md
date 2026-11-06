@@ -45,7 +45,7 @@ Click a name to open the account page.
 
 1. Check that the person can open a confirmed address of the account. If they cannot, ask them to confirm who they are, and add the address they can use. They must open its link before it counts.
 2. If they lost their phone and recovery codes, or their only passkey, click **Reset two-step sign-in**. It removes the authenticator app, the recovery codes and the passkeys, and signs the person out everywhere.
-3. If they forgot their password, they can use an email link. If the password is the problem, click **Remove password**. It also signs the person out everywhere.
+3. If they forgot their password, they can use an email link. If the password is the problem, click **Remove password**. It also signs the person out everywhere and cancels any new password they saved but have not confirmed by email.
 4. Click **Send sign-in link** next to a confirmed address, or tell the person to ask for a link on the sign-in page.
 5. The person signs in with the link and sets up two-step sign-in or a password again in their settings.
 

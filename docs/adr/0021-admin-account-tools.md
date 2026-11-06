@@ -28,7 +28,7 @@ The tools are in `worker/src/admin-users.tsx`, under `/admin/users/`. Only admin
   - active sessions, with a "sign out everywhere" action
   - links to the person's spectra and submissions
   - the number of drafts, and nothing else about drafts
-- "Reset two-step sign-in" deletes TOTP, the recovery codes and the passkeys. "Remove password" removes the password. Both actions sign the person out. The person then signs in with an email link to a confirmed address. "Send a sign-in link" sends the normal email, so the admin never sees the token.
+- "Reset two-step sign-in" deletes TOTP, the recovery codes and the passkeys. "Remove password" removes the password. Both actions sign the person out. Every action that signs the person out everywhere also cancels a new password that is waiting for its email link ([ADR 0018](/docs/adr/0018-sign-in/)). The person then signs in with an email link to a confirmed address. "Send a sign-in link" sends the normal email, so the admin never sees the token.
 - "Merge another account into this one" starts with a search. A confirmation page then shows what moves and what the merge drops ([ADR 0020](/docs/adr/0020-one-account-per-person/)). `mergePlan` builds this page from the same facts that `mergeAccounts` uses. A merge of two admin accounts needs an extra checkbox.
 
 ### Safety rules

@@ -78,6 +78,7 @@ describe("merging accounts", () => {
     await run("INSERT INTO login_challenges (token_hash, user_id, expires_at) VALUES (?, ?, '2099-01-01')", `lc-${g}`, g);
     await run("INSERT INTO webauthn_challenges (token_hash, user_id, challenge, kind, expires_at) VALUES (?, ?, 'x', 'register', '2099-01-01')", `wc-${g}`, g);
     await run("INSERT INTO login_links (token_hash, email, expires_at) VALUES (?, 'gone-main@example.invalid', '2099-01-01')", `ll-${g}`);
+    await run("INSERT INTO password_changes (user_id, token_hash, password_hash, expires_at) VALUES (?, ?, 'waiting', '2099-01-01')", g, `pc-${g}`);
 
     const res = await merge(k, g, a.cookie);
     expect(res.headers.get("location")).toBe(`/admin/users/${k}/?notice=merged`);
@@ -89,6 +90,7 @@ describe("merging accounts", () => {
       expect(await count(`SELECT 1 FROM ${tbl} WHERE ${col} = ?`, g), `${tbl}.${col}`).toBe(0);
     }
     expect(await count("SELECT 1 FROM login_links WHERE token_hash = ?", `ll-${g}`)).toBe(0);
+    expect(await count("SELECT 1 FROM password_changes WHERE token_hash = ?", `pc-${g}`)).toBe(0);
 
     const u = (await row<any>("SELECT * FROM users WHERE id = ?", k))!;
     expect([u.display_name, u.affiliation, u.slug, u.password_hash]).toEqual(["Kept Person", "Kept Lab", "kept-person", `pbkdf2$${k}`]);

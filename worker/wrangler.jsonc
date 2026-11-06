@@ -26,7 +26,7 @@
   // Simulated locally (wrangler dev and the tests). eelsdb.eu is onboarded for Email Sending; production sets
   // EMAIL_PROVIDER=cloudflare and EMAIL_FROM=info@eelsdb.eu at the cut-over, as env.dev does.
   "send_email": [{ "name": "EMAIL" }],
-  // Daily: delete old drafts, contact messages and rate-limit events, and copy usage counts into D1.
+  // Daily: delete old drafts, contact messages, rate-limit events and expired password links, and copy usage counts into D1.
   "triggers": { "crons": ["17 3 * * *"] },
   // Caps the CPU one invocation can bill (Workers Paid default: 30 s); env.dev inherits it. The heaviest work,
   // a PBKDF2 password hash, needs well under 1 s.

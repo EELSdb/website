@@ -56,7 +56,7 @@ Moderators review each submission at `/admin/submissions/{id}/`.
   The upload uses `POST /admin/submissions/{id}/processed/`, with session and CSRF. Then the page publishes the spectrum.
 - If the browser cannot read the file, the moderator can still decide. In that case the site publishes nothing processed.
 - The submitter's own browser run never produces published files. That run can fail, and the form continues anyway. Its JSON is untrusted.
-- "Request changes" and "Reject" send a message to the submitter. When the submitter edits a submission in "changes requested", it goes back into the queue.
+- Each decision is emailed to the submitter's primary confirmed address. "Request changes" and "Reject" include the moderator's notes. When the submitter edits a submission in "changes requested", it goes back into the queue.
 - The site supports several moderators. It records every action in `history`.
 
 ### File metadata

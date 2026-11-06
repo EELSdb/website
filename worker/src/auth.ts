@@ -177,14 +177,21 @@ export async function syncEmails(db: D1Database, userId: number) {
 
 export async function createSession(c: C, userId: number) {
   await syncEmails(c.env.DB, userId);
-  // Signing in again for a sensitive change replaces the old session rather than leaving it alive.
-  const old = getCookie(c, SESSION_COOKIE);
-  if (old) await c.env.DB.prepare("DELETE FROM sessions WHERE id = ?").bind(await sha256(old)).run();
+  const db = c.env.DB;
   const token = randomToken();
+  const id = await sha256(token);
   const expires = new Date(Date.now() + SESSION_DAYS * 86400_000);
-  await c.env.DB.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)")
-    .bind(await sha256(token), userId, expires.toISOString())
-    .run();
+  await db.prepare("INSERT INTO sessions (id, user_id, expires_at) VALUES (?, ?, ?)").bind(id, userId, expires.toISOString()).run();
+  // Signing in again for a sensitive change replaces the old session rather than leaving it alive. A password link
+  // that session asked for keeps it signed in, so it moves to the new one.
+  const old = getCookie(c, SESSION_COOKIE);
+  if (old) {
+    const oldId = await sha256(old);
+    await db.batch([
+      db.prepare("DELETE FROM sessions WHERE id = ?").bind(oldId),
+      db.prepare("UPDATE password_changes SET session_id = ? WHERE session_id = ?").bind(id, oldId),
+    ]);
+  }
   setCookie(c, SESSION_COOKIE, token, { ...cookieOptions(c), expires });
 }
 

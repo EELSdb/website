@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { sha256 } from "../src/auth";
 import { sent } from "../src/email";
+import { deleteExpiredPasswordChanges } from "../src/pages/settings";
 import { hashPassword } from "../src/password";
 
 const SITE = "https://eelsdb.eu";
@@ -192,7 +193,7 @@ describe("password settings", () => {
     const id = await mkUser({ email: `${unique("l")}@example.invalid` });
     const cookie = await sessionAt(id, 1);
     for (const bad of ["short", "x".repeat(201)]) {
-      expect((await post("/account/settings/password/", { new_password: bad }, cookie)).headers.get("location")).toContain("notice=password-short");
+      expect((await post("/account/settings/password/", { new_password: bad }, cookie)).headers.get("location")).toBe("/account/settings/sign-in/?notice=password-short#h-password");
     }
     expect(sent.length).toBe(before);
     expect(await pending(id)).toBe(0);
@@ -200,6 +201,33 @@ describe("password settings", () => {
       expect((await post("/account/settings/password/", { new_password: `password number ${i}` }, cookie)).headers.get("location")).toContain("notice=password-sent");
     }
     expect((await post("/account/settings/password/", { new_password: "one too many" }, cookie)).headers.get("location")).toContain("notice=password-limit");
+    expect(await pending(id)).toBe(1);
+  });
+
+  it("keeps the asking browser signed in when it signed in again before the link was opened", async () => {
+    const email = `${unique("again")}@example.invalid`;
+    const id = await mkUser({ email, password: "old password!" });
+    const old = await sessionAt(id, 300);
+    await post("/account/settings/password/", { new_password: "brand new one" }, old);
+    const fresh = sessionOf(await post("/login/password/", { login: email, password: "old password!" }, old))!;
+    await post(`/account/password/${lastToken()}/`, {});
+    expect(await sessionCount(id)).toBe(1);
+    expect((await page("/account/settings/sign-in/", fresh)).status).toBe(200);
+  });
+
+  it("keeps one waiting password per account, and the daily clean-up deletes expired ones", async () => {
+    const id = await mkUser({ email: `${unique("one")}@example.invalid` });
+    const insert = (token: string, expires: string) =>
+      env.DB.prepare("INSERT INTO password_changes (user_id, token_hash, password_hash, expires_at) VALUES (?, ?, 'x', ?)").bind(id, token, expires).run();
+    const later = new Date(Date.now() + 3600_000).toISOString();
+    await insert(`a-${id}`, later);
+    await expect(insert(`b-${id}`, later)).rejects.toThrow();
+
+    const other = await mkUser({ email: `${unique("old")}@example.invalid` });
+    await env.DB.prepare("INSERT INTO password_changes (user_id, token_hash, password_hash, expires_at) VALUES (?, ?, 'x', ?)")
+      .bind(other, `c-${other}`, new Date(Date.now() - 60_000).toISOString()).run();
+    await deleteExpiredPasswordChanges(env);
+    expect(await pending(other)).toBe(0);
     expect(await pending(id)).toBe(1);
   });
 
