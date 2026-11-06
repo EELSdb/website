@@ -4,6 +4,7 @@ import { listSpectra } from "../api/v2";
 import { ListQuery } from "../api/v2-schema";
 import { majorEdges, previews, type Preview } from "../preview";
 import NAMES from "../element-names.json";
+import { ELEMENTS } from "../elements";
 import { EdgeName, Formula, Layout, TYPE_NAMES, TypeBadge, fmt } from "./layout";
 
 const PER_PAGE = 50;
@@ -270,8 +271,8 @@ export async function browsePage(c: Context<AppEnv>) {
     .map((r: any) => ({ ...r, edges: r.edges?.split(", ") ?? [], elements: JSON.parse(r.elements ?? "[]"), preview: thumbs.get(r.id) }));
 
   const selected = new Set(f.get("element") ?? []);
-  const elementCounts = new Map<string, number>(elementRows.map((r: any) => [r.element, r.n]));
-  for (const el of selected) if (!elementCounts.has(el)) elementCounts.set(el, 0);
+  const elementCounts = new Map<string, number>([...ELEMENTS, ...selected].sort().map((el) => [el, 0]));
+  for (const r of elementRows as any[]) elementCounts.set(r.element, r.n);
   const pickedKeywords = new Set((f.get("keyword") ?? []).map((k) => k.toLowerCase()));
   const keywordCounts: [string, number][] = keywordRows.map((r: any) => [r.keyword, r.n]);
   for (const k of f.get("keyword") ?? []) if (!keywordCounts.some(([x]) => x.toLowerCase() === k.toLowerCase())) keywordCounts.push([k, 0]);

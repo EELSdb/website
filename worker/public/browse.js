@@ -114,7 +114,7 @@ function picker({ id, after, label, placeholder, describedby, chipsLabel, listLa
 
   const open = () => {
     const q = input.value.trim().toLowerCase();
-    const free = items.filter((x) => !x.selected && x.count);
+    const free = items.filter((x) => !x.selected);
     matches = q
       ? free.map((x) => [rank(x, q), x]).filter(([r]) => r >= 0).sort((a, b) => a[0] - b[0] || b[1].count - a[1].count).map(([, x]) => x)
       : free.toSorted((a, b) => b.count - a.count);
