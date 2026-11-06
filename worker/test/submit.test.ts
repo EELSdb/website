@@ -1,7 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { checkUpload, parseForm, slugify } from "../src/submit/form";
-import { MAX_PER_HOUR } from "../src/submit/index";
+import { MAX_PER_HOUR, canonicalNames } from "../src/submit/index";
 import { sessionFor } from "./helpers/session";
 
 const MSA = `#FORMAT      : EMSA/MAS Spectral Data File
@@ -134,6 +134,29 @@ describe("submitting", () => {
     expect(form).not.toContain("Open Data Commons Open Database Licence (ODbL)</a>");
     const id = Number(new URL((await postSubmit(cookie, formData({ ...fields, title: "CC BY graphite" }))).headers.get("location")!, "https://x").searchParams.get("submitted"));
     expect(await env.DB.prepare("SELECT licence FROM spectra WHERE id = ?").bind(id).first("licence")).toBe("CC-BY-4.0");
+  });
+
+  it("merges instrument names that differ only in case into the most-used spelling", () => {
+    expect(
+      canonicalNames([
+        { names: ["ARM 200cF", "GIF Quantum", "Cold FEG"], n: 5 },
+        { names: ["arm 200cf", "GIF Quantum", "cold FEG"], n: 2 },
+        { names: ["ARM 200cF", null, "Cold FEG"], n: 1 },
+      ]),
+    ).toEqual([
+      { names: ["ARM 200cF", "GIF Quantum", "Cold FEG"], n: 7 },
+      { names: ["ARM 200cF", null, "Cold FEG"], n: 1 },
+    ]);
+  });
+
+  it("gives the form the published instrument names to suggest", async () => {
+    const cookie = await sessionFor({ id: 6000011, display_name: "Suggestion Person" }, { email: true });
+    const form = await (await exports.default.fetch("https://eelsdb.eu/submit-data/", { headers: { Cookie: cookie } })).text();
+    const groups = [...form.matchAll(/data-suggest="([^"]*)"/g)].map((m) => JSON.parse(m[1].replaceAll("&quot;", '"').replaceAll("&amp;", "&")));
+    expect(groups.map((g) => g.prefix).sort()).toEqual(["", "xas_"]);
+    const guns = groups.find((g) => g.prefix === "").rows.map((r: string[]) => r[2]);
+    expect(guns).toContain("Cold FEG");
+    expect(guns).not.toContain("cold FEG");
   });
 
   it("stores processed versions next to the spectrum", async () => {

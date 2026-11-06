@@ -242,6 +242,106 @@ if (instrument) {
   });
 }
 
+// Microscope, beamline and the like: suggest values already published, so one instrument keeps one name. The first
+// `keys` fields of a group narrow the rest: spectrometers seen with the microscope typed above come first, and so on.
+// The fields stay free text.
+for (const group of $$("[data-suggest]")) {
+  const { prefix, columns, keys, rows } = JSON.parse(group.dataset.suggest);
+  const inputs = columns.map((c) => field(prefix + c));
+  inputs.forEach((input, col) => {
+    const name = input.name;
+    const list = el("ul", { className: "picker-list", id: `${name}-list`, hidden: true });
+    const box = el("div", { className: "picker" });
+    input.replaceWith(box);
+    box.append(input, list);
+    list.setAttribute("role", "listbox");
+    list.setAttribute("aria-label", "Names already in use");
+    for (const [k, v] of Object.entries({ role: "combobox", autocomplete: "off", "aria-autocomplete": "list", "aria-expanded": "false", "aria-controls": list.id })) {
+      input.setAttribute(k, v);
+    }
+    let matches = [];
+    let active = -1;
+
+    // The typed key fields before this one; a blank one doesn't narrow.
+    const scope = () => inputs.slice(0, Math.min(col, keys)).map((x) => x.value.trim().toLowerCase());
+    const names = () => {
+      const s = scope();
+      const scoped = s.some(Boolean);
+      const by = new Map();
+      for (const row of rows) {
+        const v = row[col];
+        if (!v) continue;
+        const n = row.at(-1);
+        const x = by.get(v) ?? by.set(v, { v, n: 0, here: 0 }).get(v);
+        x.n += n;
+        if (scoped && s.every((k, j) => !k || row[j]?.toLowerCase() === k)) x.here += n;
+      }
+      return [...by.values()].sort((a, b) => b.here - a.here || b.n - a.n);
+    };
+    const close = () => {
+      list.hidden = true;
+      input.setAttribute("aria-expanded", "false");
+      input.removeAttribute("aria-activedescendant");
+      active = -1;
+    };
+    const setActive = (i) => {
+      active = i;
+      [...list.children].forEach((li, j) => li.setAttribute("aria-selected", String(j === i)));
+      input.setAttribute("aria-activedescendant", `${name}-opt-${i}`);
+      list.children[i].scrollIntoView({ block: "nearest" });
+    };
+    const pick = (x) => {
+      input.value = x.v;
+      input.dispatchEvent(new Event("input", { bubbles: true }));
+      close();
+    };
+    const open = () => {
+      const q = input.value.trim().toLowerCase();
+      matches = names().filter((x) => x.v.toLowerCase().includes(q) && x.v.toLowerCase() !== q);
+      if (!matches.length) return close();
+      const key = columns[scope().findLastIndex(Boolean)];
+      list.replaceChildren(
+        ...matches.map((x, i) => {
+          const li = el("li", { id: `${name}-opt-${i}` }, el("span", { textContent: x.v }), el("span", { className: "n", textContent: x.here ? `${x.here} with this ${key}` : x.n }));
+          li.setAttribute("role", "option");
+          li.addEventListener("mousedown", (e) => e.preventDefault());
+          li.addEventListener("click", () => pick(x));
+          return li;
+        }),
+      );
+      list.hidden = false;
+      input.setAttribute("aria-expanded", "true");
+      input.removeAttribute("aria-activedescendant");
+      active = -1;
+    };
+
+    input.addEventListener("focus", open);
+    input.addEventListener("input", open);
+    input.addEventListener("blur", close);
+    // A known name typed in other capitals takes the shared spelling.
+    input.addEventListener("change", () => {
+      const x = names().find((x) => x.v.toLowerCase() === input.value.trim().toLowerCase());
+      if (x) input.value = x.v;
+    });
+    input.addEventListener("keydown", (e) => {
+      const shown = !list.hidden;
+      if (e.key === "ArrowDown" || e.key === "ArrowUp") {
+        e.preventDefault();
+        if (!shown) return open();
+        const step = e.key === "ArrowDown" ? 1 : -1;
+        setActive(active < 0 ? (step > 0 ? 0 : matches.length - 1) : (active + step + matches.length) % matches.length);
+      } else if (e.key === "Enter" && shown && active >= 0) {
+        // Enter only picks a highlighted name, so a new name typed in full is never swapped for a suggestion.
+        e.preventDefault();
+        pick(matches[active]);
+      } else if (e.key === "Escape" && shown) {
+        e.preventDefault();
+        close();
+      }
+    });
+  });
+}
+
 // ---- Steps ------------------------------------------------------------------------------------
 
 const sections = $$("section.step", form);

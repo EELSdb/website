@@ -44,6 +44,46 @@ export async function approvedInstruments(db: D1Database) {
   return results;
 }
 
+/** One combination of values for a group of fields, and how many published spectra share it. */
+export type NameRow = { names: (string | null)[]; n: number };
+
+/** Merges values that differ only in case into their most-used spelling, so suggestions offer one name per instrument. */
+export function canonicalNames(rows: NameRow[]): NameRow[] {
+  const spelling = (rows[0]?.names ?? []).map((_, i) => {
+    const counts = new Map<string, number>();
+    for (const { names, n } of rows) if (names[i]) counts.set(names[i]!, (counts.get(names[i]!) ?? 0) + n);
+    const best = new Map<string, string>();
+    for (const [name] of [...counts].sort((a, b) => b[1] - a[1])) if (!best.has(name.toLowerCase())) best.set(name.toLowerCase(), name);
+    return best;
+  });
+  const merged = new Map<string, NameRow>();
+  for (const r of rows) {
+    const names = r.names.map((v, i) => (v ? spelling[i].get(v.toLowerCase())! : null));
+    const key = JSON.stringify(names);
+    const row = merged.get(key);
+    if (row) row.n += r.n;
+    else merged.set(key, { names, n: r.n });
+  }
+  return [...merged.values()];
+}
+
+/**
+ * Wraps a group of free-text fields with the values already published, for submit.js to suggest from.
+ * The first `keys` columns narrow the rest, as a spectrometer belongs to a microscope and a beamline to a facility.
+ */
+async function Suggested(props: { db: D1Database; table: "eels_acquisition" | "xas_acquisition"; prefix: string; columns: string[]; keys: number; children: Child }) {
+  const { prefix, columns, keys } = props;
+  const values = columns.map((col) => `NULLIF(TRIM(a.${col}), '')`);
+  const raw = await props.db
+    .prepare(
+      `SELECT ${values.join(", ")}, COUNT(*) FROM ${props.table} a JOIN spectra s ON s.id = a.spectrum_id
+       WHERE s.status = 'published' GROUP BY ${values.map((_, i) => i + 1).join(", ")} HAVING ${values.map((v) => `${v} IS NOT NULL`).join(" OR ")}`,
+    )
+    .raw<(string | number | null)[]>();
+  const rows = canonicalNames(raw.map((r) => ({ names: r.slice(0, -1) as (string | null)[], n: r.at(-1) as number })));
+  return <div class="grid-2" data-suggest={JSON.stringify({ prefix, columns, keys, rows: rows.map((r) => [...r.names, r.n]) })}>{props.children}</div>;
+}
+
 const Req = (props: { eels?: boolean }) => <span class={`req${props.eels ? " req-eels" : ""}`} aria-hidden="true">*</span>;
 
 function Field(props: { name: string; label: string; errors: Record<string, string>; hint?: string; required?: boolean; children: Child }) {
@@ -343,11 +383,17 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
 
           <Step id="xas" hidden={v.type !== "xrayabs"}>
             <p class="hint">XDI files fill these in. The beam energy and angles in the next step do not apply to X-ray absorption.</p>
-            <div class="grid-2">
+            <Suggested
+              db={c.env.DB}
+              table="xas_acquisition"
+              prefix="xas_"
+              columns={["facility", "beamline", "source_type", "monochromator", "detection_mode", "polarisation", "calibration_reference", "i0_normalisation"]}
+              keys={2}
+            >
               {XAS_LABELS.map(([key, label, hint]) => (
                 <Field name={`xas_${key}`} label={label} errors={errors} hint={hint}>{input(`xas_${key}`, v)}</Field>
               ))}
-            </div>
+            </Suggested>
             <StepNav back next="Continue" />
           </Step>
 
@@ -364,12 +410,12 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 </select>
               </Field>
             )}
-            <div class="grid-2">
+            <Suggested db={c.env.DB} table="eels_acquisition" prefix="" columns={["microscope", "detector", "gun_type", "acquisition_mode"]} keys={1}>
               <Field name="microscope" label="Microscope (or beamline)" errors={errors}>{input("microscope", v)}</Field>
               <Field name="detector" label="Spectrometer / detector" errors={errors}>{input("detector", v)}</Field>
               <Field name="gun_type" label="Gun type" errors={errors}>{input("gun_type", v, { placeholder: "e.g. Schottky FEG" })}</Field>
               <Field name="acquisition_mode" label="Acquisition mode" errors={errors}>{input("acquisition_mode", v, { placeholder: "STEM, TEM image, diffraction…" })}</Field>
-            </div>
+            </Suggested>
 
             <fieldset class={`field${errors.beam_energy || errors.beam_energy_uncertainty || errors.beam_energy_choice ? " has-error" : ""}`} data-measured="beam_energy">
               <legend>Beam energy<Req eels /></legend>
