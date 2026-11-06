@@ -2,6 +2,7 @@ import { api } from "./api/index";
 import { pages } from "./pages/index";
 import { deleteOldMessages } from "./contact";
 import { deleteOldDrafts } from "./submit/drafts";
+import { deleteUnusedNewsImages } from "./news";
 import { deleteExpiredPasswordChanges } from "./pages/settings";
 import { rollupUsage } from "./usage";
 import { IS_PRODUCTION, apiPath } from "./site";
@@ -32,6 +33,7 @@ export default {
     ctx.waitUntil(deleteOldDrafts(env));
     ctx.waitUntil(deleteOldMessages(env));
     ctx.waitUntil(deleteExpiredPasswordChanges(env));
+    ctx.waitUntil(deleteUnusedNewsImages(env, controller.scheduledTime));
     // Each kind must outlast the longest window counted over it.
     ctx.waitUntil(env.DB.prepare("DELETE FROM rate_events WHERE at < datetime('now', CASE kind WHEN 'email_sent' THEN '-30 days' ELSE '-1 day' END)").run());
     ctx.waitUntil(rollupUsage(env, controller.scheduledTime));

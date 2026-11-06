@@ -262,6 +262,7 @@ export type AccountPage = (typeof ACCOUNT_PAGES)[number][0] | (typeof SETTINGS_P
 
 const STAFF_PAGES = [
   ["/admin/", "Moderation", "moderator"],
+  ["/admin/news/", "News", "moderator"],
   ["/admin/messages/", "Messages", "admin"],
   ["/admin/users/", "Accounts", "admin"],
   ["/admin/settings/", "Site settings", "admin"],

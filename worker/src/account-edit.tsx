@@ -8,7 +8,7 @@ import { LINK_FIELDS, parseLink, parseLinks, parseUsername } from "./pages/profi
 export const VERIFY_HOURS = 24;
 export const MAX_EMAILS_PER_DAY = 5;
 const MAX_AVATAR_BYTES = 512 * 1024;
-const AVATAR_TYPES: [ext: string, type: string, magic: (b: Uint8Array) => boolean][] = [
+export const AVATAR_TYPES: [ext: string, type: string, magic: (b: Uint8Array) => boolean][] = [
   ["png", "image/png", (b) => b[0] === 0x89 && b[1] === 0x50 && b[2] === 0x4e && b[3] === 0x47],
   ["jpg", "image/jpeg", (b) => b[0] === 0xff && b[1] === 0xd8 && b[2] === 0xff],
   ["webp", "image/webp", (b) => String.fromCharCode(...b.slice(0, 4)) === "RIFF" && String.fromCharCode(...b.slice(8, 12)) === "WEBP"],

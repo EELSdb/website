@@ -13,7 +13,7 @@ web
 - Electron microscopists: PhD students, postdocs, facility staff and professors in materials science, physics and chemistry, who use TEM/STEM instruments with EELS spectrometers. Their job is to find a reference spectrum for an element, edge or compound, compare its fine structure with their own measurement, and download it or load it in Python.
 - Contributors: experimentalists who share published spectra. Many do not use Git or a terminal, so submitting, editing and moderating happen in web pages.
 - HyperSpy users and other API clients (exSpy, pyTEMlib, hyperspyUI, NOMAD, course material), who load spectra from code through `api.eelsdb.eu`.
-- Moderators, who review submissions in `/admin/`.
+- Moderators, who review submissions and write the news in `/admin/`.
 
 ## Product Purpose
 
@@ -32,9 +32,9 @@ The community's own open reference collection for EELS, run by microscopists. It
 ## Capabilities and Constraints
 
 - Spectrum types: core loss, low loss, zero loss and X-ray absorption. Gas-phase spectra (the Corex database) are planned.
-- Sign-in with ORCID, Google or GitHub, plus migrated legacy accounts. Favourites, instrument profiles, a submission form with in-browser checks (Pyodide), moderation, API v1 (frozen contract) and API v2.
+- Sign-in with ORCID, Google or GitHub, plus migrated legacy accounts. Favourites, instrument profiles, a submission form with in-browser checks (Pyodide), moderation, news written by moderators in a visual editor, API v1 (frozen contract) and API v2.
 - Runs on Cloudflare Workers, D1 and R2, with no server to maintain. No hard dependency on Zenodo, GitHub or a HyperSpy release.
-- Out of scope: forum, jobs board, comments on spectra, news editing (news is a frozen archive), and hard X-ray XANES/EXAFS as a focus.
+- Out of scope: forum, jobs board, comments on spectra, and hard X-ray XANES/EXAFS as a focus.
 
 ## Brand Commitments
 

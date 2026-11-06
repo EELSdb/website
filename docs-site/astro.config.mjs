@@ -110,7 +110,7 @@ export default defineConfig({
             'share/drafts',
           ],
         },
-        { label: 'Moderate', items: ['moderate/review', 'moderate/accounts'] },
+        { label: 'Moderate', items: ['moderate/review', 'moderate/news', 'moderate/accounts'] },
         { label: 'Reference', items: ['reference/fields', ...openAPISidebarGroups, 'reference/harvesting'] },
         {
           label: 'About',

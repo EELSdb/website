@@ -270,9 +270,9 @@ describe("pages", () => {
     expect((await page("/author/simon/")).html).toContain("3 spectra");
     expect((await page("/author/nobody/")).status).toBe(404);
     const news = (await page("/news/")).html;
-    expect(news).toContain('href="/hyperspy/"');
+    expect(news).toContain('href="/news/hyperspy/"');
     expect(news).not.toMatch(/&amp;(#\d+|hellip);/);
-    const post = await page("/hyperspy/");
+    const post = await page("/news/hyperspy/");
     expect(post.status).toBe(200);
     expect(post.html).toContain('<a href="http://hyperspy.org/hyperspy-doc/current/api/hyperspy.misc.eels.eelsdb.html">');
     expect((await page("/submit-data/")).res.headers.get("location")).toBe("/login/?next=%2Fsubmit-data%2F");
@@ -300,7 +300,7 @@ describe("pages", () => {
     expect(author.html).toContain("(https://eelsdb.eu/spectra/mlc-nanotube-ys-tas2.md)");
     expect((await page("/author/simon/")).html).toContain('href="/author/simon.md"');
 
-    const news = await page("/hyperspy.md");
+    const news = await page("/news/hyperspy.md");
     expect(news.html).toMatch(/^# Hyperspy\n/);
     expect(news.html).not.toContain("<p>");
     for (const missing of ["/spectra/nope.md", "/author/nobody.md", "/nope.md"]) expect((await page(missing)).status, missing).toBe(404);

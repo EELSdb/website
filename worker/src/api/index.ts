@@ -100,7 +100,7 @@ api.get("/spectra/:slug/", oneSpectrum);
 
 async function listNews(c: Context<AppEnv>) {
   const page = Math.max(1, Number(c.req.param("page") ?? 1) || 1);
-  const { results } = await c.env.DB.prepare("SELECT legacy_v1 FROM news ORDER BY legacy_rank LIMIT ? OFFSET ?")
+  const { results } = await c.env.DB.prepare("SELECT legacy_v1 FROM news WHERE legacy_v1 IS NOT NULL ORDER BY legacy_rank LIMIT ? OFFSET ?")
     .bind(NEWS_PER_PAGE, (page - 1) * NEWS_PER_PAGE)
     .all<{ legacy_v1: string }>();
   return results.length ? json(c, results.map((r) => JSON.parse(r.legacy_v1))) : notFound(c);
@@ -147,7 +147,7 @@ api.get("/author/:slug/", oneContributor);
 api.get("/author/:slug", oneContributor);
 
 async function oneNews(c: Context<AppEnv>) {
-  const row = await c.env.DB.prepare("SELECT legacy_v1 FROM news WHERE slug = ?").bind(c.req.param("slug")).first<{ legacy_v1: string }>();
+  const row = await c.env.DB.prepare("SELECT legacy_v1 FROM news WHERE slug = ? AND legacy_v1 IS NOT NULL").bind(c.req.param("slug")).first<{ legacy_v1: string }>();
   return row ? json(c, JSON.parse(row.legacy_v1)) : notFound(c);
 }
 api.get("/:slug/", oneNews);

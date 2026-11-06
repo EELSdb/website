@@ -3,7 +3,8 @@
 import { SITE, loadBundle } from "../api/format";
 import { formatV2 } from "../api/v2";
 import { decodeEntities } from "./entities";
-import { STAFF_ROLES } from "./profile";
+import { HAS_PAGE_SQL, STAFF_ROLES } from "./profile";
+import { GRAVATAR_EMAIL_SQL, avatarUrl } from "../auth";
 import { TYPE_NAMES } from "./layout";
 import { spectrumCitation } from "./spectrum";
 
@@ -115,6 +116,7 @@ export async function authorMarkdown(db: D1Database, slug: string) {
   const role = STAFF_ROLES[person?.role];
   if (!results.length && !details && !links && !role) return null;
   const name = person?.display_name ?? results[0].author_display;
+  const news = await authorNews(db, slug, person?.id ?? null);
   return [
     `# ${name}`,
     role && `${role} of the EELS Data Base.`,
@@ -122,6 +124,8 @@ export async function authorMarkdown(db: D1Database, slug: string) {
     `- Web page: ${SITE}/author/${slug}/`,
     results.length > 0 && `## Contributed spectra (${results.length})`,
     results.map((s) => `- [${s.title}](${SITE}/spectra/${encodeURIComponent(s.slug)}.md): ${TYPE_NAMES[s.type] ?? s.type}${s.formula ? `, ${s.formula}` : ""}, ${String(s.published_at).slice(0, 10)}`).join("\n"),
+    news.length > 0 && `## News (${news.length})`,
+    news.map((n) => `- [${n.title}](${SITE}/news/${encodeURIComponent(n.slug)}.md): ${String(n.published_at).slice(0, 10)}`).join("\n"),
   ].filter(Boolean).join("\n\n") + "\n";
 }
 
@@ -132,7 +136,7 @@ export function htmlToMarkdown(html: string) {
       .replace(/<a [^>]*href="([^"]*)"[^>]*>([\s\S]*?)<\/a>/g, "[$2]($1)")
       .replace(/<\/?(strong|b)>/g, "**")
       .replace(/<\/?(em|i)>/g, "*")
-      .replace(/<sup>([\s\S]*?)<\/sup>/g, "^$1")
+      .replace(/<sup>([\s\S]*?)<\/sup>/g, "^$1^")
       .replace(/<br\s*\/?>/g, "  \n")
       .replace(/<blockquote>([\s\S]*?)<\/blockquote>/g, (_, q) => q.replace(/<\/?p>/g, "\n").trim().split("\n").map((l: string) => `> ${l.trim()}`).join("\n") + "\n\n")
       .replace(/<p[^>]*>([\s\S]*?)<\/p>/g, "$1\n\n")
@@ -142,9 +146,51 @@ export function htmlToMarkdown(html: string) {
     .trim();
 }
 
+/** `slug` and `avatar` are set only for authors with a public page (ADR 0031). */
+export type NewsAuthor = { id: number | null; name: string; slug: string | null; avatar: string | null };
+
+const LEGACY_AUTHOR_URL = "https://eelsdb.eu/author/";
+const ACCOUNT_SQL = `u.id, u.display_name, u.slug, ${HAS_PAGE_SQL} AS public, u.avatar_key, u.use_gravatar, ${GRAVATAR_EMAIL_SQL} AS email`;
+
+/** An article's byline in order. Archived posts without rows keep their recorded author, matched to an account by the old profile address. */
+export async function newsAuthors(db: D1Database, post: { id: number; legacy_v1: string | null }): Promise<NewsAuthor[]> {
+  const author = async (r: Row, name: string): Promise<NewsAuthor> =>
+    r.public ? { id: r.id, name: r.display_name, slug: r.slug, avatar: await avatarUrl(r.avatar_key, r.email, r.use_gravatar) } : { id: r.id, name, slug: null, avatar: null };
+  const { results } = await db.prepare(
+    `SELECT a.name, ${ACCOUNT_SQL} FROM news_authors a LEFT JOIN users u ON u.id = a.user_id WHERE a.news_id = ? ORDER BY a.position`,
+  ).bind(post.id).all<Row>();
+  if (results.length) return Promise.all(results.map((r) => author(r, r.display_name ?? r.name)));
+  const legacy = post.legacy_v1 ? JSON.parse(post.legacy_v1).author : null;
+  if (!legacy?.name) return [];
+  const url: string = legacy.profile_url ?? "";
+  if (!url.startsWith(LEGACY_AUTHOR_URL)) return [{ id: null, name: legacy.name, slug: null, avatar: null }];
+  const slug = url.slice(LEGACY_AUTHOR_URL.length).replace(/\/$/, "");
+  const r = (await db.prepare(
+    `SELECT ${ACCOUNT_SQL}, EXISTS (SELECT 1 FROM spectra s WHERE s.status = 'published' AND s.author_slug = ?1) AS contributor
+     FROM (SELECT 1) LEFT JOIN users u ON u.slug = ?1 OR u.id = (SELECT user_id FROM user_slug_history WHERE slug = ?1)`,
+  ).bind(slug).first<Row>())!;
+  // Old-site contributors without an account have a page through their spectra.
+  return [!r.id && r.contributor ? { id: null, name: legacy.name, slug, avatar: null } : await author(r, legacy.name)];
+}
+
+/** Published articles by the person at /author/{slug}/: through the authors table, or for archived posts, their old profile address. */
+export async function authorNews(db: D1Database, slug: string, userId: number | null) {
+  const { results } = await db.prepare(
+    `SELECT n.slug, n.title, n.published_at FROM news n WHERE n.status = 'published' AND (
+       EXISTS (SELECT 1 FROM news_authors a WHERE a.news_id = n.id AND a.user_id = ?2)
+       OR (NOT EXISTS (SELECT 1 FROM news_authors a WHERE a.news_id = n.id) AND json_extract(n.legacy_v1, '$.author.profile_url') IN (
+         SELECT '${LEGACY_AUTHOR_URL}' || h.slug || '/' FROM (SELECT ?1 AS slug UNION ALL SELECT slug FROM user_slug_history WHERE user_id = ?2) h)))
+     ORDER BY n.published_at DESC, n.id DESC`,
+  ).bind(slug, userId ?? -1).all<Row>();
+  return results;
+}
+
+export const listAnd = (items: string[]) => (items.length > 1 ? `${items.slice(0, -1).join(", ")} and ${items.at(-1)}` : items[0] ?? "");
+
 export async function newsMarkdown(db: D1Database, slug: string) {
-  const post = await db.prepare("SELECT title, published_at, body_html, legacy_v1 FROM news WHERE slug = ?").bind(slug).first<Row>();
+  const post = await db.prepare("SELECT id, title, published_at, body_md, body_html, legacy_v1 FROM news WHERE slug = ? AND status = 'published'").bind(slug).first<Row>();
   if (!post) return null;
-  const author = JSON.parse(post.legacy_v1).author?.name;
-  return [`# ${post.title}`, `${String(post.published_at).slice(0, 10)}${author ? `, ${author}` : ""}. ${SITE}/${slug}/`, htmlToMarkdown(post.body_html ?? "")].join("\n\n") + "\n";
+  const authors = listAnd((await newsAuthors(db, post as any)).map((a) => a.name));
+  const body = post.body_md ?? htmlToMarkdown(post.body_html ?? "");
+  return [`# ${post.title}`, `${String(post.published_at).slice(0, 10)}${authors ? `, ${authors}` : ""}. ${SITE}/news/${slug}/`, body].join("\n\n") + "\n";
 }

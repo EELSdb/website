@@ -11,6 +11,7 @@ import { MessagesPage, deleteMessage } from "./contact";
 import { adminUsers } from "./admin-users";
 import { SIGN_IN_METHODS, TWO_STEP_GROUPS, getSettings, setSetting, type SettingKey, type SwitchableMethod } from "./settings";
 import { MAX_FILE_BYTES } from "./submit/form";
+import { newsAdmin } from "./news";
 
 export const admin = new Hono<AppEnv>();
 
@@ -27,6 +28,7 @@ admin.use("/admin/*", requireUser, async (c, next) => {
   if (!isModerator(c.get("user"))) return c.text("Only moderators can see this page.", 403);
   await next();
 });
+admin.route("/", newsAdmin);
 
 admin.get("/admin/", async (c) => {
   const db = c.env.DB;

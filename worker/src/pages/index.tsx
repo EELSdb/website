@@ -14,6 +14,7 @@ import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge, devBanner, staffPages }
 import { homePage } from "./home";
 import { admin } from "../admin";
 import { contact } from "../contact";
+import { news } from "../news";
 import { instruments } from "../instruments";
 import { edit } from "../submit/edit";
 import { submit } from "../submit/index";
@@ -28,7 +29,7 @@ import { HAS_PAGE_SQL, LINK_FIELDS, STAFF_ROLES, linkText, linkUrl, parseLinks }
 import { LinkIcon } from "./link-icons";
 import { authorSlug } from "../submit/store";
 import { decodeEntities } from "./entities";
-import { authorMarkdown, markdownHeaders, newsMarkdown, spectrumMarkdown } from "./markdown";
+import { authorMarkdown, authorNews, markdownHeaders, spectrumMarkdown } from "./markdown";
 import { GRAVATAR_EMAIL_SQL, avatarUrl } from "../auth";
 import { drafts } from "../submit/drafts";
 import { og } from "../og/index";
@@ -51,6 +52,7 @@ pages.route("/", edit);
 pages.route("/", drafts);
 pages.route("/", admin);
 pages.route("/", contact);
+pages.route("/", news);
 
 const markdown = (render: (db: D1Database, slug: string) => Promise<string | null>) => async (c: C) => {
   const body = await render(c.env.DB, c.req.param("file")!.slice(0, -3));
@@ -151,8 +153,12 @@ pages.get("/sitemap.xml", async (c) => {
   const { results } = await c.env.DB.prepare(
     `SELECT s.slug, ${MODIFIED_SQL} AS modified FROM spectra s WHERE s.status = 'published' ORDER BY s.id`,
   ).all<{ slug: string; modified: string }>();
+  const { results: posts } = await c.env.DB.prepare(
+    "SELECT slug, COALESCE(updated_at, published_at) AS modified FROM news WHERE status = 'published' ORDER BY published_at",
+  ).all<{ slug: string; modified: string }>();
   const url = (loc: string, modified?: string) => `<url><loc>${xml(loc)}</loc>${modified ? `<lastmod>${isoTime(modified)}</lastmod>` : ""}</url>`;
-  const body = [`${SITE}/`, `${SITE}/spectra/`].map((u) => url(u)).concat(results.map((r) => url(`${SITE}/spectra/${encodeURIComponent(r.slug)}/`, r.modified)));
+  const body = [`${SITE}/`, `${SITE}/spectra/`].map((u) => url(u)).concat(results.map((r) => url(`${SITE}/spectra/${encodeURIComponent(r.slug)}/`, r.modified)))
+    .concat(url(`${SITE}/news/`), posts.map((p) => url(`${SITE}/news/${encodeURIComponent(p.slug)}/`, p.modified)));
   return c.body(`<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body.join("\n")}\n</urlset>\n`, 200, {
     "Content-Type": "application/xml; charset=utf-8",
   });
@@ -245,7 +251,7 @@ async function authorPage(c: C) {
   if (!results.length && !showDetails && !showLinks && !role) return c.notFound();
   const name = person?.display_name ?? results[0].author_display;
   const links = showLinks ? parseLinks(person.links_json) : {};
-  const avatar = person ? await avatarUrl(person.avatar_key, person.email, person.use_gravatar) : null;
+  const [avatar, news] = await Promise.all([person ? avatarUrl(person.avatar_key, person.email, person.use_gravatar) : null, authorNews(db, slug!, person?.id ?? null)]);
   const facts = (showDetails ? [person.job_title, person.affiliation] : []).filter(Boolean).join(" · ");
   return c.html(
     <Layout user={c.get("user")} title={name} path="/author/" card={`author/${encodeURIComponent(slug!)}`} head={mdLink(`/author/${slug}.md`)}>
@@ -294,38 +300,31 @@ async function authorPage(c: C) {
       ) : (
         <p class="muted">No published spectra yet.</p>
       )}
+      {news.length > 0 && (
+        <>
+          <h2>News</h2>
+          <div class="table-scroll">
+            <table>
+              <thead>
+                <tr><th>Title</th><th class="num">Date</th></tr>
+              </thead>
+              <tbody>
+                {news.map((n) => (
+                  <tr>
+                    <td class="title"><a href={`/news/${encodeURIComponent(n.slug)}/`}>{n.title}</a></td>
+                    <td class="num">{String(n.published_at).slice(0, 10)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </>
+      )}
     </Layout>,
   );
 }
 pages.get("/author/:slug/", authorPage);
 pages.get("/author/:slug", (c) => c.redirect(`/author/${c.req.param("slug")}/`, 301));
-
-pages.get("/news/", async (c) => {
-  const { results } = await c.env.DB.prepare(
-    "SELECT slug, title, published_at, json_extract(legacy_v1, '$.description') AS summary FROM news ORDER BY published_at DESC",
-  ).all<any>();
-  const years = results.map((p) => String(p.published_at).slice(0, 4));
-  return c.html(
-    <Layout user={c.get("user")} title="News" path="/news/" card="page/news">
-      <div class="prose">
-        <h1>News</h1>
-        <p class="lede">
-          Archived news from the EELS Data Base, {years.at(-1)} to {years[0]}.
-        </p>
-        <div class="news-list">
-          {results.map((p) => (
-            <article>
-              <h2><a href={`/${p.slug}/`}>{p.title}</a></h2>
-              <p class="muted small">{String(p.published_at).slice(0, 10)}</p>
-              <p>{decodeEntities(p.summary ?? "")}</p>
-            </article>
-          ))}
-        </div>
-      </div>
-    </Layout>,
-  );
-});
-
 
 const gone = (c: C) =>
   c.html(
@@ -342,27 +341,15 @@ const gone = (c: C) =>
   );
 for (const path of ["/forum", "/forum/*", "/jobs", "/jobs/*", "/registered-users", "/registered-users/"]) pages.get(path, gone);
 
-pages.get("/:file{.+\\.md}", markdown(newsMarkdown));
+// The archive's old addresses at the site root, from before news moved under /news/.
+const newsSlug = (c: C, slug: string) => c.env.DB.prepare("SELECT slug FROM news WHERE slug = ? AND status = 'published'").bind(slug).first<string>("slug");
+pages.get("/:file{.+\\.md}", async (c) => {
+  const slug = await newsSlug(c, c.req.param("file").slice(0, -3));
+  return slug ? c.redirect(`/news/${slug}.md`, 301) : c.notFound();
+});
 pages.get("/:slug/", async (c) => {
-  const post = await c.env.DB.prepare("SELECT slug, title, published_at, body_html, legacy_v1 FROM news WHERE slug = ?")
-    .bind(c.req.param("slug"))
-    .first<any>();
-  if (!post) return c.notFound();
-  const author = JSON.parse(post.legacy_v1).author?.name;
-  return c.html(
-    <Layout user={c.get("user")} title={post.title} path="/news/" card={`news/${encodeURIComponent(post.slug)}`} head={mdLink(`/${post.slug}.md`)}>
-      <article class="prose">
-        <p class="small back-link"><a href="/news/">← News</a></p>
-        <h1>{post.title}</h1>
-        <p class="muted">
-          {String(post.published_at).slice(0, 10)}
-          {author ? ` · ${author}` : ""}
-        </p>
-        {/* Recorded from the old site and reduced to simple tags by python/record_news.py. */}
-        <div>{raw(post.body_html ?? "")}</div>
-      </article>
-    </Layout>,
-  );
+  const slug = await newsSlug(c, c.req.param("slug"));
+  return slug ? c.redirect(`/news/${slug}/`, 301) : c.notFound();
 });
 
 pages.notFound((c) =>

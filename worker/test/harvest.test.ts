@@ -231,7 +231,7 @@ describe("schema.org and the sitemap", () => {
   it("lists every published spectrum in the sitemap", async () => {
     const xml = await (await fetchUrl("https://eelsdb.eu/sitemap.xml")).text();
     const total = await env.DB.prepare("SELECT COUNT(*) AS n FROM spectra WHERE status = 'published'").first<number>("n");
-    expect(xml.match(/<url>/g)!.length).toBe(total! + 2);
+    expect(xml.match(/<loc>https:\/\/eelsdb\.eu\/spectra\/[^<]+<\/loc>/g)!.length).toBe(total!);
     expect(xml).toMatch(/<loc>https:\/\/eelsdb\.eu\/spectra\/mlc-nanotube-ylas-tas2\/<\/loc><lastmod>\d{4}-\d\d-\d\dT\d\d:\d\d:\d\dZ<\/lastmod>/);
   });
 });

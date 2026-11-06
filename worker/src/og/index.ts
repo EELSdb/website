@@ -20,7 +20,7 @@ export const PAGE_CARDS: Record<string, { title: string; description: string; ur
   downloads: { title: "Bulk download", description: "Every published spectrum in one archive, with its metadata.", url: `${SITE_HOST}/downloads/` },
   moderators: { title: "Moderators", description: "The people who check each submitted spectrum before it is published.", url: `${SITE_HOST}/moderators/` },
   stats: { title: "Statistics", description: "How the API and the spectrum downloads are used, and how the collection has grown.", url: `${SITE_HOST}/stats/` },
-  news: { title: "News", description: "Archived news from the EELS Data Base.", url: `${SITE_HOST}/news/` },
+  news: { title: "News", description: "News from the EELS Data Base.", url: `${SITE_HOST}/news/` },
   contact: { title: "Contact", description: "Questions about the EELS Data Base, a spectrum or your account.", url: `${SITE_HOST}/contact/` },
 };
 
@@ -127,10 +127,10 @@ og.get("/author/:file{.+\\.png}", (c) =>
 
 og.get("/news/:file{.+\\.png}", (c) =>
   cached(c, async () => {
-    const post = await c.env.DB.prepare("SELECT slug, title, published_at FROM news WHERE slug = ?").bind(c.req.param("file").slice(0, -4)).first<any>();
+    const post = await c.env.DB.prepare("SELECT slug, title, published_at FROM news WHERE slug = ? AND status = 'published'").bind(c.req.param("file").slice(0, -4)).first<any>();
     if (!post) return null;
     const date = new Date(post.published_at.replace(" ", "T") + "Z").toLocaleDateString("en-GB", { day: "numeric", month: "long", year: "numeric", timeZone: "UTC" });
-    return textCard({ title: post.title, description: `News · ${date}`, url: `${SITE_HOST}/${post.slug}/`, traces: await traces(c) });
+    return textCard({ title: post.title, description: `News · ${date}`, url: `${SITE_HOST}/news/${post.slug}/`, traces: await traces(c) });
   }),
 );
 
