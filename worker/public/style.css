@@ -648,7 +648,7 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }
 .fit-text { white-space: nowrap; }
 /* Number fields drawn as plain text; spectrum.js sizes them to their value. */
-.process-controls .inline-num { all: unset; padding: 0 2px; margin: 0 -2px; border-radius: 3px; cursor: text; }
+.process-controls .inline-num { all: unset; appearance: textfield; padding: 0 2px; margin: 0 -2px; border-radius: 3px; cursor: text; }
 .inline-num::-webkit-inner-spin-button, .inline-num::-webkit-outer-spin-button { appearance: none; margin: 0; }
 .inline-num::placeholder { color: inherit; opacity: 1; }
 .process-controls .inline-num:hover { background: var(--sunken); }

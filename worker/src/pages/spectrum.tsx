@@ -264,11 +264,11 @@ export async function spectrumPage(c: Context<AppEnv>) {
               <svg width="16" height="16" viewBox="0 0 24 24" fill={favourite ? "currentColor" : "none"} stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 3.5l2.6 5.3 5.9.9-4.3 4.1 1 5.8-5.2-2.7-5.2 2.7 1-5.8-4.3-4.1 5.9-.9z" />
               </svg>
-              {favourite ? "Saved" : "Save"}
+              {favourite ? "Favourited" : "Favourite"}
             </button>
           </form>
         ) : (
-          <a class="button secondary" href={`/login/?next=${encodeURIComponent(`/spectra/${s.slug}/`)}`}>Sign in to save</a>
+          <a class="button secondary" href={`/login/?next=${encodeURIComponent(`/spectra/${s.slug}/`)}`}>Sign in to favourite</a>
         )}
         {fileUrl && (
           <>
@@ -549,11 +549,11 @@ export async function spectrumPage(c: Context<AppEnv>) {
             <>
               <h2>Reference</h2>
               <p>
-                {referenceText(r)}
+                {referenceText({ ...r, doi: null })}
                 {r.doi && (
                   <>
-                    {" "}
-                    <a href={`https://doi.org/${r.doi}`}>Article</a>
+                    {referenceText({ ...r, doi: null }) && ". "}
+                    <a href={`https://doi.org/${r.doi}`}>doi:{r.doi}</a>
                   </>
                 )}
                 {!r.doi && r.url && /^https?:\/\//.test(r.url) && (
