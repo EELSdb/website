@@ -26,6 +26,7 @@ The toolbar has the formatting that articles use:
 - Bulleted lists, numbered lists and quotes.
 - Images. Drag them in, paste them, or use the image button. EELSdb shrinks each image to 1600 pixels wide. Click an image to describe it for people who cannot see it, and to set its size and position.
 - YouTube videos. Use the video button, or paste a YouTube link on its own. Click a video to change its link, size or position. Readers see a picture of the video, and the player loads only when they press play.
+- Link cards: a box that links to a page, with a title and an optional short description. Use the link card button, and click a card to change it.
 - Note boxes: note, tip, caution or danger. Click inside a box to change its style.
 - Dividers.
 - Equations, written in LaTeX, for example `t/\lambda = \ln(I_t/I_0)`. They can sit in the text or on their own line. Click an equation to change it.

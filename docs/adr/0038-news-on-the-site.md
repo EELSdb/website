@@ -30,6 +30,7 @@ adr:
   - images, each with a description (alt text)
   - notes, of four kinds: note, tip, caution and danger
   - YouTube videos
+  - link cards: a bordered link with a title, an optional one-line description and an arrow
   - dividers (horizontal rules).
 - Images and videos have a size (small, medium, large or full width: 33%, 50%, 75% or 100% of the text column) and a position (centred, or floated left or right with text wrapping beside them). Floating a full-width item makes it medium. On narrow screens, floated items go full width.
 - An article has a title, a summary, a web address, a date and one or more authors. The summary is one or two sentences. The news list, the share card ([ADR 0036](/docs/adr/0036-share-cards/)) and the page description use it.
@@ -44,6 +45,8 @@ adr:
   :::
 
   ::youtube{id="aBcDeFgHiJk" width="50%" float="right"}
+
+  ::link{href="/docs/" title="Read the \"Getting started\" guide" description="Optional, one line."}
 
   ![Carbon K edge of graphite](/media/news/2026/c-k-edge.png){width="33%" float="left"}
 

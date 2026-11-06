@@ -8,11 +8,14 @@ export const YOUTUBE_ID = /^[\w-]{11}$/;
 const SIZES = new Set(["33%", "50%", "75%"]);
 
 const esc = (s: string) => s.replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" })[c]!);
-const parseAttrs = (s = ""): Record<string, string> => Object.fromEntries([...s.matchAll(/(\w+)="([^"]*)"/g)].map(([, k, v]) => [k, v]));
+// Values escape " and \ with a backslash, so a link card's title can hold quotes and braces.
+const parseAttrs = (s = ""): Record<string, string> =>
+  Object.fromEntries([...s.matchAll(/(\w+)="((?:[^"\\]|\\.)*)"/g)].map(([, k, v]) => [k, v.replace(/\\(.)/g, "$1")]));
 const layout = (a: Record<string, string>) =>
   (SIZES.has(a.width) ? ` data-width="${a.width}"` : "") + (a.float === "left" || a.float === "right" ? ` data-float="${a.float}"` : "");
 // http(s) or a path on this site; anything else (javascript:, data:) shows as text.
 const safeUrl = (u: string) => (/^https?:\/\//i.test(u) || /^\/(?!\/)/.test(u) ? u : null);
+const ARROW = '<svg class="link-card-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>';
 // MathML, so pages need no maths script, stylesheet or fonts; trust stays off, so \href and friends are refused.
 const math = (latex: string, displayMode: boolean) => katex.renderToString(latex, { output: "mathml", throwOnError: false, displayMode });
 
@@ -61,6 +64,19 @@ const marked = new Marked({
       renderer(t) {
         return `<figure class="yt"${layout(t.attrs)}><a class="yt-link" href="https://www.youtube.com/watch?v=${t.id}" data-youtube="${t.id}" aria-label="Play the video"><img src="/media/${youtubeThumbKey(t.id)}" alt="" loading="lazy"><span class="yt-play" aria-hidden="true"></span></a></figure>\n`;
       },
+    },
+    {
+      name: "linkCard",
+      level: "block",
+      start: (src) => src.match(/^::link\{/m)?.index,
+      tokenizer(src) {
+        const m = /^::link\{((?:"(?:[^"\\\n]|\\.)*"|[^"}\n])*)\}[ \t]*(?:\n+|$)/.exec(src);
+        const a = m && parseAttrs(m[1]);
+        const href = a && safeUrl(a.href ?? "");
+        if (href) return { type: "linkCard", raw: m![0], href, title: a.title || href, description: a.description ?? "" };
+      },
+      renderer: (t) =>
+        `<a class="link-card" href="${esc(t.href)}"><span class="link-card-text"><span class="link-card-title">${esc(t.title)}</span>${t.description ? `<span class="link-card-desc">${esc(t.description)}</span>` : ""}</span>${ARROW}</a>\n`,
     },
     {
       name: "blockMath",

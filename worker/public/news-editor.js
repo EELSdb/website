@@ -28,6 +28,7 @@ const icons = {
   image: svg('<rect x="3" y="4" width="14" height="12" rx="1.5"/><circle cx="7.5" cy="8.3" r="1.3"/><path d="m3.5 14.5 4-4 3 3 2-2 4 4"/>'),
   video: svg('<rect x="2.5" y="4.5" width="15" height="11" rx="3"/><path d="m8.5 7.8 4 2.2-4 2.2z" fill="currentColor"/>'),
   callout: svg('<rect x="3" y="4" width="14" height="12" rx="2"/><path d="M10 7.3v3.6M10 13.1v.01"/>'),
+  card: svg('<rect x="2.5" y="5" width="15" height="10" rx="2"/><path d="M5.5 8.5h5.5M5.5 11.5h3.5M12.8 10h2M14 8.6l1.2 1.4L14 11.4"/>'),
   hr: svg('<path d="M3 10h14"/><path d="M6 5.5h8M6 14.5h8" opacity=".4"/>'),
   math: svg('<path d="M2.5 11h2.5l2.5 5 4-12h6"/><path d="m11.5 9.5 4 4M15.5 9.5l-4 4" stroke-width="1.4"/>'),
   undo: svg('<path d="M7 4.5 3.5 8 7 11.5"/><path d="M4 8h8a4.5 4.5 0 0 1 0 9H9"/>'),
@@ -40,7 +41,10 @@ const CALLOUTS = { note: "Note", tip: "Tip", caution: "Caution", danger: "Danger
 const SIZES = { "33%": "Small", "50%": "Medium", "75%": "Large" };
 const YOUTUBE_ID = /^[\w-]{11}$/;
 const KATEX = { output: "mathml", throwOnError: false };
-const parseAttrs = (s = "") => Object.fromEntries([...s.matchAll(/(\w+)="([^"]*)"/g)].map(([, k, v]) => [k, v]));
+// Values escape " and \ with a backslash, so a link card's title can hold quotes and braces.
+const parseAttrs = (s = "") => Object.fromEntries([...s.matchAll(/(\w+)="((?:[^"\\]|\\.)*)"/g)].map(([, k, v]) => [k, v.replace(/\\(.)/g, "$1")]));
+const attrMd = (k, v) => `${k}="${v.replace(/[\\"]/g, "\\$&")}"`;
+const safeUrl = (u) => (/^https?:\/\//i.test(u) || /^\/(?!\/)/.test(u) ? u : null);
 const cleanLayout = (a = {}) => ({ width: SIZES[a.width] ? a.width : null, float: ["left", "right"].includes(a.float) ? a.float : null });
 const layoutMd = (a) => [a.width && `width="${a.width}"`, a.float && `float="${a.float}"`].filter(Boolean).join(" ");
 const layoutAttributes = () => ({
@@ -124,6 +128,36 @@ const YouTube = T.Node.create({
   renderMarkdown: (node) => { const l = layoutMd(node.attrs); return `::youtube{id="${node.attrs.id}"${l ? ` ${l}` : ""}}`; },
 });
 
+// Link cards: ::link{href="…" title="…" description="…"}. The editor shows a div, so a click selects the card instead of following it.
+const SVG_NS = "http://www.w3.org/2000/svg";
+const dataAttr = (k) => ({ default: null, parseHTML: (el) => el.dataset[k] ?? null, renderHTML: (a) => (a[k] ? { [`data-${k}`]: a[k] } : {}) });
+const LinkCard = T.Node.create({
+  name: "linkCard",
+  group: "block",
+  atom: true,
+  draggable: true,
+  addAttributes: () => ({ href: dataAttr("href"), title: dataAttr("title"), description: dataAttr("description") }),
+  parseHTML: () => [{ tag: "div.link-card[data-href]" }],
+  renderHTML: ({ node, HTMLAttributes }) => {
+    const { href, title, description } = node.attrs;
+    return ["div", T.mergeAttributes(HTMLAttributes, { class: "link-card" }),
+      ["span", { class: "link-card-text" }, ["span", { class: "link-card-title" }, title || href || ""], ...(description ? [["span", { class: "link-card-desc" }, description]] : [])],
+      [`${SVG_NS} svg`, { class: "link-card-arrow", viewBox: "0 0 20 20", fill: "none", stroke: "currentColor", "stroke-width": "1.6", "stroke-linecap": "round", "stroke-linejoin": "round", "aria-hidden": "true" }, [`${SVG_NS} path`, { d: "M4 10h12M11 5l5 5-5 5" }]]];
+  },
+  markdownTokenizer: {
+    name: "linkCard",
+    level: "block",
+    start: (src) => src.search(/^::link\{/m),
+    tokenize(src) {
+      const m = src.match(/^::link\{((?:"(?:[^"\\\n]|\\.)*"|[^"}\n])*)\}[ \t]*(?:\n+|$)/);
+      const a = m && parseAttrs(m[1]);
+      if (a && safeUrl(a.href ?? "")) return { type: "linkCard", raw: m[0], attrs: a };
+    },
+  },
+  parseMarkdown: (token, h) => h.createNode("linkCard", { href: token.attrs.href, title: token.attrs.title || null, description: token.attrs.description || null }),
+  renderMarkdown: (node) => `::link{${["href", "title", "description"].filter((k) => node.attrs[k]).map((k) => attrMd(k, node.attrs[k])).join(" ")}}`,
+});
+
 // Superscript ^th^ and subscript ~2~, as in Pandoc, with no spaces inside.
 const scriptMark = (Ext, name, ch, re) => Ext.extend({
   markdownTokenizer: {
@@ -204,6 +238,10 @@ const imageFiles = (dt) => [...(dt?.files ?? [])].filter((f) => f.type.startsWit
 
 // ---- The editor --------------------------------------------------------------------------------
 
+// Text, not url: a path on the site is a valid card link but not a valid URL, and would block the form's submit.
+const cardFields = `<label>Link to <input type="text" inputmode="url" data-f="href" spellcheck="false" autocomplete="off" placeholder="https://… or /news/…" /></label>
+  <label>Title <input type="text" data-f="title" autocomplete="off" /></label>
+  <label>Description <input type="text" data-f="description" autocomplete="off" placeholder="Optional, one line" /></label>`;
 const ed = document.createElement("div");
 ed.className = "ed";
 ed.innerHTML = `
@@ -223,6 +261,7 @@ ed.innerHTML = `
       <span class="sep"></span>
       <button type="button" class="tb-btn" data-cmd="image" title="Add image">${icons.image}</button>
       <button type="button" class="tb-btn" data-cmd="video" title="Add YouTube video">${icons.video}</button>
+      <button type="button" class="tb-btn" data-cmd="card" title="Add link card">${icons.card}</button>
       <button type="button" class="tb-btn" data-cmd="callout" title="Note box" aria-pressed="false">${icons.callout}</button>
       <button type="button" class="tb-btn" data-cmd="hr" title="Divider">${icons.hr}</button>
       <button type="button" class="tb-btn" data-cmd="math" title="Equation">${icons.math}</button>
@@ -250,6 +289,11 @@ ed.innerHTML = `
         <label>YouTube link <input type="url" placeholder="https://www.youtube.com/watch?v=…" /></label>
         <button class="button" type="button" data-video="add">Add video</button>
       </div>
+      <div class="tb-pop card-pop" data-pop="card" hidden>
+        ${cardFields}
+        <button class="button" type="button" data-card="add">Add link card</button>
+      </div>
+      <div class="tb-pop card-pop" data-pop="card-edit" hidden>${cardFields}</div>
       <div class="tb-pop math-pop" data-pop="math" hidden>
         <label>Equation <input type="text" spellcheck="false" autocomplete="off" placeholder="t/\\lambda = \\ln(I_t/I_0)" /></label>
         <div class="seg" role="group" aria-label="Placement"><button type="button" data-mplace="inline" aria-pressed="true">In the text</button><button type="button" data-mplace="block" aria-pressed="false">On its own line</button></div>
@@ -274,9 +318,11 @@ area.setAttribute("aria-label", "Article text in Markdown");
 ed.addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.matches(".tb-pop input")) e.preventDefault(); });
 const tb = $(".tb", ed);
 const pop = (name) => $(`[data-pop="${name}"]`, ed);
-const linkPop = pop("link"), mediaPop = pop("media"), videoPop = pop("video"), mathPop = pop("math"), calloutPop = pop("callout");
+const linkPop = pop("link"), mediaPop = pop("media"), videoPop = pop("video"), mathPop = pop("math"), calloutPop = pop("callout"), cardPop = pop("card"), cardEditPop = pop("card-edit");
 const linkIn = $("input", linkPop), altLabel = $("[data-alt]", mediaPop), altIn = $("input", altLabel), ytLabel = $("[data-yt]", mediaPop), ytIn = $("input", ytLabel);
 const videoIn = $("input", videoPop), mathIn = $("input", mathPop), mathOut = $("output", mathPop), calloutSel = $("select", calloutPop), styleSel = $("[data-style]", ed);
+const cardFieldsIn = (p) => Object.fromEntries([...p.querySelectorAll("input")].map((i) => [i.dataset.f, i]));
+const cardIn = cardFieldsIn(cardPop), cardEd = cardFieldsIn(cardEditPop);
 let mdMode = false;
 let dirty = false;
 
@@ -299,6 +345,7 @@ const editor = new T.Editor({
     T.Placeholder.configure({ placeholder: "Write your article. Drag images in, or use the image button." }),
     Callout,
     YouTube,
+    LinkCard,
     scriptMark(T.Superscript, "superscript", "^", /^\^([^\s^]+)\^/),
     scriptMark(T.Subscript, "subscript", "~", /^~([^\s~]+)~(?!~)/),
     InlineMath.configure({ katexOptions: KATEX, onClick: (node, pos) => openMath(node, pos) }),
@@ -347,6 +394,9 @@ function sync() {
   calloutPop.hidden = !inCallout;
   if (inCallout) calloutSel.value = editor.getAttributes("callout").kind ?? "note";
   const node = editor.state.selection.node;
+  const card = !mdMode && node?.type.name === "linkCard" ? node : null;
+  cardEditPop.hidden = !card;
+  if (card) for (const [k, i] of Object.entries(cardEd)) if (document.activeElement !== i) i.value = card.attrs[k] ?? "";
   const media = !mdMode && ["image", "youtube"].includes(node?.type.name) ? node : null;
   mediaPop.hidden = !media;
   if (!media) return;
@@ -360,7 +410,7 @@ function sync() {
 
 function openLink() {
   linkIn.value = editor.getAttributes("link").href ?? "";
-  videoPop.hidden = mathPop.hidden = true;
+  videoPop.hidden = mathPop.hidden = cardPop.hidden = true;
   linkPop.hidden = false;
   $('[data-link="remove"]', linkPop).hidden = !editor.isActive("link");
   linkIn.focus();
@@ -415,6 +465,34 @@ videoIn.addEventListener("keydown", (e) => {
   if (e.key === "Escape") { videoPop.hidden = true; editor.commands.focus(); }
 });
 
+// A bare host gets https://; other schemes, such as javascript:, stay refused.
+const cardHref = (v) => (v ? safeUrl(/^[a-z][\w+.-]*:|^\//i.test(v) ? v : `https://${v}`) : null);
+const badHref = () => say("Link to a web address (https://…) or a page on EELSdb (/…).");
+function addCard() {
+  const href = cardHref(cardIn.href.value.trim()), title = cardIn.title.value.trim();
+  if (!href) { badHref(); return cardIn.href.focus(); }
+  if (!title) { say("Give the card a title."); return cardIn.title.focus(); }
+  cardPop.hidden = true;
+  editor.chain().focus().insertContent({ type: "linkCard", attrs: { href, title, description: cardIn.description.value.trim() || null } }).run();
+  for (const i of Object.values(cardIn)) i.value = "";
+}
+$('[data-card="add"]', cardPop).addEventListener("click", addCard);
+for (const i of Object.values(cardIn)) i.addEventListener("keydown", (e) => {
+  if (e.key === "Enter") addCard();
+  if (e.key === "Escape") { cardPop.hidden = true; editor.commands.focus(); }
+});
+const setCard = (k) => {
+  const { node, from } = editor.state.selection;
+  if (node?.type.name !== "linkCard") return;
+  let v = cardEd[k].value.trim();
+  if (k === "href" && !(v = cardHref(v))) return badHref();
+  if (v !== (node.attrs[k] ?? "")) editor.chain().updateAttributes("linkCard", { [k]: v || null }).setNodeSelection(from).run();
+};
+for (const [k, i] of Object.entries(cardEd)) {
+  i.addEventListener(k === "href" ? "change" : "input", () => setCard(k));
+  i.addEventListener("keydown", (e) => { if (e.key === "Enter") setCard(k); });
+}
+
 calloutSel.addEventListener("change", () => editor.chain().focus().updateAttributes("callout", { kind: calloutSel.value }).run());
 $('[data-callout="remove"]', calloutPop).addEventListener("click", () => editor.chain().focus().lift("callout").run());
 
@@ -436,7 +514,7 @@ function openMath(node, pos) {
   setPlace(node?.type.name === "blockMath" ? "block" : "inline");
   mathOk.textContent = node ? "Update" : "Insert";
   mathRemove.hidden = !node;
-  linkPop.hidden = videoPop.hidden = true;
+  linkPop.hidden = videoPop.hidden = cardPop.hidden = true;
   mathPop.hidden = false;
   mathIn.focus();
 }
@@ -481,7 +559,8 @@ tb.addEventListener("click", async (e) => {
   if (!b || b.disabled) return;
   const c = b.dataset.cmd;
   if (c === "link") return openLink();
-  if (c === "video") { linkPop.hidden = mathPop.hidden = true; videoPop.hidden = false; return videoIn.focus(); }
+  if (c === "video") { linkPop.hidden = mathPop.hidden = cardPop.hidden = true; videoPop.hidden = false; return videoIn.focus(); }
+  if (c === "card") { linkPop.hidden = videoPop.hidden = mathPop.hidden = true; cardPop.hidden = false; return cardIn.href.focus(); }
   if (c === "math") return openMath();
   if (c === "image") { const f = await pickImage(); if (f) insertFiles([f]); return; }
   run[c](editor.chain().focus()).run();
@@ -501,7 +580,7 @@ ed.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", ()
   ed.querySelectorAll("[data-view]").forEach((x) => x.setAttribute("aria-pressed", x === b));
   editor.view.dom.hidden = mdMode;
   area.hidden = !mdMode;
-  linkPop.hidden = videoPop.hidden = mathPop.hidden = true;
+  linkPop.hidden = videoPop.hidden = mathPop.hidden = cardPop.hidden = true;
   tb.querySelectorAll("[data-cmd], [data-style]").forEach((x) => (x.disabled = mdMode));
   sync();
   (mdMode ? area : editor.view.dom).focus();

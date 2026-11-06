@@ -58,6 +58,7 @@ describe("news Markdown", () => {
         '![Floated](/media/news/0123456789abcdef.png){width="50%" float="right"}',
         ":::caution\nMind the **gap**.\n:::",
         '::youtube{id="G_yqv0Vj3ug" width="33%" float="left"}',
+        '::link{href="/docs/" title="The docs"}',
         "---",
         "$$\nE_0 = 200\\,\\mathrm{keV}\n$$",
       ].join("\n\n"),
@@ -75,6 +76,7 @@ describe("news Markdown", () => {
     expect(html).toContain('<aside class="callout" data-kind="caution"><p class="callout-label">Caution</p><p>Mind the <strong>gap</strong>.</p>');
     expect(html).toContain('<figure class="yt" data-width="33%" data-float="left"><a class="yt-link" href="https://www.youtube.com/watch?v=G_yqv0Vj3ug" data-youtube="G_yqv0Vj3ug"');
     expect(html).toContain('<img src="/media/news/youtube/G_yqv0Vj3ug.jpg"');
+    expect(html).toContain('<a class="link-card" href="/docs/"><span class="link-card-text"><span class="link-card-title">The docs</span></span>');
     expect(html).toContain("<hr>");
     expect(html).toMatch(/<div class="math-block"><span class="katex"><math[^>]*display="block"/);
   });
@@ -93,6 +95,21 @@ describe("news Markdown", () => {
     expect(renderNews("~~gone~~")).toContain("<del>gone</del>");
     expect(renderNews('::youtube{id="nope"}')).not.toContain("yt-link");
     expect(youtubeIds('::youtube{id="G_yqv0Vj3ug"}\n\n::youtube{id="bad"}')).toEqual(["G_yqv0Vj3ug"]);
+  });
+
+  it("renders link cards, with escaped values and an optional description", () => {
+    const arrow = '<svg class="link-card-arrow" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 10h12M11 5l5 5-5 5"/></svg>';
+    expect(renderNews('::link{href="https://eelsdb.eu/docs/" title="Read the docs" description="How to use <EELSdb>."}')).toBe(
+      `<a class="link-card" href="https://eelsdb.eu/docs/"><span class="link-card-text"><span class="link-card-title">Read the docs</span><span class="link-card-desc">How to use &lt;EELSdb&gt;.</span></span>${arrow}</a>\n`,
+    );
+    expect(renderNews('::link{href="/news/" title="News"}')).toBe(`<a class="link-card" href="/news/"><span class="link-card-text"><span class="link-card-title">News</span></span>${arrow}</a>\n`);
+    expect(renderNews('::link{href="/x/" title="The \\"{001}\\" planes } & more" description="a \\\\ b"}')).toContain(
+      '<span class="link-card-title">The &quot;{001}&quot; planes } &amp; more</span><span class="link-card-desc">a \\ b</span>',
+    );
+    const bad = renderNews('::link{href="javascript:alert(1)" title="Click"}');
+    expect(bad).not.toContain("link-card");
+    expect(bad).not.toMatch(/href="javascript/);
+    expect(bad).toContain("::link{");
   });
 
   it("finds the lead image for the news list", () => {
