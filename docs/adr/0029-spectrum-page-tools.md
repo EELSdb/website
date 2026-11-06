@@ -34,7 +34,7 @@ Viewers can export the current view as PNG or SVG, in light or dark. The page dr
 
 The page does view processing in plain JS (`worker/public/process.js`), not with HyperSpy in Pyodide. [ADR 0003](/docs/adr/0003-small-browser-python-stack/) has the timings.
 
-- Power-law background: the viewer sets the window with a two-thumb slider or types its ends, and the plot shades it. The page can show the fit or subtract it. This tool is for core-loss spectra only.
+- Power-law background: the viewer sets the window with a two-thumb slider or types its ends, and the plot shades it. The page can show the fit or subtract it. Each compared spectrum gets its own fit, drawn dashed in its colour, over the part of the window its data covers. With fewer than 10 of its channels in the window, it is neither fitted nor subtracted. This tool is for core-loss spectra only.
 - The two-area estimate matches exSpy's `remove_background(signal_range=…)`. Like exSpy, it treats EELS counts as binned: A comes from plain sums, and the model is multiplied by the channel width.
 - Savitzky–Golay smoothing uses order 2 and a window slider. It matches scipy's `savgol_filter` with mode "interp", which exSpy uses.
 - The viewer can normalise to the maximum or to the area.

@@ -305,11 +305,23 @@ async function main() {
   const compute = () => {
     const o = settings();
     const main = processSpectrum(data[0], data[1], o);
-    const subtract = { ...o, background: o.background === "subtract" ? "subtract" : "" };
+    // A compared spectrum is fitted over the part of the window its data covers. powerLaw snaps the window to the
+    // nearest channels, so with fewer than 10 channels there it would fit the spectrum's edge: leave it unfitted.
+    const clipped = (x) => {
+      const [lo, hi] = [Math.max(o.window[0], x[0]), Math.min(o.window[1], x.at(-1))];
+      return (hi - lo) / ((x.at(-1) - x[0]) / (x.length - 1)) >= 10 ? { ...o, window: [lo, hi] } : { ...o, background: "" };
+    };
+    const procs = compares.map((c) => {
+      const opts = clipped(c.x);
+      return { ...processSpectrum(c.x, c.y, opts), from: opts.window[0] };
+    });
+    // The fit is drawn from the window start onwards; before it, it is extrapolation.
+    const shownFit = (x, fit, from) => (o.background === "fit" && fit ? fit.map((v, i) => (x[i] < from ? null : v)) : null);
     view = {
       y: main.y,
-      fit: o.background === "fit" && main.fit ? main.fit.map((v, i) => (data[0][i] < o.window[0] ? null : v)) : null,
-      compares: compares.map((c) => processSpectrum(c.x, c.y, subtract).y),
+      fit: shownFit(data[0], main.fit, o.window[0]),
+      compares: procs.map((p) => p.y),
+      compareFits: procs.map((p, j) => shownFit(compares[j].x, p.fit, p.from)),
     };
     if (procStatus) procStatus.textContent = o.background && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies." : PROC_NOTE;
     if (snippet) snippet.innerHTML = pythonLines(o, main.fit);
@@ -327,9 +339,9 @@ async function main() {
       main,
       ...compares.map((c, j) => {
         const x = c.x.map((v) => v + (c.shift || 0));
-        const y = shown(view.compares[j]);
+        const ys = [view.compares[j], ...(view.compareFits[j] ? [view.compareFits[j]] : [])].map(shown);
         const keep = x.map((_, i) => i).filter((i) => x[i] >= lo && x[i] <= hi);
-        return [keep.map((i) => x[i]), keep.map((i) => y[i])];
+        return [keep.map((i) => x[i]), ...ys.map((y) => keep.map((i) => y[i]))];
       }),
     ]);
   };
@@ -522,10 +534,13 @@ async function main() {
     series: [
       { label: "Energy (eV)" },
       { label: seriesName(), stroke: paint("--plot"), width: 1.5, points: { show: false } },
-      ...(view.fit ? [{ label: "Power-law fit", stroke: paint("--edge"), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
-      ...compares.map((c, i) => ({ label: c.name, scale: scaleOf(i), stroke: colour(i), width: 1.5, points: { show: false }, spanGaps: true })),
+      ...(view.fit ? [{ label: compares.length ? `${title} fit` : "Power-law fit", stroke: paint("--plot"), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
+      ...compares.flatMap((c, i) => [
+        { label: c.name, scale: scaleOf(i), stroke: colour(i), width: 1.5, points: { show: false }, spanGaps: true },
+        ...(view.compareFits[i] ? [{ label: `${c.name} fit`, scale: scaleOf(i), stroke: colour(i), width: 1.5, dash: [6, 4], points: { show: false } }] : []),
+      ]),
     ],
-    legend: { live: false, markers: { show: compares.length > 0 || !!view.fit } },
+    legend: { show: compares.length > 0 || !!view.fit, live: false },
     cursor: {
       drag: { x: true, y: true, setScale: false },
       points: { show: false },

@@ -1248,6 +1248,10 @@ html:not(.js) .picture-file label { display: none; }
 .compare .hint { margin: 0; flex: 1 1 16rem; }
 .compare .hint:empty { display: none; }
 .compare-search { flex: 0 1 16rem; }
+.compare-search svg { position: absolute; left: 0.6rem; top: 50%; translate: 0 -50%; width: 15px; height: 15px; color: var(--muted); pointer-events: none; }
+/* Same size as the button beside it. */
+.compare-search input { font-size: 0.95rem; color: var(--ink); padding: 0.5rem 0.6rem 0.5rem 1.95rem; }
+.compare-search input::placeholder { color: var(--muted); }
 .compare-list { flex-basis: 100%; list-style: none; margin: 0; padding: 0; display: flex; flex-wrap: wrap; gap: 0.35rem 1.25rem; font-size: 0.875rem; }
 .compare-list li { display: inline-flex; align-items: center; gap: 0.4rem; min-width: 0; }
 .compare-list .name { overflow-wrap: anywhere; }
@@ -1261,7 +1265,7 @@ html:not(.js) .picture-file label { display: none; }
 .plot .axis-drag::before { content: ""; position: absolute; left: 0; right: 0; height: 50%; background: currentColor; opacity: 0.1; pointer-events: none; visibility: hidden; }
 .plot .axis-drag[data-half="top"]::before { visibility: visible; top: 0; }
 .plot .axis-drag[data-half="bottom"]::before { visibility: visible; bottom: 0; }
-.scale-row { padding-bottom: 0.75rem; border-bottom: 1px solid var(--rule); width: 100%; }
+.scale-row { padding-top: 0.75rem; border-top: 1px solid var(--rule); width: 100%; }
 .tool-panel .scale-row .hint { margin: 0.25rem 0 0; }
 .plot-drop { position: absolute; inset: 0; z-index: 2; display: grid; place-items: center; text-align: center; padding: 1rem;
   border: 2px dashed var(--line); border-radius: 8px; background: color-mix(in oklab, var(--bg) 88%, transparent); font-weight: 600; }

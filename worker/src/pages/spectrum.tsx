@@ -361,16 +361,16 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   Compare with your spectra
                 </label>
                 <div class="picker compare-search">
+                  <svg viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+                    <circle cx="8.5" cy="8.5" r="5.5" />
+                    <path d="M12.6 12.6 17 17" />
+                  </svg>
                   <input type="search" id="compare-search" data-slug={s.slug} autocomplete="off" placeholder="Or an EELSdb spectrum" aria-label="Compare with an EELSdb spectrum"
                     role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="compare-options" />
                   <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
                 </div>
                 <div class="compare-empty">
-                  <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                    <rect x="3" y="9" width="18" height="12" rx="2" stroke-dasharray="3 2.5" />
-                    <path d="M12 3v10M8.5 9.5 12 13l3.5-3.5" />
-                  </svg>
-                  <p><strong>Or drop files on the plot.</strong> MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded.</p>
+                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded.</p>
                 </div>
                 <span class="hint" id="compare-status" aria-live="polite"></span>
                 <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>
@@ -386,10 +386,6 @@ export async function spectrumPage(c: Context<AppEnv>) {
             </div>
             <div class="tool-panel process-panel">
               <div class="process-controls">
-                <div class="scale-row" hidden>
-                  <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
-                  <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>
-                </div>
                 {s.type === "coreloss" && (
                   <div class="bg-row">
                     <label>
@@ -429,6 +425,10 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </select>
                 </label>
                 <label><input type="checkbox" id="log-y" /> Log intensity scale</label>
+                <div class="scale-row" hidden>
+                  <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
+                  <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>
+                </div>
               </div>
               <p class="hint" id="process-status" aria-live="polite">Applies to compared spectra too. Only the view changes: downloads are the original data.</p>
             </div>
