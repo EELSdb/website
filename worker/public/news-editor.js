@@ -324,6 +324,7 @@ const videoIn = $("input", videoPop), mathIn = $("input", mathPop), mathOut = $(
 const cardFieldsIn = (p) => Object.fromEntries([...p.querySelectorAll("input")].map((i) => [i.dataset.f, i]));
 const cardIn = cardFieldsIn(cardPop), cardEd = cardFieldsIn(cardEditPop);
 let mdMode = false;
+let calloutDismissed = false;
 let dirty = false;
 
 async function insertFiles(files, pos) {
@@ -391,7 +392,8 @@ function sync() {
   $('[data-cmd="redo"]', tb).disabled = mdMode || !editor.can().redo();
   styleSel.value = editor.isActive("heading", { level: 2 }) ? "2" : editor.isActive("heading", { level: 3 }) ? "3" : "p";
   const inCallout = !mdMode && editor.isActive("callout");
-  calloutPop.hidden = !inCallout;
+  calloutPop.hidden = !inCallout || calloutDismissed;
+  if (!inCallout) calloutDismissed = false;
   if (inCallout) calloutSel.value = editor.getAttributes("callout").kind ?? "note";
   const node = editor.state.selection.node;
   const card = !mdMode && node?.type.name === "linkCard" ? node : null;
@@ -569,6 +571,28 @@ styleSel.addEventListener("change", () => {
   const ch = editor.chain().focus();
   (styleSel.value === "p" ? ch.setParagraph() : ch.setHeading({ level: +styleSel.value })).run();
 });
+
+// Every bar closes with its × button or Escape. Bars opened from the toolbar also close on a click outside the toolbar.
+const insertPops = [linkPop, videoPop, cardPop, mathPop];
+function closeInsertPops() {
+  for (const p of insertPops) p.hidden = true;
+  mathEdit = null;
+}
+function dismiss(p) {
+  if (insertPops.includes(p)) closeInsertPops();
+  else if (p === calloutPop) { calloutDismissed = true; p.hidden = true; }
+  // The image, video and card bars follow the selected node, so close them by moving the cursor past it.
+  else editor.commands.setTextSelection(editor.state.selection.to);
+  editor.commands.focus();
+}
+ed.querySelectorAll(".tb-pop").forEach((p) => p.insertAdjacentHTML("beforeend", '<button type="button" class="tb-close" aria-label="Close" title="Close (Esc)">×</button>'));
+ed.addEventListener("click", (e) => { const b = e.target.closest(".tb-close"); if (b) dismiss(b.closest(".tb-pop")); });
+ed.addEventListener("keydown", (e) => {
+  if (e.key !== "Escape") return;
+  const open = e.target.closest(".tb-pop") ?? [...ed.querySelectorAll(".tb-pop")].find((p) => !p.hidden);
+  if (open) dismiss(open);
+});
+document.addEventListener("mousedown", (e) => { if (!e.target.closest(".tb-sticky")) closeInsertPops(); });
 
 // Visual or Markdown: the Markdown view is the form's own textarea.
 ed.querySelectorAll("[data-view]").forEach((b) => b.addEventListener("click", () => {

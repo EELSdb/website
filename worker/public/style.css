@@ -753,6 +753,7 @@ dialog h2 { margin-top: 0; }
 .uploader-hint { margin: 0.75rem 0 0; font-size: 0.875rem; color: var(--muted); }
 .notice { border: 1px solid var(--line); background: var(--sunken); border-radius: 8px; padding: 1rem 1.25rem; }
 .notice.warning { border-color: var(--note); background: color-mix(in oklab, var(--note) 13%, var(--bg)); }
+.notice.success { border-color: var(--type-xrayabs); background: color-mix(in oklab, var(--type-xrayabs) 12%, var(--bg)); }
 .notice.info { position: relative; padding-left: 3.1rem; border-color: var(--accent); background: color-mix(in oklab, var(--accent) 10%, var(--bg)); font-size: 1.05rem; line-height: 1.55; }
 .notice.info::before { content: ""; position: absolute; left: 1.15rem; top: 1.18rem; width: 1.3rem; height: 1.3rem; background: var(--accent);
   mask: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Ccircle cx='12' cy='12' r='9'/%3E%3Cpath d='M12 11v5.5M12 7.5v.01'/%3E%3C/svg%3E") no-repeat center / contain; }
@@ -1474,6 +1475,10 @@ html:not(.js) .picture-file label { display: none; }
 .ed .tb-pops:has(> :not([hidden])) { border: 1px solid var(--line); border-top: 0; box-shadow: var(--shadow); }
 .ed .tb-pop { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem; padding: 0.55rem 0.7rem; border-bottom: 1px solid var(--rule); background: var(--sunken); font-size: 0.88rem; }
 .ed .tb-pop[hidden] { display: none; }
+.ed .tb-pop { position: relative; padding-right: 2.75rem; }
+.ed .tb-close { position: absolute; top: 0.45rem; right: 0.45rem; width: 1.9rem; height: 1.9rem; border: 0; border-radius: 4px; background: transparent; color: var(--muted); font-size: 1.25rem; line-height: 1; cursor: pointer; }
+.ed .tb-close:hover { background: var(--surface); color: var(--ink); }
+.ed .tb-close:focus-visible { outline: 2px solid var(--accent); outline-offset: -1px; }
 .ed .tb-pop label { display: flex; align-items: center; gap: 0.5rem; flex: 1; min-width: 14rem; font-weight: 600; }
 .ed .tb-pop input { flex: 1; min-width: 0; background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0.35rem 0.55rem; font-weight: 400; }
 .ed .tb-pop .button { padding: 0.3rem 0.75rem; font-size: 0.85rem; }

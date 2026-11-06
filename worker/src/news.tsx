@@ -201,7 +201,7 @@ function EditorPage(p: { user: User; post: Row | null; v: Values; errors: Record
         <span class={`ne-status ne-status-${status}`}>{STATUS_LABELS[status]}</span>
         {p.post && <a class="small" href={`/news/${p.post.slug}/`}>{published ? "View on the site" : "Preview"}</a>}
       </div>
-      {p.notice && <p class="notice" role="status">{p.notice}</p>}
+      {p.notice && <p class="notice success" role="status">{p.notice}</p>}
       {Object.keys(p.errors).length > 0 && <p class="notice error-summary" role="alert">Some fields need attention. Nothing was saved.</p>}
       <form method="post" action={action} class="ne-grid" id="news-form" data-status={status}>
         <div class="ne-main">
@@ -297,7 +297,7 @@ newsAdmin.get("/admin/news/", async (c) => {
   return c.html(
     <AccountLayout title="News" current="/admin/news/" user={c.get("user")!}>
       <h1>News</h1>
-      {notice && <p class="notice" role="status">{notice}</p>}
+      {notice && <p class="notice success" role="status">{notice}</p>}
       <p><a class="button" href="/admin/news/new/">Write an article</a></p>
       <div class="table-scroll">
         <table>
