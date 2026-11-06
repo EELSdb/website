@@ -19,7 +19,7 @@ const MAX = Number(table.dataset.max);
 /** Keep in step with shade() in src/pages/home.tsx. */
 const shade = (n) => (n ? Math.min(6, 1 + Math.floor((Math.log(n) / Math.log(MAX)) * 5.999)) : 0);
 const TYPE_NAMES = { coreloss: "Core loss", lowloss: "Low loss", xrayabs: "X-ray absorption", zeroloss: "Zero loss" };
-const typeButtons = [...document.querySelectorAll(".tf")];
+const typeButtons = [...document.querySelectorAll(".type-filter .tf")];
 const cells = [...table.querySelectorAll("a.el")];
 for (const a of cells) a.dataset.name = a.getAttribute("aria-label").split(":")[0];
 
@@ -40,14 +40,11 @@ function filterTable() {
   }
 }
 
-// From "all on", a click picks just that type; clicking the only type left brings all back; otherwise clicks toggle.
+// Either all types or exactly one: a click picks just that type, and clicking the lone type brings all back.
 for (const b of typeButtons) {
   b.addEventListener("click", () => {
-    const on = activeTypes();
-    const isOn = b.getAttribute("aria-pressed") === "true";
-    if (on.length === typeButtons.length) for (const x of typeButtons) x.setAttribute("aria-pressed", String(x === b));
-    else if (isOn && on.length === 1) for (const x of typeButtons) x.setAttribute("aria-pressed", "true");
-    else b.setAttribute("aria-pressed", String(!isOn));
+    const solo = activeTypes().length === 1 && b.getAttribute("aria-pressed") === "true";
+    for (const x of typeButtons) x.setAttribute("aria-pressed", String(solo || x === b));
     filterTable();
   });
 }

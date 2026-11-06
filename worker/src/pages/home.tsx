@@ -102,8 +102,7 @@ async function person(row: any): Promise<Person> {
 export async function homePage(c: Context<AppEnv>) {
   const db = c.env.DB;
   const published = "status = 'published'";
-  const [{ results: byType }, { results: byElement }, { results: people }, { results: examples }, stats] = await db.batch<any>([
-    db.prepare(`SELECT type, COUNT(*) AS n FROM spectra WHERE ${published} GROUP BY type`),
+  const [{ results: byElement }, { results: people }, { results: examples }, stats] = await db.batch<any>([
     db.prepare(
       `SELECT e.element, s.type, COUNT(DISTINCT s.id) AS n FROM spectrum_elements e JOIN spectra s ON s.id = e.spectrum_id
        WHERE s.${published} GROUP BY e.element, s.type`,
@@ -131,7 +130,6 @@ export async function homePage(c: Context<AppEnv>) {
        FROM spectra WHERE ${published}`,
     ),
   ]);
-  const typeCount = Object.fromEntries(byType.map((r: any) => [r.type, r.n]));
   const { spectra: total, contributors, since } = stats.results[0];
 
   const elTypes: Record<string, Record<string, number>> = {};
@@ -190,7 +188,7 @@ export async function homePage(c: Context<AppEnv>) {
               <ul class="types">
                 {TYPE_ORDER.map((t) => (
                   <li>
-                    <a href={`/spectra/?type=${t}`}><span class={`dot t-${t}`}></span><span class="tl">{TYPE_NAMES[t]}</span><span class="tn">{typeCount[t] ?? 0}</span></a>
+                    <a class="tf" href={`/spectra/?type=${t}`}><span class={`dot t-${t}`}></span>{TYPE_NAMES[t]}</a>
                   </li>
                 ))}
               </ul>

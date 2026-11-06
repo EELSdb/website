@@ -204,11 +204,8 @@ main { flex: 1; padding-bottom: 4rem; }
 .ways > li { border-bottom: 1px solid var(--line); flex: 1; display: flex; flex-direction: column; justify-content: center; }
 .ways > li:last-child { border-bottom: 0; }
 .ways > li.way-search { padding: 0 0.25rem 1.1rem; flex: 0 0 auto; justify-content: flex-start; }
-.ways .types { display: flex; flex-wrap: wrap; gap: 0.25rem 1.1rem; list-style: none; margin: -0.4rem 0 0; padding: 0 0.25rem 1.05rem; }
-.ways .types a { display: inline-flex; align-items: center; gap: 0.45rem; color: var(--ink); font-size: 0.93rem; }
-.ways .types .tn { color: var(--muted); }
+.ways .types { display: flex; flex-wrap: wrap; gap: 0.5rem; list-style: none; margin: -0.4rem 0 0; padding: 0 0.25rem 1.05rem; }
 .ways .types a:hover { text-decoration: none; }
-.ways .types a:hover .tl { color: var(--accent-ink); }
 .home .search { display: flex; gap: 0.5rem; margin-top: 0.6rem; }
 .home .search input { flex: 1; min-width: 0; font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 4px; padding: 0.5rem 0.7rem; }
 .home .search input::placeholder { color: var(--muted); }

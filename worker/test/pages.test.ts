@@ -87,7 +87,6 @@ describe("pages", () => {
     const { status, html } = await page("/");
     expect(status).toBe(200);
     expect(html).toMatch(/^<!doctype html>/);
-    expect(html).toContain('<span class="tl">Core loss</span><span class="tn">854</span>');
     expect(html).toContain("956 spectra from 42 microscopists, shared since 2005.");
     expect(html).toContain('aria-label="Oxygen: 508 spectra"');
   });

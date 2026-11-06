@@ -334,7 +334,7 @@ A toggle button for one spectrum type, used in groups (`role="group"`, `aria-pre
 - **On:** `surface` fill, the secondary-button border, `ink` text, filled type dot. 4px corners, padding 0.4rem 0.75rem, 0.9rem text (0.8rem and 0.3rem 0.55rem below 1180px).
 - **Off:** transparent, dashed border, `muted` text, hollow dot (a 1.5px ring in `currentColor`).
 - **Hover:** border to `muted`.
-- **Behaviour:** all start on. From all-on, the first click isolates that type; after that, clicks toggle. The controlled view recounts at once.
+- **Behaviour:** all start on, and either all or exactly one are on. A click shows just that type; clicking the lone type again turns all back on. The controlled view recounts at once.
 
 ### Tooltip
 One shared tooltip element for the periodic table and contributor avatars.
