@@ -2,6 +2,7 @@
 // eelsdb.checks) and pre-fill the form; DOIs are looked up on CrossRef; instrument profiles fill angles.
 // Without this script the page is one long form that posts normally, and moderators re-check every file.
 
+import { esc, exactElement, picker as chipPicker, rankElement } from "./picker.js";
 import { RSCIIO, loadReader } from "./pyreader.js";
 
 const TIMEOUT_MS = 90_000;
@@ -83,11 +84,12 @@ const fillIfEmpty = (name, value) => {
 
 // Elements from the formula, until the submitter edits them. Only real symbols, as the server does.
 const SYMBOLS = new Set(field("formula").dataset.symbols.split(" "));
+const elementList = () => field("elements").value.split(/[\s,;]+/).filter(Boolean);
 let elementsTouched = !!field("elements").value;
-field("elements").addEventListener("input", () => (elementsTouched = true));
 const elementsFromFormula = () => {
   if (elementsTouched) return;
   field("elements").value = [...new Set(field("formula").value.match(/[A-Z][a-z]?/g) ?? [])].filter((e) => SYMBOLS.has(e)).join(", ");
+  elementsChanged();
 };
 
 // Odd formulas get a warning, never a block: names like "Zircaloy-4" are real submissions.
@@ -178,8 +180,38 @@ field("formula").addEventListener("input", () => {
   elementsFromFormula();
   checkFormula();
 });
-field("elements").addEventListener("input", checkFormula);
 checkFormula();
+
+// Elements as chips, as on the browse page; the hidden text field stays the submitted value.
+const NAMES = JSON.parse(field("elements").dataset.names);
+const elementItems = [...SYMBOLS].map((value) => ({ value, name: NAMES[value] ?? value, html: `<b>${value}</b> ${esc(NAMES[value] ?? "")}` }));
+const elementsPicker = chipPicker({
+  id: "f-elements",
+  after: field("elements"),
+  label: $('label[for="f-elements"]'),
+  placeholder: "Type symbols or names, for example Fe O",
+  describedby: "h-elements",
+  chipsLabel: "Elements",
+  listLabel: "Elements",
+  none: "No matching elements",
+  items: elementItems,
+  limit: 8,
+  rank: rankElement,
+  exact: exactElement(elementItems),
+  onChange: (picked) => {
+    field("elements").value = picked.map((x) => x.value).join(", ");
+    elementsTouched = true;
+    elementsChanged();
+  },
+});
+field("elements").hidden = true;
+elementsPicker.set(elementList());
+
+function elementsChanged() {
+  elementsPicker.set(elementList());
+  checkFormula();
+  syncAutoEdges();
+}
 
 // Beam energy "Other" box only matters when "Other" is chosen.
 const beamOther = $(".beam-other", form);
@@ -451,16 +483,22 @@ $(".steps").addEventListener("click", (e) => {
 
 // ---- Files ------------------------------------------------------------------------------------
 
-const ROLES = { original: "Spectrum", lowloss: "Low-loss (for thickness)", companion: "Companion file" };
-const INPUTS = { original: "file", lowloss: "lowloss_file", companion: "companion_file" };
+// The spectrum is raw data or background subtracted. Sent both, the background-subtracted file is the spectrum
+// (people expect to see it plotted) and the raw data is kept with it as another version.
+const ROLES = { raw: "Raw data", bgsub: "Background subtracted" };
+const INPUTS = { lowloss: "lowloss_file", companion: "companion_file" };
 // Processed versions (oscillator strength, smoothed…): the server renders one input each, only for new submissions.
 for (const input of $$(".variant-files input[type=file]", form)) {
+  if (input.name === "variant_raw_file") continue;
   const role = input.name.replace(/_file$/, "");
   ROLES[role] = `Processed: ${$(`label[for="${input.id}"]`, form).textContent.toLowerCase()}`;
   INPUTS[role] = input.name;
 }
-ROLES.unused = "Do not include";
+Object.assign(ROLES, { lowloss: "Companion low-loss (for thickness)", companion: "Companion file (beam settings)", unused: "Leave out" });
 const isVariant = (role) => role?.startsWith("variant_");
+// An edit replaces the one spectrum file, so there raw and background subtracted take the same place.
+const slot = (role) => (editing && (role === "raw" || role === "bgsub") ? "main" : role);
+const mainFile = () => files.find((f) => f.role === "bgsub") ?? files.find((f) => f.role === "raw");
 const files = [];
 const list = $("#file-list");
 const nextButton = $("#step-files [data-next]");
@@ -469,36 +507,44 @@ const size = (n) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB`
 
 function filesReady() {
   if (files.some((f) => f.state === "reading")) return false;
-  return editing || files.some((f) => f.role === "original");
+  return editing || !!mainFile();
 }
 
 function syncInputs() {
-  for (const [role, name] of Object.entries(INPUTS)) {
+  const main = mainFile();
+  const raw = files.find((f) => f.role === "raw");
+  const chosen = { file: main, variant_raw_file: raw === main ? null : raw };
+  for (const [role, name] of Object.entries(INPUTS)) chosen[name] = files.find((f) => f.role === role);
+  for (const [name, entry] of Object.entries(chosen)) {
+    if (!field(name)) continue;
     const dt = new DataTransfer();
-    const entry = files.find((f) => f.role === role);
     if (entry) dt.items.add(entry.file);
     field(name).files = dt.files;
   }
+  if (main) field("background_subtracted").value = main.role === "bgsub" ? "1" : "0";
   nextButton.disabled = !filesReady();
   nextButton.textContent = files.some((f) => f.state === "reading") ? "Checking files…" : "Continue";
   syncSubmit();
 }
 
 const looksLowLoss = (r) => r?.points !== undefined && r.energy_min < 10 && r.energy_max <= 200;
+// Raw counts are never negative; the noise on a background-subtracted pre-edge dips below zero.
+const guessMain = (f) => (f.result?.findings?.some((x) => x.code === "negative_counts") ? "bgsub" : "raw");
 
-/** Roles the submitter has not chosen: one spectrum, then a low-loss, then a companion; the rest left out. */
+/** Roles the submitter has not chosen: the spectrum (raw, background subtracted or both), then a low-loss, then a companion; the rest left out. */
 function assignRoles() {
-  const taken = new Set(files.filter((f) => f.chosen).map((f) => f.role));
+  const taken = new Set(files.filter((f) => f.chosen).map((f) => slot(f.role)));
   const free = files.filter((f) => !f.chosen && !f.rejected);
   for (const f of free) f.role = null;
   const isSpectrum = (f) => f.result?.points !== undefined || (f.state === "failed" && SPECTRUM_EXT.includes(ext(f.file)));
   const take = (role, f) => {
-    if (!f || taken.has(role)) return;
+    if (!f || f.role || taken.has(slot(role))) return;
     f.role = role;
-    taken.add(role);
+    taken.add(slot(role));
   };
   const spectra = free.filter(isSpectrum);
-  take("original", spectra.find((f) => !looksLowLoss(f.result)) ?? spectra[0]);
+  for (const f of spectra.filter((f) => !looksLowLoss(f.result))) take(guessMain(f), f);
+  if (spectra[0] && !mainFile()) take(guessMain(spectra[0]), spectra[0]);
   take("lowloss", spectra.find((f) => !f.role && looksLowLoss(f.result)));
   take("companion", free.find((f) => !f.role && !isSpectrum(f) && f.state !== "reading" && COMPANION_EXT.includes(ext(f.file))));
   for (const f of free) f.role ??= f.state === "reading" ? null : "unused";
@@ -509,6 +555,7 @@ function render() {
   for (const f of files) paintCard(f);
   syncInputs();
   updatePanel();
+  placeDropzone();
 }
 
 function paintCard(f) {
@@ -516,6 +563,7 @@ function paintCard(f) {
   f.card ??= buildCard(f);
   f.card.dataset.state = f.rejected ? "failed" : f.state;
   f.card.dataset.role = f.role ?? "";
+  f.card.toggleAttribute("data-main", f === mainFile());
   const select = $("select", f.card);
   select.value = f.role ?? "";
   select.disabled = !!f.rejected || f.state === "reading";
@@ -525,12 +573,14 @@ function paintCard(f) {
   $(".unused-note", f.card).hidden = !leftOut;
 }
 
+let cards = 0;
 function buildCard(f) {
-  const select = el("select", { "aria-label": `How to use ${f.file.name}` }, el("option", { value: "", textContent: "Choose…" }));
+  const id = `file-role-${++cards}`;
+  const select = el("select", { id }, el("option", { value: "", textContent: "Choose…" }));
   for (const [value, label] of Object.entries(ROLES)) select.append(el("option", { value, textContent: label }));
   select.addEventListener("change", () => {
     const role = select.value;
-    for (const other of files) if (other !== f && other.role === role && role !== "unused") other.chosen = false;
+    for (const other of files) if (other !== f && slot(other.role) === slot(role) && role !== "unused") other.chosen = false;
     f.role = role;
     f.chosen = true;
     render();
@@ -550,17 +600,17 @@ function buildCard(f) {
     el("div", { className: "file-head" },
       el("span", { className: "file-name", textContent: f.file.name }),
       el("span", { className: "file-size", textContent: size(f.file.size) }),
-      el("label", { className: "file-role" }, "Use as ", select),
       remove),
+    el("div", { className: "file-plot" }),
+    el("div", { className: "file-role" }, el("label", { htmlFor: id, textContent: "This file is" }), select),
     el(
       "p",
       { className: "hint unused-note", hidden: true },
       el("strong", { textContent: "This file will not be included. " }),
       editing
         ? "Each submission has one spectrum: send this one separately afterwards."
-        : "Each submission has one spectrum. If this is a processed version of it (oscillator strength, smoothed…), choose that above; otherwise send it separately afterwards.",
+        : "Each submission is one spectrum: raw data, background subtracted, or both. If this file is a processed version of it, choose that above; if it is a different spectrum, send it separately afterwards.",
     ),
-    el("div", { className: "file-plot" }),
     el(
       "section",
       { className: "card-section" },
@@ -597,6 +647,19 @@ async function addFiles(fileList) {
 const dropzone = $("#dropzone");
 const picker = $("#f-drop");
 dropzone.hidden = false;
+const dropText = [$("strong", dropzone).textContent, $(".hint", dropzone).textContent];
+
+/** Once a file is in, the drop zone moves below the cards and asks only for files that belong with it. */
+function placeDropzone() {
+  const more = !editing && files.length > 0;
+  if (more === (dropzone.previousElementSibling === list)) return;
+  if (more) list.after(dropzone);
+  else list.before(dropzone);
+  $("strong", dropzone).textContent = more ? "Add another file for this spectrum" : dropText[0];
+  $(".hint", dropzone).textContent = more
+    ? `A companion low-loss, a companion file from the same session, or a processed version. A different specimen needs its own submission. Up to ${MAX_BYTES / 1024 / 1024} MB each.`
+    : dropText[1];
+}
 $("#browse").addEventListener("click", () => picker.click());
 picker.addEventListener("change", () => {
   addFiles([...picker.files]);
@@ -671,12 +734,10 @@ def near(energy):
 `;
 
 let pyodidePromise;
-let edgeTable = {};
 function pyodideReady() {
   pyodidePromise ??= (async () => {
     const py = await loadReader();
-    const table = await (await fetch("/eels_binding_energies.json")).json();
-    edgeTable = table.elements;
+    const table = await edgeTableReady;
     py.globals.set("TABLE_JSON", JSON.stringify(table.elements));
     await py.runPythonAsync(READ_PY);
     return py;
@@ -695,7 +756,7 @@ async function runChecks(f, kind) {
   f.path = path;
   py.FS.writeFile(path, new Uint8Array(await f.file.arrayBuffer()));
   const edges = field("edges").value.split(/[;\n]+/).map((s) => s.trim()).filter(Boolean);
-  const elements = field("elements").value.split(/[\s,;]+/).filter(Boolean);
+  const elements = elementList();
   const thickness = parseFloat(field("thickness_t_lambda").value) || null;
   const run = py.globals.get("run");
   try {
@@ -737,12 +798,12 @@ function guessType(f) {
 /** Pre-fill the form from what a file says, without overwriting anything typed. */
 function applyResult(f) {
   const r = f.result;
-  if (!r || !f.role || f.role === "unused" || f.current || isVariant(f.role)) return;
+  if (!r || !f.role || f.role === "unused" || f.current || isVariant(f.role) || (f.role === "raw" && f !== mainFile())) return;
   const source = f.role === "companion" ? "companion" : "file";
   prefill("beam_energy", r.meta.beam_energy_kv, source);
   prefill("convergence", r.meta.convergence_mrad, source);
   prefill("collection", r.meta.collection_mrad, source);
-  if (f.role !== "original") return;
+  if (f !== mainFile()) return;
   if (r.points !== undefined && !field("type").value) {
     field("type").value = guessType(f);
     markFilled("type");
@@ -757,7 +818,7 @@ function applyResult(f) {
   const x = r.xas ?? {};
   for (const k of ["facility", "beamline", "source_type", "monochromator"]) fillIfEmpty(`xas_${k}`, x[k]);
   if (fillIfEmpty("formula", x.formula)) elementsFromFormula();
-  if (x.element && x.edge) fillIfEmpty("edges", `${x.element}_${x.edge}`);
+  if (x.element && x.edge && fillIfEmpty("edges", `${x.element}_${x.edge}`)) writeEdges(fieldEntries());
   if (x.intensity_column?.startsWith("mu") && field("intensity_units").value === "counts") {
     field("intensity_units").value = "mu";
     markFilled("intensity_units");
@@ -814,8 +875,9 @@ function drawPlot(node, x, y, old, extra = {}) {
 }
 
 // ---- Spectrum plot and edges ------------------------------------------------------------------
-// The edges text field is the source of truth: the markers and the list are drawn from it. Detected
-// edges are written to it at once; removing one dismisses it. Without Pyodide there is no plot.
+// The edges text field is the source of truth: the chips, the markers and the list are drawn from it. Detected
+// edges and the edges of the listed elements are written to it at once; removing one dismisses it. Without
+// Pyodide there is no plot.
 
 const panel = $("#spectrum-panel");
 const edgeBox = $(".edge-box", panel);
@@ -834,14 +896,39 @@ const edgeLabel = (c) => {
 };
 const validEdge = (c) => EDGE.test(edgeKey(c)) && SYMBOLS.has(c.element);
 const eV = (e) => `${Math.round(e)} eV`;
-const shown = { file: null, plot: null, detected: new Set(), dismissed: new Set() };
+// auto: edges this page added (detected, or from the elements); dismissed: those the submitter removed.
+const shown = { file: null, plot: null, found: [], auto: new Set(), dismissed: new Set() };
+
+// HyperSpy's table, grouped into the labels EELS uses: L2 and L3 are one edge, "L2,3".
+let edgeTable = {};
+const edgeLabels = {};
+// Keep in step with _edge_label in python/eelsdb/checks.py.
+const labelOf = (subshell) => subshell.replace(/^([LMNO])([2-7])$/, (_, shell, n) => `${shell}${n - (n % 2)},${n - (n % 2) + 1}`);
+const edgeTableReady = fetch("/eels_binding_energies.json")
+  .then((res) => res.json())
+  .then((table) => {
+    edgeTable = table.elements;
+    for (const [element, subshells] of Object.entries(edgeTable)) {
+      const labels = {};
+      for (const [subshell, info] of Object.entries(subshells)) {
+        const energy = info["onset_energy (eV)"];
+        if (!Number.isFinite(energy)) continue;
+        const c = (labels[labelOf(subshell)] ??= { element, edge: labelOf(subshell), onset: energy, major: false });
+        c.onset = Math.min(c.onset, energy);
+        c.major ||= info.relevance === "Major";
+      }
+      edgeLabels[element] = Object.values(labels).filter(validEdge);
+    }
+    return table;
+  });
+const range = () => [shown.file?.result?.energy_min ?? Infinity, shown.file?.result?.energy_max ?? -Infinity];
 
 /** Lowest table onset of the label's subshells: "L2,3" is drawn at L3. */
 function onset({ element, edge }) {
   const [, shell, a, b] = edge.match(/^([KLMNO])(\d)?(?:,(\d))?$/) ?? [];
   if (!shell) return null;
   const subshells = shell === "K" ? ["K"] : a ? Array.from({ length: (b ?? a) - a + 1 }, (_, i) => `${shell}${+a + i}`) : [1, 2, 3, 4, 5, 6, 7].map((i) => `${shell}${i}`);
-  const energies = subshells.map((s) => edgeTable[element]?.[s]?.["onset_energy (eV)"]).filter(Number.isFinite);
+  const energies = [...subshells, edge].map((s) => edgeTable[element]?.[s]?.["onset_energy (eV)"]).filter(Number.isFinite);
   return energies.length ? Math.min(...energies) : null;
 }
 
@@ -868,7 +955,7 @@ function setEdge(old, next) {
   const dup = next && entries.some((s) => entryKey(s) === edgeKey(next));
   if (at >= 0) entries.splice(at, 1, ...(next && !dup ? [edgeKey(next)] : []));
   else if (next && !dup) entries.push(edgeKey(next));
-  if (old && shown.detected.delete(edgeKey(old))) shown.dismissed.add(edgeKey(old));
+  if (old && shown.auto.delete(edgeKey(old))) shown.dismissed.add(edgeKey(old));
   writeEdges(entries);
   edgeStatus.textContent = next ? `${edgeName(next)} added.` : `${edgeName(old)} removed.`;
 }
@@ -884,7 +971,7 @@ async function pyCall(name, ...args) {
 }
 
 // A new spectrum file wins; when editing without one, the panel shows the spectrum's current file.
-const panelFile = () => files.find((x) => x.role === "original" && x.result?.x) ?? files.find((x) => x.current && x.result?.x);
+const panelFile = () => (mainFile()?.result?.x ? mainFile() : files.find((x) => x.current && x.result?.x));
 
 /** On the files step the plot sits in its file's card, so it is clear which file it shows; later, beside the form. */
 function placePanel() {
@@ -898,9 +985,9 @@ function updatePanel() {
   const f = panelFile();
   if (f === shown.file) return placePanel();
   shown.plot?.destroy();
-  // Edges detected in a file that is no longer the spectrum leave with it.
-  if (shown.detected.size) writeEdges(fieldEntries().filter((s) => !shown.detected.has(entryKey(s))));
-  Object.assign(shown, { file: f, plot: null, detected: new Set(), dismissed: new Set() });
+  // Edges added for a file that is no longer the spectrum leave with it.
+  if (shown.auto.size) writeEdges(fieldEntries().filter((s) => !shown.auto.has(entryKey(s))));
+  Object.assign(shown, { file: f, plot: null, found: [], auto: new Set(), dismissed: new Set() });
   menu.hidePopover?.();
   placePanel();
   if (!f) return;
@@ -915,28 +1002,83 @@ function updatePanel() {
 }
 
 async function detectEdges(f) {
-  // The edges of a published spectrum are only changed by hand.
   if (f.current) return paintEdges();
   let found = [];
   try {
     found = await pyCall("suggest", f.path, field("type").value || guessType(f));
   } catch {}
   if (shown.file !== f) return;
-  const picks = found.map((s) => (s.candidates ?? []).find(validEdge)).filter(Boolean);
-  const keys = new Set(picks.map(edgeKey));
-  // After a change of type, drop what is no longer detected.
-  const entries = fieldEntries().filter((s) => !shown.detected.has(entryKey(s)) || keys.has(entryKey(s)));
-  shown.detected = new Set([...shown.detected].filter((k) => keys.has(k)));
-  const added = picks.filter((c) => !shown.dismissed.has(edgeKey(c)) && !entries.some((s) => entryKey(s) === edgeKey(c)));
-  for (const c of added) {
-    entries.push(edgeKey(c));
-    shown.detected.add(edgeKey(c));
+  shown.found = found;
+  syncAutoEdges();
+}
+
+/**
+ * The detected edges, each named after a listed element when one is among its candidates, and the major edges of
+ * the listed elements in the spectrum's range. Edges the submitter removed stay removed; added edges that are no
+ * longer wanted (after a change of type or elements) leave.
+ */
+function syncAutoEdges() {
+  const f = shown.file;
+  // The edges of a published spectrum are only changed by hand.
+  if (!f || f.current) return;
+  const listed = new Set(elementList());
+  const [lo, hi] = range();
+  const name = (candidates = []) => candidates.find((c) => validEdge(c) && listed.has(c.element)) ?? candidates.find(validEdge);
+  const fromElements = [...listed].flatMap((e) => (edgeLabels[e] ?? []).filter((c) => c.major && c.onset >= lo && c.onset <= hi));
+  const wanted = new Map();
+  for (const c of [...shown.found.map((s) => name(s.candidates)).filter(Boolean), ...fromElements]) {
+    if (!shown.dismissed.has(edgeKey(c))) wanted.set(edgeKey(c), c);
   }
+  const entries = fieldEntries().filter((s) => !shown.auto.has(entryKey(s)) || wanted.has(entryKey(s)));
+  const added = [...wanted.values()].filter((c) => !entries.some((s) => entryKey(s) === edgeKey(c)));
+  entries.push(...added.map(edgeKey));
+  shown.auto = new Set([...[...shown.auto].filter((k) => wanted.has(k)), ...added.map(edgeKey)]);
   writeEdges(entries);
-  if (added.length) edgeStatus.textContent = `Found ${added.map(edgeName).join(", ")}.`;
+  if (added.length) edgeStatus.textContent = `Added ${added.map(edgeName).join(", ")}.`;
 }
 field("type").addEventListener("change", () => shown.file && detectEdges(shown.file));
-field("edges").addEventListener("input", () => paintEdges());
+field("edges").addEventListener("input", () => {
+  paintEdges();
+  edgesPicker?.set(entryValues());
+});
+
+const entryValues = () => fieldEntries().map((s) => entryKey(s) ?? s);
+const norm = (s) => s.toLowerCase().replace(/[\s_]+/g, " ").trim();
+let edgesPicker;
+edgeTableReady.then(() => {
+  const items = Object.values(edgeLabels)
+    .flat()
+    .map((c) => ({ value: edgeKey(c), name: edgeName(c), chip: edgeName(c), c, html: `<b>${edgeLabel(c).innerHTML}</b> <span class="n">${eV(c.onset)}</span>` }));
+  edgesPicker = chipPicker({
+    id: "f-edges",
+    after: field("edges"),
+    label: $('label[for="f-edges"]'),
+    placeholder: "Type an element, for example Fe",
+    describedby: "h-edges",
+    chipsLabel: "Edges",
+    listLabel: "Edges",
+    none: "No matching edges",
+    items,
+    limit: 8,
+    // The typed element's edges first, then those of listed elements, then those in the spectrum's range; by energy.
+    rank: (x, q) => {
+      const typed = norm(q);
+      if (!norm(x.name).startsWith(typed)) return -1;
+      if (!x.c) return 0;
+      const [lo, hi] = range();
+      return (x.c.element.toLowerCase() === typed.split(" ")[0] ? 0 : 4e6) + (elementList().includes(x.c.element) ? 0 : 2e6) + (x.c.onset >= lo && x.c.onset <= hi ? 0 : 1e6) + x.c.onset;
+    },
+    onChange: (picked) => {
+      const keep = new Set(picked.map((x) => x.value));
+      for (const key of entryValues()) if (!keep.has(key) && shown.auto.delete(key)) shown.dismissed.add(key);
+      writeEdges([...keep]);
+    },
+  });
+  field("edges").hidden = true;
+  $("#h-edges").textContent = "Type an element to add one of its edges. The main edges of your elements in the range of your spectrum are added for you.";
+  edgesPicker.set(entryValues());
+  syncAutoEdges();
+}, () => {});
 
 function paintEdges() {
   const u = shown.plot;
@@ -982,8 +1124,8 @@ function paintEdges() {
     }),
   );
   if (!edges.length) edgeList.append(el("li", { className: "muted", textContent: "None yet." }));
-  $(".edge-help", edgeBox).textContent = shown.detected.size
-    ? "We added the edges we found in your spectrum. Click an edge to remove it. To add another, click the plot at its energy."
+  $(".edge-help", edgeBox).textContent = shown.auto.size
+    ? "We added the edges we found in your spectrum or expect from its elements. Click an edge to remove it. To add another, click the plot at its energy."
     : "To add an edge, click the plot at its energy.";
 }
 
@@ -1013,10 +1155,16 @@ menu.addEventListener("toggle", (e) => {
   }
 });
 
+/** Edges of the listed elements first; otherwise the order the table gave. */
+const listedFirst = (candidates) => {
+  const listed = new Set(elementList());
+  return candidates.toSorted((a, b) => listed.has(b.element) - listed.has(a.element));
+};
+
 async function edgeMenu(m, opener) {
   let near = [];
   try {
-    near = (await pyCall("near", m.energy)).filter(validEdge).filter((c) => edgeKey(c) !== edgeKey(m.c));
+    near = listedFirst((await pyCall("near", m.energy)).filter(validEdge).filter((c) => edgeKey(c) !== edgeKey(m.c)));
   } catch {}
   openMenu(opener, shown.plot.valToPos(m.energy, "x"), `${edgeName(m.c)} at ${eV(m.energy)}`, [
     { label: `Remove ${edgeName(m.c)}`, run: () => setEdge(m.c, null) },
@@ -1036,7 +1184,7 @@ async function plotClick(e) {
     return;
   }
   const listed = new Set(fieldEdges().map(edgeKey));
-  near = near.filter(validEdge).filter((c) => !listed.has(edgeKey(c)));
+  near = listedFirst(near.filter(validEdge).filter((c) => !listed.has(edgeKey(c))));
   openMenu(
     u.over,
     x,
@@ -1086,7 +1234,7 @@ function review() {
         editButton(id)),
       dl));
   };
-  const current = !used.some((f) => f.role === "original") && files.find((f) => f.current);
+  const current = !mainFile() && files.find((f) => f.current);
   group("files", "Files", [...(current ? [["Spectrum file", `${current.file.name} (current file)`]] : []), ...used.map((f) => [ROLES[f.role], f.file.name])]);
   for (const s of visible()) {
     const id = s.dataset.step;
@@ -1104,7 +1252,7 @@ function review() {
 
 /** Run the checks again now the formula, edges and type are known. */
 async function finalChecks() {
-  const f = files.find((x) => x.role === "original") ?? files.find((x) => x.current);
+  const f = mainFile() ?? files.find((x) => x.current);
   const box = $("#final-checks");
   if (!f?.result?.points) return (box.hidden = true);
   box.hidden = false;

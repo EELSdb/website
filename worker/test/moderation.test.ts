@@ -99,7 +99,7 @@ describe("review", () => {
     ]);
     const html = await (await page(`/spectra/${slug}/`)).text();
     expect(html).toMatch(/<select id="plot-version">.*Oscillator strength.*Smoothed/s);
-    expect(html).toContain("Processed versions");
+    expect(html).toContain("Other versions");
     expect(html).toContain("Metadata from the file");
     const os = v2.files.find((f: any) => f.variant === "os");
     expect(await (await exports.default.fetch(os.url)).text()).toBe(MSA);

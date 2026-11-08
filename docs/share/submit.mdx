@@ -27,22 +27,26 @@ You can go back to an earlier step at any time from the list of steps.
 
 1. **Files.** Drop the spectrum file on the form, or click **choose files**.
 
-   You can also add two optional files:
-
-   - **Matching low-loss spectrum**: EELSdb uses it to estimate the specimen thickness.
-   - **Companion file from the same session**: for example a Velox `.emd` or TIA `.ser` survey. These files often record the beam energy and the convergence angle.
-   - **Processed versions** of the same spectrum, for example oscillator strength or smoothed (see [Processed versions](/docs/share/file-formats/#processed-versions)).
-
    Your browser then reads the file. The form shows a plot of the spectrum, runs the [file checks](/docs/share/checks/), and fills in the fields that it can read from the file.
    The plot stays beside the form for the next steps.
    If your browser cannot read the file, you can still fill in the form and submit.
 
+   You can add more files for the same spectrum. A different specimen needs its own submission.
+   Under the plot of each file, choose what the file is in **This file is**:
+
+   - **Raw data** or **Background subtracted**: the spectrum. If you send both, the background-subtracted file is the main spectrum, and EELSdb keeps the raw data with it.
+   - **Processed**: a processed version of the same spectrum, for example oscillator strength or smoothed (see [Processed versions](/docs/share/file-formats/#processed-versions)).
+   - **Companion low-loss (for thickness)**: EELSdb uses it to estimate the specimen thickness.
+   - **Companion file (beam settings)**: a file from the same session, for example a Velox `.emd` or TIA `.ser` survey. These files often record the beam energy and the convergence angle.
+
+   The form makes a first choice for each file. Check it.
+
 2. **Specimen.** Type the specimen name and the chemical formula, for example `Fe2O3` or `(La0.7,Sr0.3)MnO3`, and choose the spectrum type.
 
-   The form fills in **Elements** from the formula. Correct the list if it is wrong.
+   The form fills in **Elements** from the formula. Correct the list if it is wrong: type a symbol or a name to add an element, and click an element to remove it.
 
-   For **Edges**, type the edges in the spectrum, separated by semicolons, for example `Fe_L2,3; O_K`.
-   EELSdb adds the edges it finds in your spectrum. They are listed under the plot of your spectrum: remove any that are wrong. To add another edge, click the plot at its energy.
+   **Edges** lists the edges in the spectrum. EELSdb adds the edges it finds in your spectrum, and the main edges of your elements in the energy range of your spectrum. The edges also show on the plot and in the list under it. Remove any that are wrong.
+   To add an edge, type its element in **Edges** and choose the edge, or click the plot at its energy. You can add minor edges in the same way.
 
    Also fill in the phase (solid, liquid or gas), the intensity units, the source and purity of the specimen, keywords and comments.
 
@@ -54,7 +58,7 @@ You can go back to an earlier step at any time from the list of steps.
    Choose the beam energy (60, 80, 120, 200 or 300 kV, **Other** or **Unknown**), and type the convergence and collection semi-angles in mrad.
    Mark a value **Approximate** and give an uncertainty, or mark it **Unknown**. Both are valid answers.
 
-5. **Treatment.** Tell readers how you processed the data: dark current and gain corrections, the energy calibration, the thickness in t/λ, and any deconvolution.
+5. **Treatment.** Tell readers how you processed the data: background subtraction, dark current and gain corrections, the energy calibration, the thickness in t/λ, and any deconvolution. The form fills in **Background subtracted** from your choice for the spectrum file.
 
 6. **Reference.** Paste the DOI of the paper. The form looks it up on CrossRef and fills in the authors, the title and the journal.
    If there is no DOI, give a web link or type the reference.

@@ -179,6 +179,7 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
       i0_normalisation: b.xas.i0_normalisation,
     },
     treatment: t && {
+      background_subtracted: bool(t.background_subtracted),
       dark_current_corrected: bool(t.dark_current),
       gain_variation_corrected: bool(t.gain_variation),
       calibration: t.calibration,

@@ -15,12 +15,13 @@ export const UNIT_LABELS: Record<string, string> = {
 export const XAS_FIELDS = ["facility", "beamline", "source_type", "monochromator", "resolving_power", "detection_mode", "polarisation", "polarisation_angle_deg", "calibration_reference", "i0_normalisation"];
 export const COMPANION_EXTENSIONS = ["emd", "ser", "emi", "dm3", "dm4"];
 export const MAX_FILE_BYTES = 50 * 1024 * 1024;
-/** Processed versions a contributor may upload next to the spectrum, each as its own file. */
+/** Other versions a contributor may upload next to the spectrum, each as its own file. "raw" is the raw data of a background-subtracted spectrum. */
 export const VARIANTS: Record<string, string> = {
   os: "Oscillator strength",
   os_smoothed: "Oscillator strength, smoothed",
   smoothed: "Smoothed",
   impurity_removed: "Impurity removed",
+  raw: "Raw data",
 };
 export const variantUnits = (variant: string) => (variant.startsWith("os") ? "oscillator_strength" : null);
 const MAX_ASSOCIATED = 20;
@@ -239,6 +240,7 @@ export function parseForm(body: Body): { form: ParsedForm; errors: Record<string
           }
         : null,
       treatment: {
+        background_subtracted: yesNo("background_subtracted"),
         dark_current: yesNo("dark_current"),
         gain_variation: yesNo("gain_variation"),
         calibration: text(body, "calibration", 200),

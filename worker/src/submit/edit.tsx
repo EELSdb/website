@@ -40,7 +40,7 @@ export function valuesFromBundle(b: SpectrumBundle): Values {
   for (const k of ["microscope", "gun_type", "acquisition_mode", "detector", "resolution_ev", "probe_size_nm2", "beam_current", "integration_time_s", "readouts", "dispersion_ev", "monochromated"]) {
     v[k] = str(a[k]);
   }
-  for (const k of ["dark_current", "gain_variation", "calibration", "thickness_t_lambda", "deconv_other"]) v[k] = str(t[k]);
+  for (const k of ["background_subtracted", "dark_current", "gain_variation", "calibration", "thickness_t_lambda", "deconv_other"]) v[k] = str(t[k]);
   for (const k of ["deconv_fourier_log", "deconv_fourier_ratio", "deconv_stephens", "deconv_richardson_lucy", "deconv_maximum_entropy"]) {
     if (Number(t[k])) v[k] = "1";
   }

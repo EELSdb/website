@@ -25,16 +25,18 @@ The file checks give an error for a spectrum image.
 
 ## Processed versions
 
-You can add processed versions of the same spectrum, each in a separate file:
+You can add other versions of the same spectrum, each in a separate file:
 
+- the raw data of a background-subtracted spectrum;
 - oscillator strength;
 - oscillator strength, smoothed;
 - smoothed;
 - with an impurity removed, for example air.
 
-Drop the files with the spectrum, then choose the version in **Use as**.
+Drop the files with the spectrum, then choose the version under the plot of each file, in **This file is**.
 The spectrum page shows each version in the plot and offers it for download.
-Upload the spectrum with the least processing as the main file.
+If you send the spectrum as raw data and background subtracted, the background-subtracted file is the main file.
+Otherwise, upload the spectrum with the least processing as the main file.
 
 ## DigitalMicrograph files often lack the beam energy
 

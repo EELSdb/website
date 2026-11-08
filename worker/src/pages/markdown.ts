@@ -86,6 +86,7 @@ export async function spectrumMarkdown(db: D1Database, slug: string) {
       [
         "## Treatment",
         list([
+          ["Background subtracted", t.background_subtracted === null ? null : t.background_subtracted ? "yes" : "no"],
           ["Dark current corrected", t.dark_current_corrected === null ? null : t.dark_current_corrected ? "yes" : "no"],
           ["Gain variation corrected", t.gain_variation_corrected === null ? null : t.gain_variation_corrected ? "yes" : "no"],
           ["Calibration", t.calibration],

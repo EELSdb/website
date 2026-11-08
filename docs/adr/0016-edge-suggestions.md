@@ -21,10 +21,14 @@ Contributors list the absorption edges in their spectrum, for example `C K, Fe L
   1. exSpy "Major" edges first.
   2. Distance, in 5 eV steps.
   3. K, L2,3 and M4,5 before other shells. With this rule, C K beats Ru M4,5 at 282 eV.
-- The submit form adds the top candidate of each detected onset to the edges field at once, with no confirmation.
-  - Removable chips under the plot show every edge in the field; a click on a chip removes it. A removed detection stays removed, even when the detector runs again after a change of spectrum type.
-  - Detected edges that are no longer detected (after a change of type) or that came from a file that is no longer the spectrum leave the field.
-  - A click on a marker offers Remove or a nearby label instead. A click on the plot lists nearby candidates to add.
+- The submit form adds edges to the edges field at once, with no confirmation:
+  - For each detected onset, the first candidate whose element is in the Elements field, else the top candidate.
+  - The major edges (exSpy "Major") of each listed element whose onset is in the energy range of the spectrum, for every spectrum type. Minor edges are only added by hand.
+- Elements and Edges are chip fields over their text fields. Elements works like the browse filter: a typed symbol or name becomes a chip at a space, a comma or Enter. In Edges, the contributor types an element and picks one of its edges, major or minor. The list shows the typed element first, then the edges of listed elements, then the edges in the range of the spectrum.
+- The edge chips in the form, the chips under the plot and the plot markers show the same field. A click on a chip removes the edge.
+  - A removed edge stays removed, even when the detector runs again after a change of spectrum type or elements.
+  - Added edges that are no longer wanted (after a change of type or elements) or that came from a file that is no longer the spectrum leave the field. Removing an element removes the edges that it added.
+  - A click on a marker offers Remove or a nearby label instead. A click on the plot lists nearby candidates to add. Both lists show the candidates of listed elements first.
   - Each marker sits at the table onset of the lowest subshell of its label. The contributor cannot drag markers, because the site stores edges as labels only ([ADR 0007](/docs/adr/0007-data-model/)).
 - On the files step, the plot and the edge list sit in the card of the spectrum file, so it is clear which file they belong to. From the next step on, they sit beside the form.
 - The edges text field stays the source of truth. The reasons are accessibility, exactness and a fallback when Pyodide fails.
@@ -35,7 +39,8 @@ Contributors list the absorption edges in their spectrum, for example `C K, Fe L
 - The detector finds 172 of 214 listed major edges in range. The misses have almost no pre-edge, or are weak M4,5 or high-energy L edges.
 - 190 of 243 suggestions match a listed element. Some "unmatched" suggestions are real edges that the contributor did not list, for example O K in CrC.
 - The expected failures are chemical shifts and weak M4,5 edges. Because of chemical shifts, the label menu matters more than the position.
-- The weak points are unlikely candidates (Pu N6,7, At N4,5) and false positives (Sn M4,5 on SrTiO3). We offered to rank the formula's elements first, but did not do it.
+- The weak points are unlikely candidates (Pu N6,7, At N4,5) and false positives (Sn M4,5 on SrTiO3). Candidates of the listed elements come first, which fixes the first kind when the contributor lists the elements.
+- The exSpy table has gaps. For example, it has no S K edge (2472 eV), so the form cannot suggest it or offer it at a click on the plot.
 
 ## Alternatives considered
 

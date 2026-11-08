@@ -150,6 +150,7 @@ export const Spectrum = z
       .openapi({ description: "X-ray absorption settings. Null for EELS spectra." }),
     treatment: z
       .strictObject({
+        background_subtracted: flag,
         dark_current_corrected: flag,
         gain_variation_corrected: flag,
         calibration: text,
@@ -181,7 +182,7 @@ export const Spectrum = z
         role: z.enum(["legacy", "original", "lowloss", "variant", "msa", "hspy", "metadata"]).openapi({
           description: "`variant` is a processed version from the contributor, named in `variant`; `metadata` is every tag read from the original file at review, as JSON, not checked by a person.",
         }),
-        variant: z.enum(["os", "os_smoothed", "smoothed", "impurity_removed"]).nullable().openapi({ description: "For a `variant` file: oscillator strength, smoothed, or with an impurity (often air) removed." }),
+        variant: z.enum(["os", "os_smoothed", "smoothed", "impurity_removed", "raw"]).nullable().openapi({ description: "For a `variant` file: oscillator strength, smoothed, with an impurity (often air) removed, or the raw data of a background-subtracted spectrum." }),
         intensity_units: z.enum(INTENSITY_UNITS).nullable().openapi({ description: "For a `variant` file whose units differ from the spectrum's." }),
         url: z.string(),
         filename: z.string(),

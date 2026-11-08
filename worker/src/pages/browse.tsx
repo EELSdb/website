@@ -496,7 +496,7 @@ export async function browsePage(c: Context<AppEnv>) {
           )}
         </section>
       </div>
-      <script src="/browse.js" defer></script>
+      <script src="/browse.js" type="module"></script>
     </Layout>,
   );
 }

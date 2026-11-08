@@ -67,7 +67,7 @@ A field with no value is `null`.
 
 ## Treatment
 
-- `dark_current_corrected`, `gain_variation_corrected`: `true`, `false` or `null`.
+- `background_subtracted`, `dark_current_corrected`, `gain_variation_corrected`: `true`, `false` or `null`. `background_subtracted` describes the main file.
 - `calibration`: How the energy axis was calibrated.
 - `thickness`: `value_t_lambda` and its `source`.
 - `deconvolutions`: The deconvolutions applied, for example Fourier-log, Fourier-ratio, Stephens, Richardson-Lucy or maximum entropy.

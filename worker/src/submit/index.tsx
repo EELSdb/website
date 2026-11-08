@@ -4,6 +4,7 @@ import { raw } from "hono/html";
 import type { Child } from "hono/jsx";
 import { requireUser, type AppEnv, type User } from "../auth";
 import { ELEMENTS } from "../elements";
+import NAMES from "../element-names.json";
 import { AccountLayout, Layout, RESEND_SCRIPT, TYPE_NAMES } from "../pages/layout";
 import { BEAM_ENERGIES, COMPANION_EXTENSIONS, MAX_FILE_BYTES, SPECTRUM_EXTENSIONS, UNIT_LABELS, VARIANTS, cleanBrowserChecks, collectUploads, parseForm } from "./form";
 import { createSpectrum, instrumentOk, storeFile } from "./store";
@@ -92,7 +93,7 @@ function Field(props: { name: string; label: string; errors: Record<string, stri
     <div class={`field${error ? " has-error" : ""}`}>
       <label for={`f-${props.name}`}>{props.label}{props.required && <Req />}</label>
       {props.children}
-      {props.hint && <p class="hint">{props.hint}</p>}
+      {props.hint && <p class="hint" id={`h-${props.name}`}>{props.hint}</p>}
       {error && <p class="error" id={`e-${props.name}`}>{error}</p>}
     </div>
   );
@@ -298,7 +299,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 <path d="M12 15V4M7.5 8.5 12 4l4.5 4.5M5 15v3.5A1.5 1.5 0 0 0 6.5 20h11a1.5 1.5 0 0 0 1.5-1.5V15" />
               </svg>
               <p>
-                <strong>{props.edit ? "Drop a new spectrum file here" : "Drop your files here"}</strong> or{" "}
+                <strong>{props.edit ? "Drop a new spectrum file here" : "Drop your spectrum file here"}</strong> or{" "}
                 <button type="button" class="link-button" id="browse">choose files</button>
               </p>
               <p class="hint">
@@ -328,8 +329,8 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
               </Field>
               {!props.edit && (
                 <details class="variant-files" open={Object.keys(VARIANTS).some((code) => errors[`variant_${code}_file`])}>
-                  <summary>Processed versions of the same spectrum (optional)</summary>
-                  <p class="hint">Each as its own file, next to the spectrum as measured.</p>
+                  <summary>Other versions of the same spectrum (optional)</summary>
+                  <p class="hint">Each as its own file. If the spectrum file is background subtracted, add its raw data here.</p>
                   {Object.entries(VARIANTS).map(([code, label]) => (
                     <Field name={`variant_${code}_file`} label={label} errors={errors}>
                       <input id={`f-variant_${code}_file`} name={`variant_${code}_file`} type="file" accept={accept} />
@@ -358,7 +359,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 {input("formula", v, { required: true, "data-symbols": [...ELEMENTS].join(" "), "aria-describedby": "formula-warning" })}
                 <p class="formula-warning" id="formula-warning" aria-live="polite" hidden></p>
               </Field>
-              <Field name="elements" label="Elements" errors={errors} hint="Filled from the formula; correct it if needed.">{input("elements", v, { placeholder: "Fe, O" })}</Field>
+              <Field name="elements" label="Elements" errors={errors} hint="Filled from the formula; correct it if needed.">{input("elements", v, { placeholder: "Fe, O", "data-names": JSON.stringify(NAMES) })}</Field>
               <Field name="edges" label="Edges" errors={errors} hint='Separate with semicolons, for example "Fe_L2,3; O_K".'>{input("edges", v)}</Field>
               <Field name="keywords" label="Keywords" errors={errors} hint="Comma-separated.">{input("keywords", v)}</Field>
             </div>
@@ -465,6 +466,13 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
 
           <Step id="treatment">
             <div class="grid-3">
+              <Field name="background_subtracted" label="Background subtracted" errors={errors}>
+                <select id="f-background_subtracted" name="background_subtracted">
+                  <option value="">Not stated</option>
+                  <option value="1" selected={v.background_subtracted === "1"}>Yes</option>
+                  <option value="0" selected={v.background_subtracted === "0"}>No</option>
+                </select>
+              </Field>
               <Field name="dark_current" label="Dark current corrected" errors={errors}>
                 <select id="f-dark_current" name="dark_current">
                   <option value="">Not stated</option>

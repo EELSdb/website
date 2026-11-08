@@ -950,23 +950,21 @@ html:not(.js) [data-back], html:not(.js) [data-next] { display: none; }
 .dropzone strong { color: var(--ink); font-weight: 600; }
 .dropzone .hint { margin-top: 0.5rem; }
 .dropzone.over { border-color: var(--accent); background: var(--accent-soft); }
-#step-files:has(.file-card) .dropzone { padding: 1rem 1.5rem; grid-auto-flow: column; justify-content: center; align-items: center; gap: 0.75rem; }
-#step-files:has(.file-card) .dropzone :is(svg, .hint) { display: none; }
+#step-files:has(.file-card) .dropzone { padding: 1rem 1.5rem; }
+#step-files:has(.file-card) .dropzone svg { display: none; }
+#step-files:has(.file-card) .dropzone .hint { margin-top: 0.25rem; }
+.file-list + .dropzone { margin-top: 0.75rem; }
 
 .file-list { list-style: none; margin: 0.75rem 0 0; padding: 0; display: grid; grid-template-columns: minmax(0, 1fr); gap: 0.75rem; }
 .file-card { padding: 0.75rem 1rem 0.9rem; border: 1px solid var(--line); border-radius: 6px; background: var(--surface); }
-.file-head { display: grid; grid-template-columns: minmax(0, max-content) auto 1fr auto auto; align-items: center; gap: 0.35rem 0.9rem; }
-.file-head > .file-role { grid-column: 4; }
-.file-head > .icon-button { grid-column: 5; }
-@media (max-width: 560px) {
-  .file-head { grid-template-columns: minmax(0, max-content) 1fr auto; }
-  .file-head > .file-role { grid-column: 1 / -1; grid-row: 2; }
-  .file-head > .icon-button { grid-column: 3; grid-row: 1; }
-  .file-role select { flex: 1; min-width: 0; }
-}
-.file-name { font-weight: 600; overflow-wrap: anywhere; }
-.file-size { color: var(--muted); font-size: 0.85rem; }
-.file-role { display: inline-flex; align-items: center; gap: 0.5rem; font-size: 0.85rem; color: var(--muted); white-space: nowrap; }
+.file-head { display: flex; align-items: center; gap: 0.9rem; }
+.file-head > .icon-button { margin-left: auto; flex: none; }
+.file-name { font-weight: 600; overflow-wrap: anywhere; min-width: 0; }
+.file-size { color: var(--muted); font-size: 0.85rem; white-space: nowrap; }
+/* Under the plot, so it reads as a question about the file shown. */
+.file-role { display: flex; flex-wrap: wrap; align-items: center; gap: 0.4rem 0.75rem; margin-top: 0.9rem; padding-top: 0.75rem; border-top: 1px solid var(--rule); }
+.file-role label { font-weight: 600; }
+.file-role select { min-width: 0; max-width: 100%; }
 .icon-button { all: unset; cursor: pointer; display: grid; place-items: center; width: 1.9rem; height: 1.9rem; border-radius: 4px; color: var(--muted); }
 .icon-button:hover { background: var(--sunken); color: var(--ink); }
 .file-status { margin: 0; font-size: 0.9rem; color: var(--muted); display: flex; align-items: flex-start; gap: 0.5rem; }
@@ -982,7 +980,7 @@ html:not(.js) [data-back], html:not(.js) [data-next] { display: none; }
 .card-label { margin: 0 0 0.5rem; font-size: 0.8rem; font-weight: 600; letter-spacing: 0; color: var(--muted); }
 .card-label:focus { outline: none; }
 .file-card .findings:empty { display: none; }
-.file-card[data-role="original"] .file-plot { display: none; }
+.file-card[data-main] .file-plot { display: none; }
 .file-card[data-warn] { border-color: var(--note); }
 .unused-note { margin: 0.6rem 0 0; }
 .unused-note strong { color: var(--note); }

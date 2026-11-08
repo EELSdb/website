@@ -504,6 +504,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           <h2>Treatment</h2>
           <MetaList
             items={[
+              ["Background subtracted", yesNo(t.background_subtracted)],
               ["Dark current corrected", yesNo(t.dark_current)],
               ["Gain variation corrected", yesNo(t.gain_variation)],
               ["Calibration", t.calibration],
@@ -638,7 +639,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           </fieldset>
           {variants.length > 0 && (
             <>
-              <h3>Processed versions</h3>
+              <h3>Other versions</h3>
               <ul class="plain-list small">
                 {variants.map((f) => (
                   <li><a href={href(f.r2_key)} download={f.filename}>{VARIANTS[f.variant] ?? f.variant}</a> <span class="muted">({f.filename})</span></li>
