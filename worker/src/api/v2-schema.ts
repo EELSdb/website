@@ -39,7 +39,7 @@ export const ListQuery = z
     ),
     edge: repeated("Edge, matched whole: `L2,3` (any element) or `Fe_L2,3`. Repeat to require several.", "Fe_L2,3"),
     formula: z.string().optional().openapi({ param: { description: "Text that the formula contains." }, example: "TiO2" }),
-    q: z.string().optional().openapi({ param: { description: "Text in the title or description." }, example: "graphite" }),
+    q: z.string().optional().openapi({ param: { description: "Text in the title or description, or a reference number such as `EELSDB-0042`." }, example: "graphite" }),
     author: repeated("Part of the contributor's name, or their profile name. Repeat to include several contributors.", "Sigle"),
     keyword: repeated("A keyword the contributor gave, matched whole and ignoring case. Repeat to require several.", "nanotube"),
     complete: z.enum(["true"]).optional().openapi({ param: { description: "`true`: only spectra whose beam energy and both angles are known." } }),
@@ -91,6 +91,7 @@ export const Spectrum = z
   .strictObject({
     id: z.number().int().openapi({ description: "Numeric id. Spectra from the old site keep their WordPress id." }),
     slug: z.string().openapi({ description: "The name in the spectrum's web address." }),
+    accession: z.string().nullable().openapi({ description: "The reference number to quote, such as `EELSDB-0042`. Spectra get one when first published, in order." }),
     url: z.string().openapi({ description: "The spectrum page." }),
     api_url: z.string().openapi({ description: "This record in API v2." }),
     title: z.string().openapi({ description: "The specimen name." }),
@@ -254,13 +255,13 @@ export const oneRoute = createRoute({
   path: "/spectra/{id}",
   operationId: "getSpectrum",
   summary: "Get one spectrum",
-  description: "One published spectrum, by numeric id or by slug.",
+  description: "One published spectrum, by numeric id, reference number or slug.",
   request: {
     params: z.object({
-      id: z.string().openapi({ param: { name: "id", in: "path" }, description: "Numeric id, or the slug from the spectrum's web address.", example: "21751" }),
+      id: z.string().openapi({ param: { name: "id", in: "path" }, description: "Numeric id, reference number (`EELSDB-0042`), or the slug from the spectrum's web address.", example: "21751" }),
     }),
   },
-  responses: { 200: json(Spectrum, "A spectrum."), 404: json(ApiError, "No published spectrum with this id or slug.") },
+  responses: { 200: json(Spectrum, "A spectrum."), 404: json(ApiError, "No published spectrum with this id, reference number or slug.") },
 });
 
 const field = (description: string, example?: string) => z.string().optional().openapi({ description, example });

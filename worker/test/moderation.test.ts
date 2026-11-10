@@ -69,6 +69,9 @@ describe("review", () => {
     const before = sent.length;
     expect((await form(`/admin/submissions/${subId}/`, modCookie, { decision: "approve" })).status).toBe(302);
     expect(sent.slice(before).map((e) => e.to)).toEqual(["web@lab.org"]);
+    const numbers = await env.DB.prepare("SELECT accession AS n, (SELECT MAX(accession) FROM spectra) AS max FROM spectra WHERE id = ?").bind(spectrumId).first<any>();
+    expect(numbers.n).toBeGreaterThan(956);
+    expect(numbers.n).toBe(numbers.max);
     expect((await form(`/admin/submissions/${subId}/`, modCookie, { decision: "approve" })).status).toBe(409);
     expect((await post(`/admin/submissions/${subId}/processed/`, modCookie, processed(record))).status).toBe(409);
 

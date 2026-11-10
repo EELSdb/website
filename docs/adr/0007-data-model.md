@@ -26,6 +26,7 @@ The old WordPress site stored spectrum fields as post meta strings. The values c
 - Edges are labels only, with no energy. Marker positions come from the edge table. A record of observed onsets (chemical shifts) would need a separate change to the data model.
 - Each edit adds a `history` row. The history lets us review and reverse changes.
 - Each spectrum has its own licence ([ADR 0023](/docs/adr/0023-licences/)).
+- Each published spectrum has a reference number (`spectra.accession`), shown as `EELSDB-0042` and with a fifth digit from 10000. The numbers follow publication order: migration 0029 numbered the existing spectra by `published_at`, then `id`, and approval gives a new spectrum the next number. Drafts and rejected submissions get none. `id` cannot serve as the public number, because migrated spectra keep their WordPress post IDs and Corex IDs start at 30001.
 - A spectrum has one of these statuses: `draft`, `pending`, `published`, `private` or `rejected`. Only `published` spectra are public.
 - New links between associated spectra (`spectrum_links`) go in both directions.
 

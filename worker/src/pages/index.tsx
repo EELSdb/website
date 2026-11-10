@@ -35,6 +35,7 @@ import { drafts } from "../submit/drafts";
 import { og } from "../og/index";
 import { unsubscribe } from "../digest/unsubscribe";
 import { digestPages } from "../digest/archive";
+import { parseAccession } from "../accession";
 
 export const pages = new Hono<AppEnv>();
 type C = Context<AppEnv>;
@@ -227,6 +228,13 @@ pages.get("/moderators/", async (c) => {
         ) : (
           <p class="muted">No moderators yet.</p>
         )}
+        <section aria-labelledby="h-join">
+          <h2 id="h-join">Become a moderator</h2>
+          <p>
+            Moderators are EELS and X-ray absorption specialists who give some of their time to check new spectra. If you would like to help,{" "}
+            <a href="/contact/?topic=moderator">get in touch</a> and tell us about your experience. The <a href="/docs/moderate/review/">moderator guide</a> shows what the work involves.
+          </p>
+        </section>
       </div>
     </Layout>,
   );
@@ -344,6 +352,14 @@ const gone = (c: C) =>
     410,
   );
 for (const path of ["/forum", "/forum/*", "/jobs", "/jobs/*", "/registered-users", "/registered-users/"]) pages.get(path, gone);
+
+// Short addresses for reference numbers, such as eelsdb.eu/EELSDB-0042 on a poster.
+for (const path of ["/:ref{[Ee][Ee][Ll][Ss][Dd][Bb]-?[0-9]+}", "/:ref{[Ee][Ee][Ll][Ss][Dd][Bb]-?[0-9]+}/"]) {
+  pages.get(path, async (c) => {
+    const slug = await c.env.DB.prepare("SELECT slug FROM spectra WHERE accession = ? AND status = 'published'").bind(parseAccession(c.req.param("ref") ?? "")).first<string>("slug");
+    return slug ? c.redirect(`/spectra/${encodeURIComponent(slug)}/`, 302) : c.notFound();
+  });
+}
 
 // The archive's old addresses at the site root, from before news moved under /news/.
 const newsSlug = (c: C, slug: string) => c.env.DB.prepare("SELECT slug FROM news WHERE slug = ? AND status = 'published'").bind(slug).first<string>("slug");

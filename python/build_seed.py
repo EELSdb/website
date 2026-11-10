@@ -80,7 +80,7 @@ def load(path):
     return json.loads(path.read_text())
 
 
-def spectrum_rows(s, rank, ids_by_slug, manifest, analysis):
+def spectrum_rows(s, rank, ids_by_slug, manifest, analysis, accession):
     """Statements for one recorded v1 spectrum object."""
     sid = s["id"]
     legacy = dict(s)
@@ -105,6 +105,7 @@ def spectrum_rows(s, rank, ids_by_slug, manifest, analysis):
         "id": sid,
         "slug": slug_of(s["permalink"]),
         "status": "published",
+        "accession": accession[sid],
         # WordPress stored " - " and printed it as " &#8211; " (wptexturize).
         "title": s["title"].replace(" &#8211; ", " - "),
         "type": TYPE_CODES[s["type"]],
@@ -211,7 +212,7 @@ COREX_LINKS = [
 ]
 
 
-def corex_rows(r):
+def corex_rows(r, accession):
     """Statements for one Corex record (see corex.py)."""
     sid = r["id"]
     notes = [COREX_DESCRIPTION,
@@ -221,6 +222,7 @@ def corex_rows(r):
         "id": sid,
         "slug": r["slug"],
         "status": "published",
+        "accession": accession[sid],
         "title": r["title"],
         "type": "coreloss",
         "technique": "eels",
@@ -292,12 +294,16 @@ def build():
     analysis = {a["spectrum_id"]: a for a in load(analysis_path)} if analysis_path.exists() else {}
     ids_by_slug = {slug_of(s["permalink"]): s["id"] for s in spectra}
 
+    corex = load(COREX) if COREX.exists() else []
+    # Same order as migration 0029 gives existing databases: publication date, then id.
+    order = sorted([(s["published"], s["id"]) for s in spectra] + [(COREX_IMPORTED, r["id"]) for r in corex])
+    accession = {sid: n for n, (_, sid) in enumerate(order, 1)}
+
     lines = []
     for rank, s in enumerate(spectra):
-        lines += spectrum_rows(s, rank, ids_by_slug, manifest, analysis)
-    corex = load(COREX) if COREX.exists() else []
+        lines += spectrum_rows(s, rank, ids_by_slug, manifest, analysis, accession)
     for r in corex:
-        lines += corex_rows(r)
+        lines += corex_rows(r, accession)
     hspy = load(HSPY) if HSPY.exists() else []
     lines += [insert("files", {"spectrum_id": f["spectrum_id"], "role": "hspy", "r2_key": f["key"], "filename": f["filename"],
                                "media_type": "application/x-hdf5", "bytes": f["bytes"], "sha256": f["sha256"]}) for f in hspy]

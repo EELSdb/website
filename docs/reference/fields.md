@@ -26,6 +26,7 @@ A field with no value is `null`.
 
 - `id`: A number. Spectra from the old site keep their old id.
 - `slug`: The name in the web address: `https://eelsdb.eu/spectra/{slug}/`.
+- `accession`: The reference number to quote, such as `EELSDB-0042`. A spectrum gets the next number when it is first published. `https://eelsdb.eu/EELSDB-0042` opens its page.
 - `title`: The specimen name.
 - `type`: `coreloss`, `lowloss`, `zeroloss` or `xrayabs`.
 - `technique`: `eels` or `xas`.

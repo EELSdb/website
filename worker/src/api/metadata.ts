@@ -42,7 +42,7 @@ const TYPE_NAMES: Record<string, string> = {
   coreloss: "Core-loss EELS spectrum",
   lowloss: "Low-loss EELS spectrum",
   zeroloss: "Zero-loss EELS spectrum",
-  xrayabs: "X-ray absorption spectrum",
+  xrayabs: "X-ray absorption (NEXAFS) spectrum",
 };
 const TECHNIQUES: Record<string, string> = { eels: "Electron energy-loss spectroscopy", xas: "X-ray absorption spectroscopy" };
 const INTENSITY_LABELS: Record<string, string> = {

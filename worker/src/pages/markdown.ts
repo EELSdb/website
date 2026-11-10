@@ -46,6 +46,7 @@ export async function spectrumMarkdown(db: D1Database, slug: string) {
     `# ${s.title}`,
     `${TYPE_NAMES[s.type] ?? s.type} spectrum${s.formula ? ` of ${s.formula}` : ""}, contributed by ${s.author.name}${s.published_at ? `, published ${s.published_at.slice(0, 10)}` : ""}.`,
     list([
+      ["Reference number", s.accession],
       ["Web page", s.url],
       ["API v2 record (JSON)", s.api_url],
       ["Data file", s.download_url],

@@ -2,6 +2,7 @@ import { env, exports } from "cloudflare:workers";
 import { describe, expect, it } from "vitest";
 import { openapiV2 } from "../src/api/v2";
 import { Spectrum, SpectrumPage } from "../src/api/v2-schema";
+import { accessionId } from "../src/accession";
 
 const get = (path: string) => exports.default.fetch(`https://api.eelsdb.eu/v2${path}`);
 const json = async (path: string) => (await get(path)).json<any>();
@@ -29,6 +30,16 @@ describe("API v2", () => {
     expect((await json("/spectra?complete=true")).total).toBe(245);
     const sorted = await json("/spectra?sort=min_energy_ev&order=desc&per_page=3");
     expect(sorted.results[0].energy.min_ev).toBeGreaterThanOrEqual(sorted.results[1].energy.min_ev);
+  });
+
+  it("finds a spectrum by its reference number", async () => {
+    expect([accessionId(42), accessionId(12345)]).toEqual(["EELSDB-0042", "EELSDB-12345"]);
+    const one = await json("/spectra/EELSDB-0042");
+    expect(one.accession).toBe("EELSDB-0042");
+    expect((await json("/spectra?q=eelsdb-42")).results.map((s: any) => s.accession)).toEqual(["EELSDB-0042"]);
+    const short = await exports.default.fetch("https://eelsdb.eu/EELSDB-0042", { redirect: "manual" });
+    expect(short.headers.get("Location")).toBe(`/spectra/${one.slug}/`);
+    expect((await exports.default.fetch("https://eelsdb.eu/EELSDB-9999")).status).toBe(404);
   });
 
   it("reports bad parameters", async () => {

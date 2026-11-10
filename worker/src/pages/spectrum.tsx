@@ -5,6 +5,7 @@ import { API_HOST, SITE, loadBundle, type SpectrumBundle } from "../api/format";
 import { creatorOrcids, jsonLdScript, licenceOf, schemaOrg, toRecord } from "../api/metadata";
 import { EELSDB_BIBTEX, EELSDB_CITATION, referenceText, stripTags } from "./citation";
 import { isModerator } from "../instruments";
+import { accessionId } from "../accession";
 import { UNIT_LABELS, VARIANTS, variantUnits } from "../submit/form";
 import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge, fmt } from "./layout";
 import { HistoryTimeline, spectrumHistory } from "./history";
@@ -93,8 +94,9 @@ export function spectrumCitation(b: SpectrumBundle) {
   const year = String(s.published_at ?? "").slice(0, 4);
   const url = `${SITE}/spectra/${encodeURIComponent(s.slug)}/`;
   const ref = referenceText(b.reference);
+  const number = s.accession ? accessionId(s.accession) : `spectrum ${s.id}`;
   const text = [
-    `${s.author_display}. ${s.title}${s.formula ? ` (${s.formula})` : ""}. EELS Data Base, spectrum ${s.id}${year ? `, ${year}` : ""}. ${url}`,
+    `${s.author_display}. ${s.title}${s.formula ? ` (${s.formula})` : ""}. EELS Data Base, ${number}${year ? `, ${year}` : ""}. ${url}`,
     ref,
     EELSDB_CITATION,
   ].filter(Boolean).join("\n\n");
@@ -104,7 +106,7 @@ export function spectrumCitation(b: SpectrumBundle) {
     `@misc{${bibKey(s)},
   author = {${s.author_display}},
   title = {${s.title}},
-  howpublished = {EELS Data Base, spectrum ${s.id}},
+  howpublished = {EELS Data Base, ${number}},
   year = {${year}},
   url = {${url}}
 }`,
@@ -221,7 +223,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
       title={s.title}
       path="/spectra/"
       card={`spectra/${encodeURIComponent(s.slug)}`}
-      description={`${s.title}${s.formula ? ` (${s.formula})` : ""}: ${(TYPE_NAMES[s.type] ?? s.type).toLowerCase()} spectrum in the EELS Data Base.`}
+      description={`${s.title}${s.formula ? ` (${s.formula})` : ""}: ${(TYPE_NAMES[s.type] ?? s.type).replace(/^[A-Z](?=[a-z])/, (ch) => ch.toLowerCase())} spectrum in the EELS Data Base.`}
       head={
         <>
           <link rel="stylesheet" href="/vendor/uPlot.min.css" />
@@ -247,6 +249,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           <h1>{s.title}</h1>
           <p class="byline">
             <TypeBadge type={s.type} boxed /> <Formula formula={s.formula} />
+            {s.accession && <span class="accession" title="Reference number: quote it to point people to this spectrum">{accessionId(s.accession)}</span>}
           </p>
         </div>
         <div class="head-actions">
@@ -326,7 +329,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
         >
           <p class="plot-message">{fileUrl ? "Loading spectrum…" : "No data file for this spectrum."}</p>
         </div>
-        {fileUrl && <div class="plot-drop" id="plot-drop" hidden>Drop spectrum files to compare them with this one</div>}
+        {fileUrl && <div class="plot-drop" id="plot-drop" hidden>Drop spectrum files or a figure to compare them with this one</div>}
         <div class="plot-tools">
           {versions.length > 1 && (
             <label>
@@ -357,7 +360,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <p><strong>Check your data against this reference.</strong> Overlay spectra from your computer or from EELSdb on the plot, each in its own colour.</p>
                 </div>
                 <label class="button secondary compare-pick">
-                  <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi" />
+                  <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi,image/*" />
                   Compare with your spectra
                 </label>
                 <div class="picker compare-search">
@@ -370,7 +373,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
                 </div>
                 <div class="compare-empty">
-                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded.</p>
+                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded. To trace a spectrum from a published figure, drop or paste a screenshot of it.</p>
                 </div>
                 <span class="hint" id="compare-status" aria-live="polite"></span>
                 <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>
@@ -673,6 +676,54 @@ export async function spectrumPage(c: Context<AppEnv>) {
           <HistoryTimeline events={history} />
           <div class="dialog-actions">
             <button class="button secondary" type="button" data-close autofocus>Close</button>
+          </div>
+        </dialog>
+      )}
+      {fileUrl && (
+        <dialog id="figure-dialog" class="figure-dialog" aria-labelledby="figure-title">
+          <h2 id="figure-title" tabindex={-1} autofocus>Trace a spectrum from a figure</h2>
+          <div class="figure-body">
+            <ol class="figure-steps">
+              {[1, 2].map((n) => (
+                <li>
+                  <span class="figure-step-title">{n === 1 ? "Click a tick on the energy axis" : "Click a second tick"}</span>
+                  <span class="figure-step-hint">
+                    {n === 1 ? "Choose one with a number under it, then type that number." : "Choose one far from the first, then type its number. Drag the blue handles above the figure to fine-tune either tick."}
+                  </span>
+                  <span class="figure-energy">
+                    <label for={`figure-e${n}`}>Energy</label>
+                    <input type="number" step="any" id={`figure-e${n}`} disabled /> eV
+                  </span>
+                </li>
+              ))}
+              <li>
+                <span class="figure-step-title">Draw over the curve</span>
+                <span class="figure-step-hint">From one end to the other, over the tops of the peaks too. The pink line shows what was traced; draw again over any part it missed.</span>
+                <button type="button" class="link-button" id="figure-clear" hidden>Clear the drawing</button>
+              </li>
+            </ol>
+            <div class="figure-stage">
+              <div class="figure-handles">
+                {[1, 2].map((n) => (
+                  <button type="button" class="figure-handle" data-handle={n - 1} hidden>
+                    <svg width="14" height="14" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <path d="M4.5 4.5 1 8l3.5 3.5M11.5 4.5 15 8l-3.5 3.5M1 8h14" />
+                    </svg>
+                    <span></span>
+                  </button>
+                ))}
+              </div>
+              <canvas id="figure-canvas" class="figure-canvas"></canvas>
+            </div>
+          </div>
+          <p class="notice warning figure-warning" id="figure-warning" role="alert" hidden></p>
+          <div class="figure-name">
+            <label for="figure-name">Name in the legend</label>
+            <input type="text" id="figure-name" maxlength={100} />
+          </div>
+          <div class="dialog-actions">
+            <button class="button secondary" type="button" data-close>Cancel</button>
+            <button class="button" type="button" id="figure-add" disabled>Add to the plot</button>
           </div>
         </dialog>
       )}

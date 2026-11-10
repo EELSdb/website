@@ -26,6 +26,12 @@ Below the plot are two boxes side by side. The left box is "Compare spectra". Th
 ### Compare
 
 - Viewers can add their own files. They choose a file or drop it on the plot. The page reads MSA and text files in JS, and other formats with the shared Pyodide reader (`pyreader.js`). Files never leave the browser.
+- Viewers can also trace a spectrum from a screenshot of a published figure. They paste, drop or choose an image, click two ticks on the energy axis and type their energies, then draw over the curve with a brush 24 screen pixels wide. `digitise.js` looks only under the drawing, so axes, ticks, labels and other curves elsewhere do not matter, and the trace covers only what the viewer drew over:
+  - The curve's colour is the commonest ink colour under the brush, weighted towards the middle of the stroke.
+  - A pixel belongs to the curve when it lies near the line in RGB from that colour to the background, on the curve's side of halfway. Anti-aliased and JPEG-blurred edges are blends of the two colours and pass; other colours do not.
+  - In each column the stroke crosses, the trace takes the run of curve pixels nearest the stroke, at the middle of the run.
+  - The trace becomes a compared spectrum, scaled to this spectrum's height over the same energies, because the figure's intensity scale is unknown.
+  - The tracer does not calibrate the y axis or handle log axes. Two curves of the same colour under the brush can mix; the pink preview shows the viewer when that happens.
 - Viewers can also add other EELSdb spectra. A type-ahead searches `/search/spectra.json?overlaps={slug}`, which returns spectra with an overlapping energy range. It lists spectra that share an edge first, then spectra that share an element. The page draws each one from its `/download/json`.
 - The page draws compared spectra only within the energy range of the reference.
 - "Independent y axes" gives each compared spectrum its own y scale. Each scale has a right-hand axis in the spectrum's colour (`--compare-1` to `--compare-4`). The checkbox is at the bottom of "Adjust the plot", with help text, and shows only while spectra are compared.
@@ -70,6 +76,8 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 - The "Use in HyperSpy" snippet prints the peak energies of the main spectrum, with the `slope_thresh` value that the page used.
 
 ## Alternatives considered
+
+- Tracing a figure from one click on the curve, following its colour outwards column by column. On real figures (JPEG-blurred lines, noise touching axis ticks) the trace jumped onto the axes and stopped at steep edges, and each fix fitted one figure. A drawn stroke tells the tracer where the curve is, and works for any figure.
 
 - **Processing controls in a `<details>` under the plot.** Viewers did not find them.
 - **Values at the pointer in the legend.** uPlot shows "--" while the pointer is off the plot, which looks broken. The tooltip shows values only on hover.

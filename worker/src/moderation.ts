@@ -150,7 +150,7 @@ export async function decide(env: Env, id: number, decision: Decision, notes: st
       .bind(sub.spectrum_id, moderator.id, JSON.stringify({ action: `${sub.kind} ${status.replace("_", " ")}`, notes })),
   ];
   if (sub.kind === "new" && decision === "approve") {
-    statements.push(db.prepare("UPDATE spectra SET status = 'published', published_at = datetime('now') WHERE id = ?").bind(sub.spectrum_id));
+    statements.push(db.prepare("UPDATE spectra SET status = 'published', published_at = datetime('now'), accession = COALESCE(accession, (SELECT COALESCE(MAX(accession), 0) + 1 FROM spectra)) WHERE id = ?").bind(sub.spectrum_id));
   }
   if (sub.kind === "new" && decision === "reject") {
     statements.push(db.prepare("UPDATE spectra SET status = 'rejected' WHERE id = ?").bind(sub.spectrum_id));

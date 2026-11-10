@@ -6,13 +6,14 @@ description: Search and filter EELSdb spectra by element, edge, formula, energy 
 The [browse page](/spectra/) lists every published spectrum and has filters in the side panel.
 On every page of the main site, the **Search spectra** box in the header searches the titles.
 On the [home page](/), click an element on the periodic table to list every spectrum that contains it.
+To open a spectrum from its reference number, such as EELSDB-0042, go to `eelsdb.eu/EELSDB-0042`, or type the number in **Title or description** on the browse page.
 
 ## Filter the list
 
 The filters combine: a spectrum must match all of them.
 
 - Title or description: Text in the specimen name or the contributor's comments.
-- Type: Core loss, low loss, zero loss or X-ray absorption. Select more than one to include each of them.
+- Type: Core loss, low loss, zero loss or X-ray absorption (NEXAFS). Select more than one to include each of them.
 - Phase: Solid, liquid or gas. All phases by default.
 - Formula contains: Text in the chemical formula, for example `TiO2`.
 - Elements: Spectra that contain all the selected elements. Type symbols or names separated by spaces or commas, for example `Fe O`, or choose each one from the list. The number after each element is its spectrum count.

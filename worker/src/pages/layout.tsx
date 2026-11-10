@@ -363,7 +363,7 @@ export const TYPE_NAMES: Record<string, string> = {
   coreloss: "Core loss",
   lowloss: "Low loss",
   zeroloss: "Zero loss",
-  xrayabs: "X-ray absorption",
+  xrayabs: "X-ray absorption (NEXAFS)",
 };
 
 export const TypeBadge = (props: { type: string; boxed?: boolean }) => (

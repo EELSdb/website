@@ -1357,7 +1357,7 @@ if (editing && form.dataset.currentFile) {
 // submitted value, a space-separated list of addresses, so the form works the same without this script.
 {
   const field = $("#f-associated");
-  const TYPES = { coreloss: "Core loss", lowloss: "Low loss", zeroloss: "Zero loss", xrayabs: "X-ray absorption" };
+  const TYPES = { coreloss: "Core loss", lowloss: "Low loss", zeroloss: "Zero loss", xrayabs: "X-ray absorption (NEXAFS)" };
   const attrs = (node, values) => {
     for (const [k, v] of Object.entries(values)) node.setAttribute(k, v);
     return node;

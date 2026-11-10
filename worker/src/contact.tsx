@@ -12,6 +12,7 @@ export const TOPICS: Record<string, string> = {
   spectrum: "A question about a spectrum",
   website: "A problem with the website",
   account: "My account",
+  moderator: "Becoming a moderator",
   other: "Something else",
 };
 const MAX_PER_HOUR = 5;
@@ -118,7 +119,7 @@ contact.get("/contact/", async (c) => {
       if (u && u.origin === new URL(c.req.url).origin && !u.pathname.startsWith("/contact/")) page = safePath(u.pathname);
     } catch {}
   }
-  return c.html(<ContactPage user={user} v={{ ...(await prefill(c, user)), page }} errors={{}} siteKey={c.env.TURNSTILE_SITE_KEY} logOnly={emailIsLogOnly(c.env)} />);
+  return c.html(<ContactPage user={user} v={{ ...(await prefill(c, user)), page, topic: c.req.query("topic") }} errors={{}} siteKey={c.env.TURNSTILE_SITE_KEY} logOnly={emailIsLogOnly(c.env)} />);
 });
 
 contact.get("/contact/sent/", (c) =>

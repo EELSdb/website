@@ -347,7 +347,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
             <p class="hint step-intro" data-prefilled hidden>Some fields are filled in from your file. Please check them.</p>
             <div class="grid-2">
               <Field name="title" label="Specimen name" errors={errors} required>{input("title", v, { required: true, maxlength: 200 })}</Field>
-              <Field name="type" label="Spectrum type" errors={errors} required>
+              <Field name="type" label="Spectrum type" errors={errors} required hint="X-ray absorption means NEXAFS: near-edge fine structure at core edges, up to about 3 keV.">
                 <select id="f-type" name="type" required>
                   <option value="">Choose…</option>
                   {Object.entries(TYPE_NAMES).map(([code, name]) => (

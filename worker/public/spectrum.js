@@ -1,6 +1,7 @@
 // Spectrum page: plot the data file with uPlot and mark exSpy edge onsets for the spectrum's elements.
 
 import { processSpectrum } from "/process.js";
+import { toSpectrum, traceStrokes } from "/digitise.js";
 import { highlightPython, hyperspyCode } from "/snippet.js";
 
 for (const button of document.querySelectorAll("[data-open]")) {
@@ -801,8 +802,215 @@ async function main() {
     list.hidden = !compares.length;
     rebuild();
   };
+  const span = (x) => `${+x[0].toFixed(1)}–${+x.at(-1).toFixed(1)} eV`;
+  const overlaps = (x) => x[0] < data[0].at(-1) && x.at(-1) > data[0][0];
+  // The plot only draws compared spectra within this spectrum's energy range, so one outside it would not show.
+  const addCompare = (c) => {
+    if (!overlaps(c.x)) {
+      status.textContent = `Not added: ${c.name} covers ${span(c.x)}, outside this spectrum's ${span(data[0])}.`;
+      return;
+    }
+    compares.push(c);
+    update();
+    status.textContent = NOTE;
+  };
+  // A figure's intensity scale is unknown: start the trace at the height of this spectrum over the same energies.
+  const fitToMain = (x, y) => {
+    let [lo, hi] = [Infinity, -Infinity];
+    data[0].forEach((e, i) => {
+      if (e >= x[0] && e <= x.at(-1)) [lo, hi] = [Math.min(lo, data[1][i]), Math.max(hi, data[1][i])];
+    });
+    const [ylo, yhi] = [Math.min(...y), Math.max(...y)];
+    return hi > lo && yhi > ylo ? y.map((v) => lo + ((v - ylo) / (yhi - ylo)) * (hi - lo)) : y;
+  };
+  // Screenshots of published figures: the viewer clicks two ticks on the energy axis, types their energies and draws
+  // over a curve to trace it.
+  const figure = document.getElementById("figure-dialog");
+  const traceFigure =
+    figure &&
+    (() => {
+      const BLUE = "#1f6fd6";
+      const BRUSH = 12;
+      const canvas = document.getElementById("figure-canvas");
+      const ctx = canvas.getContext("2d", { willReadFrequently: true });
+      const steps = [...figure.querySelectorAll(".figure-steps > li")];
+      const energies = [document.getElementById("figure-e1"), document.getElementById("figure-e2")];
+      const handles = [...figure.querySelectorAll("[data-handle]")];
+      const clear = document.getElementById("figure-clear");
+      const warning = document.getElementById("figure-warning");
+      const nameInput = document.getElementById("figure-name");
+      const add = document.getElementById("figure-add");
+      // A circle the size of the brush, dark with a white rim so it shows on any figure.
+      const brushCursor = `url("data:image/svg+xml,${encodeURIComponent(
+        `<svg xmlns="http://www.w3.org/2000/svg" width="${2 * BRUSH + 2}" height="${2 * BRUSH + 2}"><circle cx="${BRUSH + 1}" cy="${BRUSH + 1}" r="${BRUSH}" fill="rgb(31 111 214 / 0.15)" stroke="white" stroke-width="2"/><circle cx="${BRUSH + 1}" cy="${BRUSH + 1}" r="${BRUSH}" fill="none" stroke="${BLUE}" stroke-width="1"/></svg>`,
+      )}") ${BRUSH + 1} ${BRUSH + 1}, crosshair`;
+      let bitmap, pixels, ticks, strokes, trace, drawing, hover, done;
+      // The tick whose handle is being dragged, and where on the handle it was grabbed.
+      let grabbed = null;
+      let grabOffset = 0;
+      // Image pixels per screen pixel, so marks and the brush look the same however much the screenshot is scaled.
+      const scale = () => canvas.width / canvas.getBoundingClientRect().width;
+      const at = (e) => {
+        const box = canvas.getBoundingClientRect();
+        return [(e.clientX - box.left) * scale(), (e.clientY - box.top) * scale()];
+      };
+      const energy = (i) => (energies[i].value.trim() !== "" && Number.isFinite(+energies[i].value) ? +energies[i].value : null);
+      const placing = () => ticks.includes(null);
+      // Each placed tick has a handle above the figure, kept inside the strip; its nub points at the tick.
+      const placeHandles = () => {
+        const strip = handles[0].parentElement.getBoundingClientRect();
+        const box = canvas.getBoundingClientRect();
+        handles.forEach((h, i) => {
+          h.hidden = ticks[i] === null;
+          if (h.hidden) return;
+          const ev = energy(i);
+          h.lastElementChild.textContent = ev === null ? `${i + 1}` : `${ev} eV`;
+          h.setAttribute("aria-label", `Tick ${i + 1}${ev === null ? "" : `, ${ev} eV`}. Drag it, or use the arrow keys, to move it.`);
+          const x = box.left - strip.left + (ticks[i] + 0.5) / scale();
+          const left = Math.min(Math.max(x - h.offsetWidth / 2, 0), strip.width - h.offsetWidth);
+          h.style.left = `${left}px`;
+          h.style.setProperty("--nub", `${x - left}px`);
+        });
+      };
+      const moveTick = (i, x) => {
+        x = Math.min(canvas.width - 1, Math.max(0, Math.round(x)));
+        if (x !== ticks[1 - i]) ticks[i] = x;
+        draw();
+      };
+      const path = (points) => {
+        ctx.beginPath();
+        points.forEach(([x, y], i) => (i ? ctx.lineTo(x, y) : ctx.moveTo(x, y)));
+        if (points.length === 1) ctx.lineTo(points[0][0] + 0.01, points[0][1]);
+        ctx.stroke();
+      };
+      const draw = () => {
+        const k = scale();
+        ctx.drawImage(bitmap, 0, 0);
+        ctx.setLineDash([6 * k, 4 * k]);
+        ctx.lineWidth = 1.5 * k;
+        const guides = ticks.map((x, i) => [x, i]).filter(([x]) => x !== null);
+        if (hover !== null && placing()) guides.push([hover, ticks.indexOf(null)]);
+        for (const [x, i] of guides) {
+          ctx.strokeStyle = x === hover && ticks[i] === null ? "rgb(31 111 214 / 0.55)" : BLUE;
+          path([[x + 0.5, 0], [x + 0.5, canvas.height]]);
+        }
+        ctx.setLineDash([]);
+        placeHandles();
+        Object.assign(ctx, { lineCap: "round", lineJoin: "round", lineWidth: 2 * BRUSH * k, strokeStyle: "rgb(31 111 214 / 0.25)" });
+        strokes.forEach(path);
+        if (trace?.length) {
+          Object.assign(ctx, { lineWidth: 2 * k, strokeStyle: "rgb(255 30 140 / 0.9)" });
+          path(trace);
+        }
+
+        const e = [energy(0), energy(1)];
+        const same = e[0] !== null && e[0] === e[1];
+        const complete = [ticks[0] !== null && e[0] !== null, ticks[1] !== null && e[1] !== null && !same, trace?.length > 1];
+        const current = complete.indexOf(false);
+        steps.forEach((li, i) => (li.dataset.state = complete[i] ? "done" : i === current ? "current" : "upcoming"));
+        energies.forEach((input, i) => (input.disabled = ticks[i] === null));
+        clear.hidden = !strokes.length;
+        canvas.style.cursor = placing() ? "crosshair" : brushCursor;
+
+        let problem = same ? "The two ticks need different energies." : strokes.length && !drawing && !trace?.length ? "No curve found under the drawing. Draw right over the line." : "";
+        if (!problem && !complete.includes(false)) {
+          const [x] = toSpectrum(trace, ticks.map((px, i) => ({ px, ev: e[i] })), canvas.height);
+          if (!overlaps(x)) problem = `The trace covers ${span(x)}, outside this spectrum's ${span(data[0])}, so it would not show on the plot. Check the energies of the ticks.`;
+        }
+        warning.textContent = problem;
+        warning.hidden = !problem;
+        add.disabled = complete.includes(false) || !!problem;
+      };
+      canvas.addEventListener("click", (e) => {
+        if (!placing()) return;
+        const x = Math.round(at(e)[0]);
+        if (ticks.includes(x)) return;
+        const i = ticks.indexOf(null);
+        ticks[i] = x;
+        hover = null;
+        draw();
+        energies[i].focus();
+      });
+      canvas.addEventListener("pointerdown", (e) => {
+        if (placing()) return;
+        e.preventDefault();
+        canvas.setPointerCapture(e.pointerId);
+        drawing = true;
+        strokes.push([at(e)]);
+        draw();
+      });
+      canvas.addEventListener("pointermove", (e) => {
+        if (drawing) strokes.at(-1).push(at(e));
+        else if (placing()) hover = Math.round(at(e)[0]);
+        else return;
+        draw();
+      });
+      canvas.addEventListener("pointerleave", () => {
+        if (hover === null) return;
+        hover = null;
+        draw();
+      });
+      for (const type of ["pointerup", "pointercancel"])
+        canvas.addEventListener(type, () => {
+          if (!drawing) return;
+          drawing = false;
+          trace = traceStrokes(pixels, strokes, BRUSH * scale());
+          draw();
+        });
+      for (const input of energies) input.addEventListener("input", draw);
+      handles.forEach((h, i) => {
+        h.addEventListener("pointerdown", (e) => {
+          e.preventDefault();
+          h.setPointerCapture(e.pointerId);
+          h.focus();
+          [grabbed, grabOffset] = [i, ticks[i] - at(e)[0]];
+        });
+        h.addEventListener("pointermove", (e) => grabbed === i && moveTick(i, at(e)[0] + grabOffset));
+        for (const type of ["pointerup", "pointercancel"]) h.addEventListener(type, () => (grabbed = null));
+        h.addEventListener("keydown", (e) => {
+          const step = { ArrowLeft: -1, ArrowRight: 1 }[e.key];
+          if (!step) return;
+          e.preventDefault();
+          moveTick(i, ticks[i] + step * (e.shiftKey ? 10 : 1));
+        });
+      });
+      // The handles follow the figure when the dialog changes size.
+      new ResizeObserver(() => figure.open && draw()).observe(canvas);
+      clear.addEventListener("click", () => {
+        [strokes, trace] = [[], null];
+        draw();
+      });
+      add.addEventListener("click", () => {
+        const [x, y] = toSpectrum(trace, ticks.map((px, i) => ({ px, ev: energy(i) })), canvas.height);
+        done({ name: nameInput.value.trim() || nameInput.placeholder, x, y: fitToMain(x, y) });
+        figure.close();
+      });
+      figure.addEventListener("close", () => done(null));
+      return async (file) => {
+        bitmap = await createImageBitmap(file);
+        [canvas.width, canvas.height] = [bitmap.width, bitmap.height];
+        ctx.drawImage(bitmap, 0, 0);
+        pixels = ctx.getImageData(0, 0, canvas.width, canvas.height);
+        [ticks, strokes, trace, drawing, hover] = [[null, null], [], null, false, null];
+        for (const input of energies) input.value = "";
+        // Pasted screenshots are all called image.png.
+        nameInput.value = nameInput.placeholder = /^image\.\w+$/i.test(file.name) ? "Pasted figure" : file.name;
+        figure.showModal();
+        draw();
+        return new Promise((resolve) => (done = resolve));
+      };
+    })();
   async function addFiles(files) {
     for (const file of files) {
+      if (traceFigure && file.type.startsWith("image/")) {
+        try {
+          const traced = await traceFigure(file);
+          if (traced) addCompare(traced);
+        } catch {
+          status.textContent = `${file.name} could not be opened as an image.`;
+        }
+        continue;
+      }
       const text = /\.(msa|emsa|txt|csv)$/i.test(file.name);
       status.textContent = text ? `Reading ${file.name}…` : "Getting the file reader ready (the first time takes a few seconds)…";
       try {
@@ -812,10 +1020,7 @@ async function main() {
           [x, y] = [order.map((i) => x[i]), order.map((i) => y[i])];
         }
         if (x.length < 2) throw new Error("No spectrum found in this file.");
-        compares.push({ name: file.name, x, y });
-        update();
-        const overlap = x[0] < data[0].at(-1) && x.at(-1) > data[0][0];
-        status.textContent = overlap ? NOTE : `${file.name} does not overlap the energy range of this spectrum.`;
+        addCompare({ name: file.name, x, y });
       } catch (e) {
         status.textContent = `${file.name} could not be read: ${String(e.message).split("\n").filter(Boolean).pop()}`;
       }
@@ -825,7 +1030,7 @@ async function main() {
   const search = document.getElementById("compare-search");
   if (search) {
     const options = document.getElementById("compare-options");
-    const TYPES = { coreloss: "Core loss", lowloss: "Low loss", zeroloss: "Zero loss", xrayabs: "X-ray absorption" };
+    const TYPES = { coreloss: "Core loss", lowloss: "Low loss", zeroloss: "Zero loss", xrayabs: "X-ray absorption (NEXAFS)" };
     let matches = [];
     let active = -1;
     let seq = 0;
@@ -907,6 +1112,14 @@ async function main() {
       }
     });
   }
+  if (traceFigure)
+    addEventListener("paste", (e) => {
+      const images = [...(e.clipboardData?.files ?? [])].filter((f) => f.type.startsWith("image/"));
+      if (images.length && !figure.open) {
+        e.preventDefault();
+        addFiles(images.slice(0, 1));
+      }
+    });
   input?.addEventListener("change", async () => {
     await addFiles([...input.files]);
     input.value = "";

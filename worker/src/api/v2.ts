@@ -3,6 +3,7 @@
 import { OpenAPIHono } from "@hono/zod-openapi";
 import type { Context } from "hono";
 import type { AppEnv } from "../auth";
+import { accessionId, parseAccession } from "../accession";
 import { variantUnits } from "../submit/form";
 import { API_HOST, SITE, loadMany, type SpectrumBundle } from "./format";
 import { DOCUMENT, ListQuery, draftRoute, indexRoute, listRoute, oneRoute, type Spectrum } from "./v2-schema";
@@ -68,7 +69,9 @@ export function spectraFilter(q: z.infer<typeof ListQuery>) {
   }
   for (const k of q.keyword ?? []) add("EXISTS (SELECT 1 FROM spectrum_keywords k WHERE k.spectrum_id = s.id AND k.keyword = ? COLLATE NOCASE)", k.trim());
   if (q.formula) add("s.formula LIKE ? ESCAPE '\\'", like(q.formula));
-  if (q.q) add("(s.title LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')", like(q.q), like(q.q));
+  const accession = q.q ? parseAccession(q.q) : null;
+  if (accession) add("s.accession = ?", accession);
+  else if (q.q) add("(s.title LIKE ? ESCAPE '\\' OR s.description LIKE ? ESCAPE '\\')", like(q.q), like(q.q));
   if (q.author?.length) {
     add(`(${q.author.map(() => "s.author_display LIKE ? ESCAPE '\\' OR s.author_slug = ?").join(" OR ")})`, ...q.author.flatMap((a) => [like(a.trim()), a.trim()]));
   }
@@ -128,6 +131,7 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
   return {
     id: s.id,
     slug: s.slug,
+    accession: s.accession ? accessionId(s.accession) : null,
     url: `${SITE}/spectra/${encodeURIComponent(s.slug)}/`,
     api_url: `${API_HOST}/v2/spectra/${s.id}`,
     title: s.title,
@@ -255,11 +259,11 @@ v2.openapi(listRoute, async (c) => {
 
 v2.openapi(oneRoute, async (c) => {
   const key = c.req.valid("param").id;
-  const row = await c.env.DB.prepare(`SELECT id FROM spectra WHERE ${/^\d+$/.test(key) ? "id" : "slug"} = ? AND status = 'published'`)
-    .bind(/^\d+$/.test(key) ? Number(key) : key)
-    .first<number>("id");
+  const accession = parseAccession(key);
+  const [column, value] = accession ? ["accession", accession] : /^\d+$/.test(key) ? ["id", Number(key)] : ["slug", key];
+  const row = await c.env.DB.prepare(`SELECT id FROM spectra WHERE ${column} = ? AND status = 'published'`).bind(value).first<number>("id");
   const [bundle] = row === null ? [] : await loadMany(c.env.DB, [row]);
-  return bundle ? c.json(formatV2(bundle), 200) : error(c, 404, "not_found", "No published spectrum with this id or slug.");
+  return bundle ? c.json(formatV2(bundle), 200) : error(c, 404, "not_found", "No published spectrum with this id, reference number or slug.");
 });
 
 v2.openAPIRegistry.registerComponent("securitySchemes", "apiToken", { type: "http", scheme: "bearer", description: `An API token from ${SITE}/account/settings/tokens/.` });

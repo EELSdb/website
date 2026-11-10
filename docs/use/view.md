@@ -33,6 +33,25 @@ Type a name or a formula to search, then choose a spectrum.
 To compare with your own files, click **Compare with your spectra** and choose one or more files, or drag the files onto the plot.
 EELSdb reads MSA, CSV, text, DigitalMicrograph, Velox EMD, HyperSpy and XDI files.
 Your browser reads the files. EELSdb does not upload them.
+A file that does not overlap the energy range of this spectrum would not show on the plot, so EELSdb does not add it and says why.
+
+### Trace a spectrum from a published figure
+
+To compare with a spectrum that you only have as a figure, for example in a paper, take a screenshot of the figure.
+Paste it on the spectrum page, drag it onto the plot, or choose it with **Compare with your spectra**.
+
+1. Click a tick on the energy axis that has a number under it, and type that number. A dashed line follows the pointer to show where the tick goes. A blue handle above the figure marks the tick: drag it, or select it and press the arrow keys, to fine-tune it.
+2. Click a second tick, well away from the first, and type its number.
+3. Draw over the curve you want, from one end to the other, with the mouse or a finger. Cover the tops of the peaks too. EELSdb traces the line under your drawing and shows the trace in pink.
+4. If the trace misses part of the curve, draw over that part again. **Clear the drawing** starts the drawing again and keeps the ticks.
+5. Change **Name in the legend** if you like. It starts as the file name.
+6. Click **Add to the plot**.
+
+The steps on the left show what to do next. If the trace falls outside the energy range of this spectrum, usually because of a typing error in a tick's energy, a warning says so and EELSdb does not add it.
+
+The trace covers only the part of the curve that you drew over. It ignores axes, labels and other curves outside your drawing, and takes the colour of the line under the middle of it.
+The trace starts with the height of this spectrum over the same energies, because the figure's own intensity scale is unknown.
+Your browser does the tracing. EELSdb does not upload the screenshot.
 
 Each compared spectrum has its own colour.
 The list in the box shows the compared spectra, and the legend below the plot names them.

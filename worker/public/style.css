@@ -623,6 +623,7 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .cal-table select { min-width: 9rem; }
 .byline { color: var(--muted); margin: 0.35rem 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
 .byline .formula { color: var(--ink); }
+.byline .accession { font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.02em; user-select: all; }
 .plot-panel { margin-top: 1.75rem; }
 .plot { min-height: 360px; position: relative; }
 .plot-busy { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; font-weight: 600; backdrop-filter: blur(4px); background: color-mix(in oklab, var(--bg) 40%, transparent); }
@@ -736,6 +737,67 @@ dialog h2 { margin-top: 0; }
 .download-formats label:has(:checked) { border-color: var(--accent); background: color-mix(in oklab, var(--accent) 8%, transparent); }
 .download-formats input { accent-color: var(--accent); margin: 0; flex: none; }
 .dialog-actions { display: flex; gap: 0.5rem; justify-content: flex-end; margin-top: 1.5rem; flex-wrap: wrap; }
+.figure-dialog { width: min(68rem, 100% - 2rem); }
+.figure-dialog h2 { outline: none; }
+.figure-body { display: grid; grid-template-columns: 18rem minmax(0, 1fr); gap: 1.5rem; align-items: start; margin-top: 1.25rem; }
+.figure-steps { list-style: none; margin: 0; padding: 0; counter-reset: figure-step; display: grid; gap: 1.1rem; }
+.figure-steps li { counter-increment: figure-step; display: grid; grid-template-columns: 1.8rem minmax(0, 1fr); column-gap: 0.75rem; row-gap: 0.3rem; align-items: start; color: var(--muted); }
+.figure-steps li::before {
+  content: counter(figure-step);
+  grid-row: span 3;
+  width: 1.8rem;
+  height: 1.8rem;
+  border-radius: 50%;
+  display: grid;
+  place-items: center;
+  background: var(--sunken);
+  font-size: 0.85rem;
+  font-weight: 600;
+  transition: background-color 0.2s, color 0.2s;
+}
+.figure-steps li[data-state="current"]::before { background: var(--accent); color: var(--on-accent); }
+.figure-steps li[data-state="done"]::before { content: "\2713"; background: var(--accent-soft); color: var(--accent-ink); }
+.figure-steps li > * { grid-column: 2; }
+.figure-step-title { color: var(--ink); font-weight: 600; line-height: 1.35; padding-top: 0.2rem; }
+.figure-steps li[data-state="upcoming"] .figure-step-title { font-weight: 500; color: var(--muted); }
+.figure-step-hint { font-size: 0.85rem; line-height: 1.4; }
+.figure-steps li:not([data-state="current"]) .figure-step-hint { display: none; }
+.figure-energy { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem; font-size: 0.9rem; }
+.figure-energy input { width: 6.5rem; }
+.figure-energy input:disabled { opacity: 0.4; cursor: not-allowed; }
+.figure-steps .link-button { justify-self: start; font-size: 0.85rem; }
+.figure-stage { min-width: 0; }
+.figure-handles { position: relative; height: 2.1rem; }
+.figure-handle {
+  --handle: #1f6fd6;
+  position: absolute;
+  bottom: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  padding: 0.2rem 0.55rem;
+  border: 0;
+  border-radius: 999px;
+  background: var(--handle);
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 600;
+  white-space: nowrap;
+  cursor: ew-resize;
+  touch-action: none;
+  box-shadow: var(--shadow);
+}
+.figure-handle::after { content: ""; position: absolute; top: 100%; left: var(--nub, 50%); transform: translateX(-50%); border: 6px solid transparent; border-bottom: 0; border-top-color: var(--handle); }
+.figure-handle:hover, .figure-handle:active { --handle: #1859ad; }
+.figure-handle:focus-visible { outline: 2px solid var(--focus); outline-offset: 2px; }
+.figure-canvas { display: block; max-width: 100%; max-height: max(12rem, 100dvh - 18rem); margin: 0; border: 1px solid var(--rule); border-radius: 4px; cursor: crosshair; touch-action: none; }
+.figure-warning { margin: 1rem 0 0; }
+.figure-name { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 0.75rem; margin-top: 1.25rem; }
+.figure-name label { font-weight: 600; }
+.figure-name input { flex: 1 1 14rem; max-width: 26rem; }
+@media (max-width: 720px) {
+  .figure-body { grid-template-columns: minmax(0, 1fr); }
+}
 .dialog-actions .button { max-width: 100%; }
 .dl-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 560px) {
