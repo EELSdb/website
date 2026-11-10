@@ -623,7 +623,17 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .cal-table select { min-width: 9rem; }
 .byline { color: var(--muted); margin: 0.35rem 0 0; display: flex; align-items: center; flex-wrap: wrap; gap: 0.6rem; }
 .byline .formula { color: var(--ink); }
-.byline .accession { font-family: var(--mono); font-size: 0.9rem; letter-spacing: 0.02em; user-select: all; }
+.title-row { display: flex; align-items: center; flex-wrap: wrap; gap: 0.4rem 1.25rem; }
+.title-row h1 { margin: 0; }
+/* The heading's line box has more room above the letters than below, so centring alone sits the chip high. */
+.title-row .accession { position: relative; top: 0.2rem; }
+.accession { display: inline-flex; align-items: center; gap: 0.4rem; padding: 0.2rem 0.5rem; border: 1px solid var(--line); border-radius: 4px; background: var(--sunken); color: var(--ink); font: inherit; cursor: pointer; }
+.accession:hover { border-color: var(--muted); }
+.accession code { font-size: 0.85rem; letter-spacing: 0.02em; }
+.accession svg { width: 15px; height: 15px; color: var(--muted); }
+.accession .i-done, .accession.copied .i-copy { display: none; }
+.accession.copied .i-done { display: block; color: var(--type-xrayabs); }
+.accession .copy-label { position: absolute; width: 1px; height: 1px; overflow: hidden; clip-path: inset(50%); white-space: nowrap; }
 .plot-panel { margin-top: 1.75rem; }
 .plot { min-height: 360px; position: relative; }
 .plot-busy { position: absolute; inset: 0; z-index: 3; display: grid; place-items: center; font-weight: 600; backdrop-filter: blur(4px); background: color-mix(in oklab, var(--bg) 40%, transparent); }

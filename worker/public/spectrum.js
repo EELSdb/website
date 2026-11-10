@@ -44,20 +44,21 @@ for (const dialog of document.querySelectorAll("dialog")) {
 for (const button of document.querySelectorAll("dialog [data-close]")) {
   button.addEventListener("click", () => button.closest("dialog").close());
 }
-for (const button of document.querySelectorAll("[data-copy]")) {
+// data-copy names the element whose text to copy; data-copy-text gives the text itself.
+for (const button of document.querySelectorAll("[data-copy], [data-copy-text]")) {
   const label = button.querySelector(".copy-label");
   button.addEventListener("click", async () => {
-    const target = document.getElementById(button.dataset.copy);
+    const target = button.dataset.copy && document.getElementById(button.dataset.copy);
     try {
-      await navigator.clipboard.writeText(target.textContent);
+      await navigator.clipboard.writeText(button.dataset.copyText ?? target.textContent);
       button.classList.add("copied");
-      label.textContent = "Copied";
+      label.textContent = label.dataset.done ?? "Copied";
       setTimeout(() => {
         button.classList.remove("copied");
-        label.textContent = "Copy";
+        label.textContent = label.dataset.idle ?? "Copy";
       }, 1600);
     } catch {
-      getSelection().selectAllChildren(target);
+      if (target) getSelection().selectAllChildren(target);
     }
   });
 }

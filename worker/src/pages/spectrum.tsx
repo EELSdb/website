@@ -71,6 +71,24 @@ function CopyButton(props: { target: string; what: string }) {
   );
 }
 
+/** The reference number; a click copies its permanent link. */
+function AccessionChip(props: { id: string }) {
+  const link = `${SITE}/${props.id}`;
+  return (
+    <button class="accession" type="button" data-copy-text={link} title={`Copy the permanent link: ${link}`} aria-label={`${props.id}: copy the permanent link`}>
+      <code>{props.id}</code>
+      <svg class="i-copy" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <rect x="6.5" y="6.5" width="10" height="11" rx="1.5" />
+        <path d="M13.5 6.5V4a1.5 1.5 0 0 0-1.5-1.5H5A1.5 1.5 0 0 0 3.5 4v8A1.5 1.5 0 0 0 5 13.5h1.5" />
+      </svg>
+      <svg class="i-done" viewBox="0 0 20 20" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M4 10.5l4 4 8-9" />
+      </svg>
+      <span class="copy-label" role="status" data-done="Link copied" data-idle=""></span>
+    </button>
+  );
+}
+
 /** Stored edges typeset as "Fe L<sub>2,3</sub>". */
 function EdgeList(props: { b: SpectrumBundle }) {
   if (!props.b.edges.length) return null;
@@ -246,10 +264,12 @@ export async function spectrumPage(c: Context<AppEnv>) {
       )}
       <div class="spectrum-head">
         <div>
-          <h1>{s.title}</h1>
+          <div class="title-row">
+            <h1>{s.title}</h1>
+            {s.accession && <AccessionChip id={accessionId(s.accession)} />}
+          </div>
           <p class="byline">
             <TypeBadge type={s.type} boxed /> <Formula formula={s.formula} />
-            {s.accession && <span class="accession" title="Reference number: quote it to point people to this spectrum">{accessionId(s.accession)}</span>}
           </p>
         </div>
         <div class="head-actions">
