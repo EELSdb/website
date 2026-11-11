@@ -25,7 +25,7 @@ The browser loads Pyodide core, numpy, micropip, h5py, RosettaSciIO and the `eel
 This spike used `spikes/pyodide/spike.mjs`, with Pyodide 314.0.7 and Python 3.14, on Node 26 and Apple silicon.
 
 - RosettaSciIO 0.15.0 installs with micropip and reads EELSdb MSA files. `eelsdb.checks` runs unchanged.
-- exSpy 0.3.2 installs, but `import exspy` fails with `ModuleNotFoundError: h5py`. The cause is that micropip does not pull in h5py. If you load h5py first with `pyodide.loadPackage("h5py")`, the import works.
+- exSpy 0.3.2 installs, but `import exspy` failed with `ModuleNotFoundError: h5py`. The spike installed RosettaSciIO first, and micropip does not install the dependencies of an extra (here `rosettasciio[hdf5]`, which HyperSpy requires) for a package that is already installed. Installing exSpy on its own, or loading h5py first with `pyodide.loadPackage("h5py")`, avoids this. The site loads h5py first.
 - Pyodide core downloads about 12 MB before compression. RosettaSciIO adds about 6 MB, so the total is about 18 MB.
 - exSpy adds about 38 MB more, for a total of about 56 MB. This download includes scipy, matplotlib, sympy, pillow, h5py and HyperSpy.
 - With a warm cache, the core is ready at 0.8 s and RosettaSciIO at 1.6 s. The file read and checks finish at 3 s. The exSpy import finishes at 7 s.
@@ -45,6 +45,10 @@ This spike loaded HyperSpy plus exSpy in Chrome, to judge interactive processing
 | `smooth_savitzky_golay` per call | 1.2 ms | 1.2 ms |
 
 We ran this spike on a fast Mac on a fast network. HyperSpy and exSpy work in Pyodide. numba is optional, and HyperSpy falls back when numba is missing.
+
+### Check, 2026-11-11
+
+With Pyodide 314.0.7 and micropip 0.11.1, on top of the "Label peaks" stack (numpy, h5py, RosettaSciIO and HyperSpy), exSpy adds about 1.2 MB: exSpy itself (603 kB), pooch and requests. `import exspy` then takes about 3.8 s more.
 
 ## Consequences
 
