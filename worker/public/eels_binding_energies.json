@@ -75,6 +75,24 @@
       }
     },
     "Ag": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 3806.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 3524.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3351.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "Delayed maximum",
         "onset_energy (eV)": 602.0,
@@ -213,6 +231,12 @@
       }
     },
     "Ar": {
+      "K": {
+        "edge": "",
+        "onset_energy (eV)": 3206.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "L1": {
         "edge": "Abrupt onset",
         "onset_energy (eV)": 320.0,
@@ -315,13 +339,13 @@
       },
       "N4": {
         "edge": "",
-        "onset_energy (eV)": 879.0,
+        "onset_energy (eV)": 533.0,
         "relevance": "Minor",
         "threshold": ""
       },
       "N5": {
         "edge": "",
-        "onset_energy (eV)": 533.0,
+        "onset_energy (eV)": 507.0,
         "relevance": "Minor",
         "threshold": ""
       }
@@ -426,6 +450,18 @@
         "onset_energy (eV)": 1550.0,
         "relevance": "Major",
         "threshold": ""
+      },
+      "M4": {
+        "edge": "",
+        "onset_energy (eV)": 70.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "M5": {
+        "edge": "",
+        "onset_energy (eV)": 69.0,
+        "relevance": "Major",
+        "threshold": ""
       }
     },
     "C": {
@@ -437,6 +473,12 @@
       }
     },
     "Ca": {
+      "K": {
+        "edge": "",
+        "onset_energy (eV)": 4039.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "L1": {
         "edge": "Abrupt onset",
         "onset_energy (eV)": 438.0,
@@ -457,6 +499,24 @@
       }
     },
     "Cd": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 4018.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 3727.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3538.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 651.0,
@@ -521,6 +581,12 @@
       }
     },
     "Cl": {
+      "K": {
+        "edge": "",
+        "onset_energy (eV)": 2822.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "L1": {
         "edge": "Abrupt onset",
         "onset_energy (eV)": 270.0,
@@ -794,7 +860,7 @@
       "K": {
         "edge": "",
         "onset_energy (eV)": 7113.0,
-        "relevance": "Minor",
+        "relevance": "Major",
         "threshold": ""
       },
       "L1": {
@@ -1092,9 +1158,33 @@
         "onset_energy (eV)": 620.0,
         "relevance": "Major",
         "threshold": ""
+      },
+      "N4,5": {
+        "edge": "",
+        "onset_energy (eV)": 49.0,
+        "relevance": "Major",
+        "threshold": ""
       }
     },
     "In": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 4238.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 3938.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3730.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 702.0,
@@ -1132,9 +1222,27 @@
         "onset_energy (eV)": 2040.0,
         "relevance": "Major",
         "threshold": ""
+      },
+      "O2": {
+        "edge": "",
+        "onset_energy (eV)": 63.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "O3": {
+        "edge": "",
+        "onset_energy (eV)": 48.0,
+        "relevance": "Major",
+        "threshold": ""
       }
     },
     "K": {
+      "K": {
+        "edge": "",
+        "onset_energy (eV)": 3608.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "L1": {
         "edge": "Abrupt onset",
         "onset_energy (eV)": 377.0,
@@ -1619,15 +1727,15 @@
         "relevance": "Major",
         "threshold": ""
       },
-      "O1": {
-        "edge": "",
-        "onset_energy (eV)": 206.0,
-        "relevance": "Minor",
-        "threshold": ""
-      },
       "O2": {
         "edge": "",
         "onset_energy (eV)": 283.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "O3": {
+        "edge": "",
+        "onset_energy (eV)": 206.0,
         "relevance": "Minor",
         "threshold": ""
       },
@@ -1662,6 +1770,12 @@
       "M5": {
         "edge": "Delayed maximum",
         "onset_energy (eV)": 1960.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "O2": {
+        "edge": "",
+        "onset_energy (eV)": 58.0,
         "relevance": "Major",
         "threshold": ""
       }
@@ -1779,13 +1893,13 @@
       },
       "O1": {
         "edge": "",
-        "onset_energy (eV)": 223.0,
+        "onset_energy (eV)": 310.0,
         "relevance": "Minor",
         "threshold": ""
       },
       "O2": {
         "edge": "",
-        "onset_energy (eV)": 310.0,
+        "onset_energy (eV)": 232.0,
         "relevance": "Minor",
         "threshold": ""
       },
@@ -1817,6 +1931,24 @@
       }
     },
     "Pd": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 3604.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 3330.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3173.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 559.0,
@@ -1838,6 +1970,12 @@
       "M5": {
         "edge": "Delayed maximum",
         "onset_energy (eV)": 335.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "N2,3": {
+        "edge": "",
+        "onset_energy (eV)": 51.0,
         "relevance": "Major",
         "threshold": ""
       }
@@ -1906,13 +2044,13 @@
       "N4": {
         "edge": "Delayed maximum",
         "onset_energy (eV)": 120.0,
-        "relevance": "Minor",
+        "relevance": "Major",
         "threshold": "Broad peak"
       },
       "N5": {
         "edge": "Delayed maximum",
-        "onset_energy (eV)": 121.0,
-        "relevance": "Minor",
+        "onset_energy (eV)": 120.0,
+        "relevance": "Major",
         "threshold": "Broad peak"
       },
       "O2": {
@@ -2275,7 +2413,7 @@
       },
       "O2": {
         "edge": "",
-        "onset_energy (eV)": 254.0,
+        "onset_energy (eV)": 200.0,
         "relevance": "Minor",
         "threshold": ""
       },
@@ -2357,6 +2495,24 @@
       }
     },
     "Rh": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 3412.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 3146.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3004.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 521.0,
@@ -2457,6 +2613,24 @@
       }
     },
     "Ru": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 3224.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 2967.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 2838.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 483.0,
@@ -2471,7 +2645,7 @@
       },
       "M4": {
         "edge": "Delayed maximum",
-        "onset_energy (eV)": 279.0,
+        "onset_energy (eV)": 284.0,
         "relevance": "Major",
         "threshold": ""
       },
@@ -2483,6 +2657,12 @@
       }
     },
     "S": {
+      "K": {
+        "edge": "",
+        "onset_energy (eV)": 2472.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "L1": {
         "edge": "Abrupt onset",
         "onset_energy (eV)": 229.0,
@@ -2572,6 +2752,12 @@
         "onset_energy (eV)": 1436.0,
         "relevance": "Major",
         "threshold": ""
+      },
+      "M4,5": {
+        "edge": "",
+        "onset_energy (eV)": 55.0,
+        "relevance": "Major",
+        "threshold": ""
       }
     },
     "Si": {
@@ -2639,6 +2825,24 @@
       }
     },
     "Sn": {
+      "L1": {
+        "edge": "",
+        "onset_energy (eV)": 4465.0,
+        "relevance": "Minor",
+        "threshold": ""
+      },
+      "L2": {
+        "edge": "",
+        "onset_energy (eV)": 4156.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "L3": {
+        "edge": "",
+        "onset_energy (eV)": 3929.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "M2": {
         "edge": "",
         "onset_energy (eV)": 756.0,
@@ -2873,15 +3077,27 @@
         "relevance": "Major",
         "threshold": "Sharp peak"
       },
+      "N6": {
+        "edge": "",
+        "onset_energy (eV)": 342.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "N7": {
+        "edge": "",
+        "onset_energy (eV)": 333.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "O4": {
         "edge": "Delayed maximum",
-        "onset_energy (eV)": 83.0,
+        "onset_energy (eV)": 93.0,
         "relevance": "Major",
         "threshold": "Broad peak"
       },
       "O5": {
         "edge": "Delayed maximum",
-        "onset_energy (eV)": 83.0,
+        "onset_energy (eV)": 85.0,
         "relevance": "Major",
         "threshold": "Broad peak"
       }
@@ -2983,9 +3199,21 @@
         "relevance": "Major",
         "threshold": "Sharp peak"
       },
+      "N6": {
+        "edge": "",
+        "onset_energy (eV)": 388.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "N7": {
+        "edge": "",
+        "onset_energy (eV)": 377.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
       "O4": {
         "edge": "Delayed maximum",
-        "onset_energy (eV)": 96.0,
+        "onset_energy (eV)": 103.0,
         "relevance": "Major",
         "threshold": "Broad peak"
       },
@@ -3052,6 +3280,12 @@
       "M5": {
         "edge": "Delayed maximum",
         "onset_energy (eV)": 672.0,
+        "relevance": "Major",
+        "threshold": ""
+      },
+      "N4,5": {
+        "edge": "",
+        "onset_energy (eV)": 68.0,
         "relevance": "Major",
         "threshold": ""
       }

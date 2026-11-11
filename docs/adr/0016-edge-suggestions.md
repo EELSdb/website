@@ -40,7 +40,7 @@ Contributors list the absorption edges in their spectrum, for example `C K, Fe L
 - 190 of 243 suggestions match a listed element. Some "unmatched" suggestions are real edges that the contributor did not list, for example O K in CrC.
 - The expected failures are chemical shifts and weak M4,5 edges. Because of chemical shifts, the label menu matters more than the position.
 - The weak points are unlikely candidates (Pu N6,7, At N4,5) and false positives (Sn M4,5 on SrTiO3). Candidates of the listed elements come first, which fixes the first kind when the contributor lists the elements.
-- The exSpy table has gaps. For example, it has no S K edge (2472 eV), so the form cannot suggest it or offer it at a click on the plot.
+- The exSpy table has gaps. For example, it has no S K edge (2472 eV). EELSdb's copy adds 32 major edges below 4.5 keV, and L1 for each element that gains L2,3, with onsets from Elam et al. (2002), and corrects some wrong onsets. These changes are not in exSpy. `worker/public/eels_binding_energies.README.md` lists them.
 
 ## Alternatives considered
 
