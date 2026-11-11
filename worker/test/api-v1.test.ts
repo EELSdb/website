@@ -5,12 +5,6 @@ const get = (path: string, init?: RequestInit) => exports.default.fetch(`https:/
 const getJson = async (path: string) => (await get(path)).json<any>();
 
 describe("API v1 deliberate changes", () => {
-  it("monochromated=0 returns only non-monochromated spectra", async () => {
-    const body = await getJson("/spectra?monochromated=0&per_page=-1");
-    expect(body.length).toBeGreaterThan(0);
-    expect(new Set(body.map((s: any) => s.monochromated))).toEqual(new Set(["No"]));
-  });
-
   it("matches whole edge names", async () => {
     const k = await getJson("/spectra/?edge=K&per_page=-1");
     expect(k.every((s: any) => s.edges.some((e: string) => e.endsWith("_K")))).toBe(true);

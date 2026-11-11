@@ -83,4 +83,5 @@ A field with no value is `null`.
 
 - `files`: Every file of the spectrum, with `role`, `url`, `filename`, `bytes` and `sha256`. See [Files](/docs/use/api/#files).
 - `download_url`: The main data file.
+- `downloads`: The spectrum as MSA, CSV, JSON and HSPY, as in the download menu of the spectrum page.
 - `processing`: The tools and versions that the moderator used at review, with their findings.

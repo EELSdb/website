@@ -43,7 +43,6 @@ exSpy depends on these behaviours (`exspy/data/_eelsdb.py`, 0.3.2 and main, Octo
 `EXPECTED_DIFFS.md` lists each of these deliberate changes:
 
 - The API treats `ge` as ≥ and `lt` as ≤, as the documentation states. The old code treated any value other than `gt` or `eq` as ≤. exSpy sends `gt`, `lt` and `eq`, so it sees no change.
-- `monochromated=0` returns only non-monochromated spectra.
 - The edge filter matches whole edge names. `K` matches `C_K`, not `K_L2,3`.
 - The author search matches names and ORCID iDs only, not emails or logins. An author filter that matches nobody returns `[]`. The live site dropped the filter and listed every post.
 - The API returns corrected energy ranges for files that the old parser misread ([ADR 0010](/docs/adr/0010-migrating-public-data/)).

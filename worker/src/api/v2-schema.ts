@@ -193,6 +193,9 @@ export const Spectrum = z
       }),
     ),
     download_url: text.openapi({ description: "The main data file: the old upload, else the reviewed MSA, else the submitted file." }),
+    downloads: z
+      .strictObject({ msa: text, csv: text, json: text, hspy: text })
+      .openapi({ description: "The spectrum in each download format, as on the spectrum page. MSA, CSV and JSON are converted from the main data file on request." }),
     processing: z
       .array(z.strictObject({ tool: z.string(), version: text, run_at: text }))
       .openapi({ description: "The tools and versions the moderator used at review." }),

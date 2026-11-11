@@ -197,7 +197,8 @@ export function buildSpectraQuery(params: Params): SpectraQuery {
   }
 
   const mono = str(params, "monochromated");
-  if (mono === "1" || mono === "0") {
+  // monochromated=0 is ignored, as on the old site: most old spectra have no value, and exSpy sends it.
+  if (mono === "1") {
     where.push("a.monochromated = ?");
     binds.push(Number(mono));
   }

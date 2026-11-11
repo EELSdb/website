@@ -166,6 +166,10 @@ Each file has a `role`, a `url`, a `filename`, its size in `bytes` and its `sha2
 
 `download_url` is the main file: the `legacy` file, else the `msa` file, else the `original` file.
 
+`downloads` has the links of the download menu on the spectrum page: `msa`, `csv`, `json` and `hspy`.
+Every spectrum has them, including the spectra from the old site, which have no stored MSA file.
+The MSA, CSV and JSON files are converted from the main file when you ask for them.
+
 To keep a copy up to date, ask only for what changed since your last run:
 
 ```sh

@@ -60,6 +60,12 @@ describe("API v2", () => {
     expect(s.energy).toEqual({ min_ev: 1700, max_ev: 2574, step_ev: 0.5 });
     expect(s.reference).toMatchObject({ doi: "10.1021/acsnano.9b09284", doi_url: "https://doi.org/10.1021/acsnano.9b09284", year: 2020 });
     expect(s.download_url).toBe("https://eelsdb.eu/wp-content/uploads/2023/10/Y20.txt");
+    expect(s.downloads).toEqual({
+      msa: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/msa",
+      csv: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/csv",
+      json: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/json",
+      hspy: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/hspy",
+    });
     expect(s.associated[0]).toMatchObject({ title: "MLC Nanotube YS-TaS2", type: "coreloss" });
     expect((await get("/spectra/999999")).status).toBe(404);
   });

@@ -94,7 +94,11 @@ def write_hspy(path, energy, intensity, title, acq, reference, eels=True):
     """
     from rsciio.hspy import file_writer
 
-    energy = np.asarray(energy, float)
+    energy, intensity = np.asarray(energy, float), np.asarray(intensity, float)
+    if np.any(np.diff(energy) <= 0):
+        # HyperSpy rejects a non-uniform axis that is not strictly increasing, and some old files repeat an energy.
+        energy, keep = np.unique(energy, return_index=True)
+        intensity = intensity[keep]
     steps = np.diff(energy)
     uniform = steps.size == 0 or np.allclose(steps, steps[0], rtol=1e-6)
     axis = {"units": "eV", "name": "Energy loss" if eels else "Energy", "navigate": False}
@@ -110,7 +114,7 @@ def write_hspy(path, energy, intensity, title, acq, reference, eels=True):
     # The keys HyperSpy's own save passes; RosettaSciIO's writer reads every one of them. package_info names the
     # package with the signal class, which HyperSpy checks on load: exSpy provides EELSSpectrum.
     file_writer(str(path), {
-        "data": np.asarray(intensity, float), "axes": [axis], "metadata": metadata, "original_metadata": {},
+        "data": intensity, "axes": [axis], "metadata": metadata, "original_metadata": {},
         "tmp_parameters": {}, "attributes": {"_lazy": False}, "learning_results": {}, "models": {},
         "package_info": {"package": "exspy", "package_version": ""} if eels else {"package": "hyperspy", "package_version": ""},
     })

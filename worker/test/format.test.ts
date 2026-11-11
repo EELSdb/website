@@ -32,5 +32,9 @@ it("formats migrated spectra like their recorded v1 objects", async () => {
     }
   }
   // WordPress gave one associated spectrum a null type; the formatter uses the spectrum's real type.
-  expect(Object.keys(diffs)).toEqual([expect.stringMatching(/^associated_spectra: .*titanium-dioxide-5.*"type":null/)]);
+  // One spectrum listed "No" for "no elements", which the seed drops.
+  expect(Object.keys(diffs)).toHaveLength(2);
+  expect(Object.keys(diffs)).toEqual(
+    expect.arrayContaining([expect.stringMatching(/^associated_spectra: .*titanium-dioxide-5.*"type":null/), expect.stringMatching(/^elements: \["No"\] -> /)]),
+  );
 });

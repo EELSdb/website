@@ -9,9 +9,6 @@ The replay test (`worker/test/api-v1-replay.test.ts`) runs every recorded reques
     "spectra/order-author-DESC": "sort by author"
   },
   "membership": {
-    "spectra/monochromated-0": "monochromated=0 filters",
-    "spectra/exspy-monochromated-0-slash": "monochromated=0 filters",
-    "spectra/exspy-monochromated-0-noslash": "monochromated=0 filters",
     "spectra/order-ref_year-ASC": "empty meta rows",
     "spectra/order-ref_year-DESC": "empty meta rows"
   },
@@ -86,10 +83,6 @@ The 8 files with a wrong `XPERCHAN` already had the right range in the live API 
 ### `ge` means "greater than or equal" (`same_as`)
 
 The live API treated every compare value except `gt` and `eq` as "less than or equal", including the documented `ge`. The new API treats `ge` like `gt` (≥). exSpy sends only `gt`, `lt` and `eq`, so it sees no change.
-
-### `monochromated=0` returns only non-monochromated spectra (`membership`)
-
-The live API ignored `monochromated=0` (all spectra). The new API returns only spectra recorded as not monochromated, which is what exSpy users asking for `monochromated=False` expect. `monochromated=1` is unchanged.
 
 ### `order=author` (`differs`)
 

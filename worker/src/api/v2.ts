@@ -113,6 +113,13 @@ function measured(value: unknown, source: unknown, uncertainty: unknown, unit: s
 
 const fileUrl = (key: string) => `${SITE}/${key.split("/").map(encodeURIComponent).join("/")}`;
 
+/** The links of the spectrum page's download menu (pages/download.ts), which converts the main file on request. */
+function downloads(b: SpectrumBundle) {
+  const url = (format: string) => `${SITE}/spectra/${encodeURIComponent(b.spectrum.slug)}/download/${format}`;
+  const converted = (format: string) => (b.legacyFile ? url(format) : null);
+  return { msa: converted("msa"), csv: converted("csv"), json: converted("json"), hspy: b.files.some((f) => f.role === "hspy") ? url("hspy") : null };
+}
+
 export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
   const s = b.spectrum;
   const a = b.acquisition;
@@ -218,6 +225,7 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
         media_type: f.media_type,
       })),
     download_url: b.legacyFile ? fileUrl(b.legacyFile) : null,
+    downloads: downloads(b),
     processing: b.processing as z.infer<typeof Spectrum>["processing"],
   };
 }

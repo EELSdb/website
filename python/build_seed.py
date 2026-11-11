@@ -128,7 +128,8 @@ def spectrum_rows(s, rank, ids_by_slug, manifest, analysis, accession):
         "legacy_v1": json.dumps(legacy, ensure_ascii=False, separators=(",", ":")),
     })]
 
-    for i, el in enumerate(dict.fromkeys(s.get("elements", []))):
+    # The old site used "No" for "no elements"; no spectrum is of nobelium.
+    for i, el in enumerate(dict.fromkeys(e for e in s.get("elements", []) if e != "No")):
         out.append(insert("spectrum_elements", {"spectrum_id": sid, "element": el, "position": i}))
     for i, edge in enumerate(dict.fromkeys(s.get("edges", []))):
         el, _, name = edge.partition("_")
