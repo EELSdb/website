@@ -39,8 +39,8 @@ The repository does not contain the spectrum files. They live in `data/cache/` a
 - 224 of the 273 MSA files contain no acquisition metadata.
 - The old edge table disagreed with exSpy for 59 of 154 comparable edges. It stored combined edges such as L2,3 as one value between the two onsets. For NiO it stored 864 eV, against 855 and 872 eV.
 - The old upload parser did arithmetic on the first column of every line. Under PHP 7, a blank line or a header line without `#` became energy 0 with no warning. Do not trust old derived min/max energies.
-- RosettaSciIO read all 273 MSA files correctly. It keeps padded keys (`BEAMKV   -kV`), so the reader must normalise them.
-- MSA files can leave `#OFFSET` and `#XPERCHAN` blank when `#DATATYPE` is XY. The 2016 Corex files do this. If a blank header line has no trailing space, RosettaSciIO uses a 0, 1, 2… axis with no warning. The reader therefore checks the raw header values.
+- RosettaSciIO read the headers of all 273 MSA files. It keeps padded keys (`BEAMKV   -kV`), so the reader must normalise them.
+- For `#DATATYPE: XY`, RosettaSciIO 0.15 ignores the X column and builds an even axis from `#OFFSET` and `#XPERCHAN`, with no warning. Uneven or wrong headers therefore give wrong energies: in November 2026, 793 of the 1,598 XY MSA files in `data/cache/files` were more than 0.01 eV off, and a Corex file was up to 7.9 eV off. Blank `#OFFSET`/`#XPERCHAN` give `""` or a 0, 1, 2… axis. The reader therefore reads the X column itself, and HyperSpy users should load the HSPY files.
 - A `DATATYPE: Y` file with no axis now fails with a clear error. EMSA 1.0 has not changed, so the age of a file does not matter.
 
 ## Clean-up at import
