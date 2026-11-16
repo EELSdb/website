@@ -11,6 +11,7 @@ for (const button of document.querySelectorAll("[data-open]")) {
   });
 }
 const downloadCopy = document.getElementById("download-copy");
+const downloadStatus = document.getElementById("download-status");
 for (const radio of document.querySelectorAll("[name=download-format]")) {
   radio.addEventListener("change", () => {
     const link = document.getElementById("download-link");
@@ -18,13 +19,14 @@ for (const radio of document.querySelectorAll("[name=download-format]")) {
     link.download = radio.dataset.name;
     link.querySelector(".dl-name").textContent = `Download ${radio.dataset.name}`;
     downloadCopy.disabled = !radio.dataset.text;
+    downloadStatus.hidden = true;
     downloadCopy.title = radio.dataset.text ? "" : "This format is not text, so it cannot be copied. Download it instead.";
   });
 }
 // Copies the chosen format's text, exactly as the file would hold it.
 downloadCopy?.addEventListener("click", async () => {
-  const url = document.querySelector("[name=download-format]:checked").value;
-  const idle = downloadCopy.textContent;
+  const radio = document.querySelector("[name=download-format]:checked");
+  const url = radio.value;
   try {
     // Safari allows a clipboard write only if it starts in the click, so the text goes in as a promise.
     const text = fetch(url).then(async (res) => {
@@ -32,11 +34,10 @@ downloadCopy?.addEventListener("click", async () => {
       return new Blob([await res.text()], { type: "text/plain" });
     });
     await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
-    downloadCopy.textContent = "Copied";
+    showCopyResult(downloadStatus, true, `Copied ${radio.dataset.name}. Paste it into another program.`);
   } catch {
-    downloadCopy.textContent = "Copy failed: download instead";
+    showCopyResult(downloadStatus, false, "Your browser did not allow the copy. Download the file instead.");
   }
-  setTimeout(() => (downloadCopy.textContent = idle), 2000);
 });
 // The usage dialog shows the spectrum's usage page, fetched when it first opens.
 const usageLink = document.querySelector("[data-open=usage-dialog]");
@@ -120,6 +121,13 @@ function parseSpectrum(text) {
 }
 
 const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
+/** The result of a clipboard copy in a dialog: a green box when it worked, a warning when it did not. */
+const showCopyResult = (box, ok, text) => {
+  box.className = `notice copy-result ${ok ? "success" : "warning"}`;
+  box.textContent = text;
+  box.hidden = false;
+};
 
 /** A colour token resolved for canvas drawing (tokens use light-dark(), which only the cascade resolves). */
 const probe = document.createElement("span");
@@ -808,8 +816,11 @@ async function main() {
     import("/quantify.js").then(({ quantify }) => {
       const q = quantify(qx, qy, JSON.parse(el.dataset.edges || "[]"), table, quantInfo, { backgroundSubtracted: quantInfo.bgsub });
       const pct = (f) => `${(100 * f).toFixed(f < 0.1 ? 1 : 0)}%`;
-      const skipped = q.skipped?.length
-        ? `<p class="hint">Left out: ${q.skipped.map((k) => `${esc(k.edge)} (${esc(k.reason)})`).join("; ")}.</p>`
+      // One sentence per reason: "La M4,5: only K and L2,3 edges have hydrogenic cross-sections."
+      const reasons = new Map();
+      for (const k of q.skipped ?? []) reasons.set(k.reason, [...(reasons.get(k.reason) ?? []), k]);
+      const skipped = reasons.size
+        ? `<div class="notice warning quant-skipped" role="note"><strong>Left out</strong>${[...reasons].map(([reason, ks]) => `<p>${ks.map((k) => esc(k.edge)).join(", ")}: ${esc(reason)}.</p>`).join("")}</div>`
         : "";
       if (q.error) {
         quantResult.innerHTML = `<p class="hint">Not possible for this spectrum: it ${esc(q.error)}</p>${skipped}`;
@@ -823,7 +834,7 @@ async function main() {
       quantResult.innerHTML = `<table class="quant-table"><thead><tr><th>Element</th><th>Edge</th><th class="num">Atoms</th><th class="num">Ratio</th></tr></thead><tbody>${rows}</tbody></table>
 <p class="hint">An estimate, often 10–20% out, and worse for L edges with strong white lines. It compares the counts in a ${+q.delta.toFixed(1)} eV window after each edge, above a power-law background, with hydrogenic cross-sections for ${quantInfo.E0} kV, ${angle}. Only the elements listed are counted.</p>${skipped}`;
       const summary = document.getElementById("quant-summary");
-      summary.innerHTML = `<button type="button" title="Show the quantification">≈ ${q.elements.map((e) => `${esc(e.element)} ${pct(e.fraction)}`).join(" · ")}</button> <a class="help-link" href="/docs/use/quantify/" title="How this is calculated, and why to treat it with care" aria-label="How quick quantification works">?</a>`;
+      summary.innerHTML = `<button type="button">≈ ${q.elements.map((e) => `${esc(e.element)} ${pct(e.fraction)}`).join(" · ")}</button> <a class="help-link" href="/docs/use/quantify/" data-tip="How this is calculated, and why to treat it with care" aria-label="How quick quantification works: how it is calculated, and why to treat it with care">?</a>`;
       summary.querySelector("button").addEventListener("click", () => {
         const tab = document.querySelector("[name=tool-tab][value=analyse]");
         tab.checked = true;
@@ -1190,7 +1201,8 @@ async function main() {
               li.id = `compare-opt-${i}`;
               li.setAttribute("role", "option");
               li.innerHTML = '<span></span><span class="n"></span>';
-              li.firstChild.textContent = s.name;
+              // The reference number stays on one line: browsers break after its hyphen.
+              li.firstChild.append(s.title, ...(s.accession ? [" ", Object.assign(document.createElement("span"), { className: "acc", textContent: `(${s.accession})` })] : []));
               li.lastChild.textContent = [s.formula, TYPES[s.type], range(s)].filter(Boolean).join(" · ");
               li.addEventListener("mousedown", (e) => e.preventDefault());
               li.addEventListener("click", () => pick(matches[i]));
@@ -1448,7 +1460,7 @@ ${parts.join("\n")}
   const canCopy = () =>
     typeof ClipboardItem === "function" && (choice("export-format") === "png" || !!ClipboardItem.supports?.("image/svg+xml"));
   const syncExport = () => {
-    exportStatus.textContent = "";
+    exportStatus.hidden = true;
     copyButton.disabled = !canCopy();
     copyButton.title = copyButton.disabled ? "This browser cannot copy this image. Save it instead." : "";
   };
@@ -1459,9 +1471,9 @@ ${parts.join("\n")}
     try {
       // Safari allows a clipboard write only if it starts in the click, so the image goes in as a promise.
       await navigator.clipboard.write([new ClipboardItem({ [type]: render() })]);
-      exportStatus.textContent = "Copied. Paste it into your document or slides.";
+      showCopyResult(exportStatus, true, "Image copied. Paste it into your document or slides.");
     } catch {
-      exportStatus.textContent = "Your browser did not allow the copy. Save the image instead.";
+      showCopyResult(exportStatus, false, "Your browser did not allow the copy. Save the image instead.");
     }
   });
   document.getElementById("export-save").addEventListener("click", async () => {

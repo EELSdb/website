@@ -49,6 +49,7 @@ describe("quick quantification", () => {
     expect(quantify(x, y, ["B_K"], (table as any).elements, acq).error).toMatch(/two elements/);
     expect(quantify(x, y, ["B_K", "N_K"], (table as any).elements, { E0: 200, beta: null }).error).toMatch(/collection angle/);
     const q = quantify(x, y, ["B_K", "N_K", "Fe_M2,3"], (table as any).elements, acq);
-    expect(q.skipped).toContainEqual({ edge: "Fe M2,3", reason: "no hydrogenic cross-section (only K and L2,3 edges)" });
+    expect(q.skipped).toContainEqual({ element: "Fe", edge: "Fe M2,3", reason: "only K and L2,3 edges have hydrogenic cross-sections" });
+    expect(quantify(x, y, ["B_K", "N_K", "B_L1"], (table as any).elements, acq).skipped).toEqual([]);
   });
 });

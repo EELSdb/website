@@ -19,7 +19,7 @@ The page quantifies a spectrum when all of these are true:
 - It has K or L2,3 edges of at least two elements within its energy range, listed under **Edges**.
 
 Otherwise the **Analyse** tab says what is missing.
-Edges of other types (M, N and L1) are left out and listed under the table.
+Edges of other types (M, N and L1) are left out. A warning under the table lists them with the reason, except for minor edges of elements that are measured from another edge.
 If an element has both a K and an L2,3 edge in range, the page uses the K edge.
 
 ## How it is calculated

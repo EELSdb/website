@@ -357,8 +357,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <label><input type="radio" name="export-theme" value="dark" /><span>Dark</span></label>
                 </div>
               </div>
-              <p class="hint export-status" id="export-status" aria-live="polite"></p>
+              <p class="notice copy-result" id="export-status" role="status" hidden></p>
               <div class="dialog-actions">
+                <button class="button secondary dialog-close" type="button" popovertarget="save-plot" popovertargetaction="hide">Close</button>
                 <button class="button secondary" type="button" id="export-copy">Copy image</button>
                 <button class="button" type="button" id="export-save">Save image</button>
               </div>
@@ -435,7 +436,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </svg>
                   <input type="search" id="compare-search" data-slug={s.slug} autocomplete="off" placeholder="Or an EELSdb spectrum" aria-label="Compare with an EELSdb spectrum"
                     role="combobox" aria-autocomplete="list" aria-expanded="false" aria-controls="compare-options" />
-                  <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
+                  <ul class="picker-list spectrum-options" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
                 </div>
                 <div class="compare-empty">
                   <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD and HSPY files, and X-ray absorption files (XDI, SPEC, Athena, NeXus and beamline columns), are read in your browser and never uploaded. To trace a spectrum from a published figure, drop or paste a screenshot of it.</p>
@@ -510,7 +511,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                 <section class="quant" aria-labelledby="quant-title">
                   <h3 id="quant-title">
                     Quick quantification{" "}
-                    <a class="help-link" href="/docs/use/quantify/" title="How this is calculated, and why to treat it with care" aria-label="How quick quantification works">?</a>
+                    <a class="help-link" href="/docs/use/quantify/" data-tip="How this is calculated, and why to treat it with care" aria-label="How quick quantification works: how it is calculated, and why to treat it with care">?</a>
                   </h3>
                   {quant ? (
                     <div id="quant-result" aria-live="polite"><p class="hint">Calculating…</p></div>
@@ -761,8 +762,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
               </ul>
             </>
           )}
+          <p class="notice copy-result" id="download-status" role="status" hidden></p>
           <div class="dialog-actions">
-            <button class="button secondary" type="button" data-close>Close</button>
+            <button class="button secondary dialog-close" type="button" data-close>Close</button>
             <button class="button secondary" type="button" id="download-copy" disabled={!TEXT_FILE.test(downloads[0]?.name ?? "")}>
               Copy to clipboard
             </button>

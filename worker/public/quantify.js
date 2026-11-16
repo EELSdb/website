@@ -165,16 +165,16 @@ export function quantify(x, y, edges, table, { E0, alpha = 0, beta }, { backgrou
     const Z = SYMBOLS.indexOf(element) + 1;
     const shell = edge === "K" ? "K" : edge === "L2,3" || edge === "L3" ? "L3" : null;
     if (!shell || !t || !Z) {
-      skipped.push({ edge: `${element} ${edge}`, reason: "no hydrogenic cross-section (only K and L2,3 edges)" });
+      skipped.push({ element, edge: `${element} ${edge}`, reason: "only K and L2,3 edges have hydrogenic cross-sections" });
       continue;
     }
     if (shell === "L3" && (Z < 11 || !t.L1)) {
-      skipped.push({ edge: `${element} ${edge}`, reason: "no hydrogenic L cross-section for this element" });
+      skipped.push({ element, edge: `${element} ${edge}`, reason: "the hydrogenic L cross-section needs an L1 onset, which the edge table lacks for this element" });
       continue;
     }
     const onset = t[shell]["onset_energy (eV)"];
     if (!(onset > x[0] && onset < x.at(-1))) {
-      skipped.push({ edge: `${element} ${edge}`, reason: "outside the energy range" });
+      skipped.push({ element, edge: `${element} ${edge}`, reason: "outside the energy range of the spectrum" });
       continue;
     }
     // One edge per element: the K edge where both are in range.
@@ -205,7 +205,7 @@ export function quantify(x, y, edges, table, { E0, alpha = 0, beta }, { backgrou
       const idx = x.map((_, k) => k).filter((k) => x[k] >= lo && x[k] <= e.onset - 3);
       const fit = fitPowerLaw(idx.map((k) => x[k]), idx.map((k) => y[k]));
       if (!fit) {
-        skipped.push({ edge: `${e.element} ${e.edge}`, reason: "no power-law background fits before the edge" });
+        skipped.push({ element: e.element, edge: `${e.element} ${e.edge}`, reason: "no power-law background fits before the edge" });
         continue;
       }
       background = (k) => fit(x[k]);
@@ -217,5 +217,7 @@ export function quantify(x, y, edges, table, { E0, alpha = 0, beta }, { backgrou
   if (out.length < 2) return { error: "fewer than two edges could be measured.", skipped };
   if (out.some((e) => !(e.n > 0))) return { error: "an edge has no counts above the background.", skipped };
   const total = out.reduce((s, e) => s + e.n, 0);
-  return { elements: out.map(({ n, ...e }) => ({ ...e, fraction: n / total })), delta, skipped };
+  // Other edges of an element that was measured (Co L1 beside Co L2,3) do not matter.
+  const measured = new Set(out.map((e) => e.element));
+  return { elements: out.map(({ n, ...e }) => ({ ...e, fraction: n / total })), delta, skipped: skipped.filter((k) => !measured.has(k.element)) };
 }

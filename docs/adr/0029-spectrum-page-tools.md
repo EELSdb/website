@@ -47,6 +47,7 @@ New tools go in one of the tabs by that rule, and a short result that viewers sh
 
 The Export popover has two parts. At the top is the permanent link (the reference-number link, `https://eelsdb.eu/EELSDB-0017`, or the page address for a spectrum without one) with a copy button, as in the citation dialog. Below it are the image choices, Format (PNG or SVG) and Background (light or dark), then two actions at the bottom: "Copy image" and "Save image".
 
+- Both the Export popover and the Download dialog have Close on the left and their actions on the right. A copy shows its result in a green box (or a warning if the browser refused), not in the button's label.
 - The popover is only about the image and the link. Data is in the Download dialog, so the Export button's image icon matches what it does.
 - Safari allows a clipboard write only if it starts in the click, so the page passes the image to `ClipboardItem` as a promise. Every browser copies PNG; "Copy image" is disabled for SVG where `ClipboardItem.supports("image/svg+xml")` is false. If the browser refuses the write, the popover says so.
 

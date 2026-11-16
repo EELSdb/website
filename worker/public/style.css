@@ -511,6 +511,14 @@ a.chip:hover { background: var(--accent-soft); }
 .picker-list b { min-width: 1.6rem; font-weight: 600; }
 .picker-list .n { margin-left: auto; font-size: 0.8rem; color: var(--muted); font-variant-numeric: tabular-nums; }
 .picker-list [aria-selected="true"] { background: var(--sunken); }
+/* Spectrum names with reference numbers are long: the details go on a line of their own. */
+.spectrum-options li { flex-direction: column; align-items: stretch; gap: 0.1rem; }
+.spectrum-options .n { margin-left: 0; }
+.spectrum-options .acc { white-space: nowrap; color: var(--muted); }
+.compare-search .picker-list { right: auto; width: max(100%, 26rem); }
+@media (max-width: 560px) {
+  .compare-search .picker-list { right: 0; width: auto; }
+}
 .picker-list .none { color: var(--muted); cursor: default; }
 .picker-list .empty { color: var(--muted); }
 
@@ -658,6 +666,12 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .analyse-panel h3 { margin: 0 0 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
 .help-link { display: inline-grid; place-items: center; width: 1.15rem; height: 1.15rem; border: 1px solid var(--line); border-radius: 50%; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-decoration: none; line-height: 1; }
 .help-link:hover, .help-link:focus-visible { color: var(--ink); border-color: var(--accent); }
+/* Shows at once, unlike the browser's title tooltip. */
+.help-link[data-tip] { position: relative; }
+.help-link[data-tip]::after { content: attr(data-tip); position: absolute; z-index: 20; bottom: calc(100% + 0.4rem); left: 50%; translate: -50% 0; width: max-content; max-width: 16rem; padding: 0.4rem 0.6rem; border-radius: 6px; background: var(--ink); color: var(--bg); font-size: 0.8rem; font-weight: 500; line-height: 1.35; text-align: center; white-space: normal; pointer-events: none; opacity: 0; visibility: hidden; }
+.help-link[data-tip]:hover::after, .help-link[data-tip]:focus-visible::after { opacity: 1; visibility: visible; }
+.quant-skipped { margin: 0.75rem 0 0; padding: 0.6rem 0.9rem; font-size: 0.85rem; }
+.quant-skipped p { margin: 0.2rem 0 0; }
 .quant-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
 .quant-table th, .quant-table td { text-align: left; padding: 0.3rem 0.5rem 0.3rem 0; border-bottom: 1px solid var(--rule); }
 .quant-table td.num, .quant-table th.num { text-align: right; }
@@ -823,11 +837,13 @@ dialog h2 { margin-top: 0; }
   .figure-body { grid-template-columns: minmax(0, 1fr); }
 }
 .dialog-actions .button { max-width: 100%; }
+.dialog-actions .dialog-close { margin-right: auto; }
 .dl-name { overflow: hidden; text-overflow: ellipsis; min-width: 0; }
 @media (max-width: 560px) {
   .cite-text, .cite-block pre { padding-right: 1rem; }
   .copy { position: static; margin-top: 0.5rem; }
   .dialog-actions { flex-direction: column-reverse; }
+  .dialog-actions .dialog-close { margin-right: 0; }
   .dialog-actions .button { justify-content: center; }
   .plot-hint { margin-left: 0; }
 }
@@ -1380,8 +1396,7 @@ html:not(.js) .picture-file label { display: none; }
 .segmented span:hover { background: var(--sunken); }
 .segmented input:checked + span { background: var(--ink); color: var(--bg); }
 .segmented label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; position: relative; }
-.save-plot .export-status { margin: 0.75rem 0 0; }
-.save-plot .export-status:empty { display: none; }
+.copy-result { margin: 1rem 0 0; padding: 0.6rem 0.9rem; font-size: 0.875rem; }
 .save-plot .export-heading { margin: 0 0 0.5rem; font-size: 0.95rem; }
 .save-plot .export-image { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
 .save-plot .export-image + p { margin-bottom: 0.75rem; }

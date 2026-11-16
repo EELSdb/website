@@ -1399,7 +1399,7 @@ if (editing && form.dataset.currentFile) {
     "aria-expanded": "false",
     "aria-controls": "associated-list",
   });
-  const list = attrs(el("ul", { className: "picker-list", id: "associated-list", hidden: true }), { role: "listbox", "aria-label": "Matching spectra" });
+  const list = attrs(el("ul", { className: "picker-list spectrum-options", id: "associated-list", hidden: true }), { role: "listbox", "aria-label": "Matching spectra" });
   box.append(chips, input, list);
   field.after(box);
   field.hidden = true;
@@ -1461,7 +1461,7 @@ if (editing && form.dataset.currentFile) {
     list.replaceChildren(
       ...(matches.length
         ? matches.map((s, i) => {
-            const li = attrs(el("li", { id: `associated-opt-${i}` }, el("span", { textContent: s.name }), el("span", { className: "n", textContent: [s.formula, TYPES[s.type], s.author].filter(Boolean).join(" · ") })), { role: "option" });
+            const li = attrs(el("li", { id: `associated-opt-${i}` }, el("span", {}, s.title, ...(s.accession ? [" ", el("span", { className: "acc", textContent: `(${s.accession})` })] : [])), el("span", { className: "n", textContent: [s.formula, TYPES[s.type], s.author].filter(Boolean).join(" · ") })), { role: "option" });
             li.addEventListener("mousedown", (e) => e.preventDefault());
             li.addEventListener("click", () => add(matches[i]));
             return li;
