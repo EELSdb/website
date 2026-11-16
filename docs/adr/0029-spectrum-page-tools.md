@@ -42,6 +42,13 @@ Below the plot are two boxes side by side. The left box is "Compare spectra". Th
 
 ### Export
 
+The Export popover copies to the clipboard or saves a file.
+
+- "Copy image" puts a PNG of the view, in the light theme, on the clipboard, for pasting into slides and documents. Safari allows a clipboard write only if it starts in the click, so the page passes the image to `ClipboardItem` as a promise.
+- "Copy data" puts the plotted values within the energies in view on the clipboard as tab-separated text with a header row, which spreadsheets and plotting programs split into columns. It copies the values after processing, with compared spectra and fits as more columns (gaps where a spectrum has no value at an energy). A log axis hides values of zero and below; the copy keeps them.
+- "Copy permalink" copies the reference-number link (`https://eelsdb.eu/EELSDB-0017`), or the page address for a spectrum without one.
+- If the browser refuses the write, the popover says so and points to the file buttons.
+
 Viewers can export the current view as PNG or SVG, in light or dark. The page draws a second uPlot off-screen at 1200 × 560 in the chosen theme. uPlot draws only to canvas. The page therefore builds the SVG from the scales and ticks of that uPlot (`_splits`, `_values`, `_size`). These are internal fields of uPlot 1.6. Each export states the processing that the viewer applied.
 
 ### View processing

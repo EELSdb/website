@@ -1357,6 +1357,8 @@ html:not(.js) .picture-file label { display: none; }
 .save-plot { margin: auto; width: min(26rem, 100% - 2rem); padding: 1.25rem 1.5rem 1.5rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .save-plot h2 { margin-top: 0; }
 .save-plot p { margin: 0 0 1rem; }
+.save-grid .save-wide { grid-column: span 2; }
+.save-plot .copy-status:empty { display: none; }
 .save-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: 0.5rem 0.75rem; align-items: center; font-size: 0.875rem; }
 .plot .axis-drag { cursor: ns-resize; touch-action: none; }
 .plot .axis-drag::before { content: ""; position: absolute; left: 0; right: 0; height: 50%; background: currentColor; opacity: 0.1; pointer-events: none; visibility: hidden; }

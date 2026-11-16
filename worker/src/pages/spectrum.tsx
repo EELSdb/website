@@ -310,8 +310,12 @@ export async function spectrumPage(c: Context<AppEnv>) {
             </button>
             <div id="save-plot" class="save-plot" popover="auto" role="dialog" aria-labelledby="save-plot-title">
               <h2 id="save-plot-title">Export the plot</h2>
-              <p class="muted small">An image of the plot as it is now, with any compared spectra.</p>
+              <p class="muted small">The plot as it is now, with any compared spectra: copy it to paste into another program, or save it as a file.</p>
+              <p class="hint copy-status" id="copy-status" aria-live="polite"></p>
               <div class="save-grid">
+                <strong>Copy</strong>
+                <button type="button" class="button secondary" data-copy-plot="image" title="A PNG image in the light theme, for slides and documents">Image</button>
+                <button type="button" class="button secondary" data-copy-plot="data" title="The plotted values in view as tab-separated columns, for spreadsheets and plotting programs">Data</button>
                 {(["png", "svg"] as const).map((f) => (
                   <>
                     <strong>{f.toUpperCase()}</strong>
@@ -322,6 +326,10 @@ export async function spectrumPage(c: Context<AppEnv>) {
                     ))}
                   </>
                 ))}
+                <strong>Link</strong>
+                <button type="button" class="button secondary save-wide" data-copy-text={s.accession ? `${SITE}/${accessionId(s.accession)}` : `${SITE}/spectra/${encodeURIComponent(s.slug)}/`} title="The permanent link to this spectrum">
+                  <span class="copy-label" role="status" data-done="Link copied" data-idle="Copy permalink">Copy permalink</span>
+                </button>
               </div>
               <div class="dialog-actions">
                 <button class="button secondary" type="button" popovertarget="save-plot" popovertargetaction="hide">Close</button>

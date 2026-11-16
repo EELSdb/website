@@ -453,15 +453,15 @@ async function main() {
   const shown = (ys) => (log() ? ys.map((v) => (v > 0 ? v : null)) : ys);
   const colour = (i) => paint(`--compare-${(i % 4) + 1}`);
   // Only where this spectrum has data, so a wider file does not squeeze the reference.
-  const plotData = () => {
-    const main = [data[0], shown(view.y), ...(view.fit ? [shown(view.fit)] : [])];
+  const plotData = (f = shown) => {
+    const main = [data[0], f(view.y), ...(view.fit ? [f(view.fit)] : [])];
     if (!compares.length) return main;
     const [lo, hi] = [data[0][0], data[0].at(-1)];
     return uPlot.join([
       main,
       ...compares.map((c, j) => {
         const x = c.x.map((v) => v + (c.shift || 0));
-        const ys = [view.compares[j], ...(view.compareFits[j] ? [view.compareFits[j]] : [])].map(shown);
+        const ys = [view.compares[j], ...(view.compareFits[j] ? [view.compareFits[j]] : [])].map(f);
         const keep = x.map((_, i) => i).filter((i) => x[i] >= lo && x[i] <= hi);
         return [keep.map((i) => x[i]), ...ys.map((y) => keep.map((i) => y[i]))];
       }),
@@ -1212,6 +1212,10 @@ async function main() {
   const legendItems = (u) => u.series.slice(1).filter((s) => !s.isFit).map((s) => ({ label: s.label, colour: s._stroke ?? s.stroke }));
 
   async function savePng(theme) {
+    give(await renderPng(theme), "png");
+  }
+
+  async function renderPng(theme) {
     const { u, colours, done } = await themedPlot(theme);
     const src = u.ctx.canvas;
     const r = src.width / u.width;
@@ -1238,7 +1242,7 @@ async function main() {
     ctx.fillText(describe(), out.width - 16 * r, 50 * r);
     ctx.drawImage(src, 0, HEAD * r);
     done();
-    out.toBlob((blob) => give(blob, "png"));
+    return new Promise((resolve) => out.toBlob(resolve, "image/png"));
   }
 
   async function saveSvg(theme) {
@@ -1328,6 +1332,40 @@ ${parts.join("\n")}
     a.download = `${location.pathname.split("/").filter(Boolean).pop()}.${ext}`;
     a.click();
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
+  }
+
+  // The plotted values over the energies in view, as tab-separated columns that spreadsheets split on paste. Log axes
+  // hide values of zero and below, so the copy uses the values before that.
+  const plottedTable = () => {
+    const cols = plotData((ys) => ys);
+    const names = ["Energy (eV)", seriesName(), ...plot.series.slice(2).map((s) => s.label)];
+    const { min, max } = plot.scales.x;
+    const lines = [names.join("\t")];
+    cols[0].forEach((x, k) => {
+      if (min != null && (x < min || x > max)) return;
+      lines.push(cols.map((c) => c[k] ?? "").join("\t"));
+    });
+    return lines.join("\n") + "\n";
+  };
+  const copyStatus = document.getElementById("copy-status");
+  for (const button of document.querySelectorAll("[data-copy-plot]")) {
+    const idle = button.textContent;
+    button.addEventListener("click", async () => {
+      copyStatus.textContent = "";
+      try {
+        // Safari only allows a clipboard write that starts in the click, so the image is passed as a promise.
+        if (button.dataset.copyPlot === "image") await navigator.clipboard.write([new ClipboardItem({ "image/png": renderPng("light") })]);
+        else await navigator.clipboard.writeText(plottedTable());
+        button.textContent = "Copied";
+        button.classList.add("copied");
+        setTimeout(() => {
+          button.textContent = idle;
+          button.classList.remove("copied");
+        }, 1600);
+      } catch {
+        copyStatus.textContent = "Your browser did not allow the copy. Save a file instead.";
+      }
+    });
   }
 
   for (const button of document.querySelectorAll("[data-save-plot]")) {
