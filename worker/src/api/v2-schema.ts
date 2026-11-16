@@ -183,7 +183,10 @@ export const Spectrum = z
         role: z.enum(["legacy", "original", "lowloss", "variant", "msa", "hspy", "metadata"]).openapi({
           description: "`variant` is a processed version from the contributor, named in `variant`; `metadata` is every tag read from the original file at review, as JSON, not checked by a person.",
         }),
-        variant: z.enum(["os", "os_smoothed", "smoothed", "impurity_removed", "raw"]).nullable().openapi({ description: "For a `variant` file: oscillator strength, smoothed, with an impurity (often air) removed, or the raw data of a background-subtracted spectrum." }),
+        variant: z.enum(["os", "os_smoothed", "smoothed", "impurity_removed", "raw", "other_1", "other_2", "other_3"]).nullable().openapi({
+          description: "For a `variant` file: oscillator strength, smoothed, with an impurity (often air) removed, or the raw data of a background-subtracted spectrum. `other_1` to `other_3` are related spectra that are not versions of this one, such as the same area after beam damage; `note` says what they show.",
+        }),
+        note: z.string().nullable().openapi({ description: "The contributor's comment on the file. Always present for `other_*` variants." }),
         intensity_units: z.enum(INTENSITY_UNITS).nullable().openapi({ description: "For a `variant` file whose units differ from the spectrum's." }),
         url: z.string(),
         filename: z.string(),

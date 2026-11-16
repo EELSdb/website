@@ -218,6 +218,7 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
         role: f.role,
         variant: f.variant,
         intensity_units: f.variant ? variantUnits(f.variant) : null,
+        note: f.note ?? null,
         url: fileUrl(f.r2_key),
         filename: f.filename,
         bytes: f.bytes,

@@ -4,6 +4,7 @@ import { PROVIDERS, accountsLockedOut, methodsFrom, requireUser, signInAgainUrl,
 import { hasTwoStep } from "./totp";
 import { EXPORT_KEY, fileHeaders } from "./files";
 import { isModerator } from "./instruments";
+import { variantLabel } from "./submit/form";
 import { DEFAULT_LICENCE, licenceOf } from "./api/metadata";
 import { DECISIONS, PROCESSED_ROLES, QUEUE_SQL, decide, reviewInput, storeProcessed, submissionDetail, type Decision, type ProcessingRecord } from "./moderation";
 import { AccountLayout, Layout, TypeBadge } from "./pages/layout";
@@ -476,7 +477,8 @@ admin.get("/admin/submissions/:id/", async (c) => {
           <ul>
             {d.files.map((f: any) => (
               <li>
-                <a href={`/admin/submissions/${d.id}/files/${f.role}/`}>{f.filename}</a> ({f.role}, {f.bytes ? `${Math.round(f.bytes / 1024)} kB` : "size unknown"})
+                <a href={`/admin/submissions/${d.id}/files/${fileKey(f)}/`}>{f.filename}</a> ({f.variant ? variantLabel(f.variant) : f.role}, {f.bytes ? `${Math.round(f.bytes / 1024)} kB` : "size unknown"})
+                {f.note && <p class="small">Comment: {f.note}</p>}
               </li>
             ))}
             {d.change?.file && <li>New file in this edit: {d.change.file.name}</li>}
@@ -591,10 +593,15 @@ admin.post("/admin/exports/", async (c) => {
 
 admin.get("/admin/submissions/:id/files/:role/", async (c) => {
   const d = await submissionDetail(c.env.DB, Number(c.req.param("id")));
-  const file = d?.files.find((f: any) => f.role === c.req.param("role"));
+  const file = d?.files.find((f: any) => fileKey(f) === c.req.param("role"));
   const object = file && (await c.env.FILES.get(file.r2_key));
   if (!object) return c.notFound();
   return new Response(object.body, { headers: fileHeaders(file.filename) });
 });
 
 admin.route("/", adminUsers);
+
+/** Variants share the role "variant", so their links name the variant. */
+function fileKey(f: { role: string; variant?: string | null }) {
+  return f.variant ? `variant-${f.variant}` : f.role;
+}

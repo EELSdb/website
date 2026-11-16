@@ -169,6 +169,22 @@ describe("submitting", () => {
     expect(results[1].r2_key).toBe(`submissions/${id}/variant-os_smoothed/os-smooth.msa`);
   });
 
+  it("stores other spectra with their comments, and needs a comment for each", async () => {
+    const cookie = await sessionFor({ id: 6000013, display_name: "Other Person" }, { email: true });
+    const missing = formData(fields);
+    missing.append("variant_other_1_file", new File([MSA], "damaged.msa"));
+    const bad = await postSubmit(cookie, missing);
+    expect(bad.status).toBe(422);
+    expect(await bad.text()).toContain("say what this spectrum is");
+
+    const fd = formData(fields);
+    fd.append("variant_other_1_file", new File([MSA], "damaged.msa"));
+    fd.append("variant_other_1_note", "Same area after 60 s of beam exposure");
+    const id = Number(new URL((await postSubmit(cookie, fd)).headers.get("location")!, "https://x").searchParams.get("submitted"));
+    const { results } = await env.DB.prepare("SELECT role, variant, note FROM files WHERE spectrum_id = ? ORDER BY id").bind(id).all<any>();
+    expect(results.map((f) => [f.role, f.variant, f.note])).toEqual([["original", null, null], ["variant", "other_1", "Same area after 60 s of beam exposure"]]);
+  });
+
   it("stores a background-subtracted spectrum with its raw data", async () => {
     const cookie = await sessionFor({ id: 6000012, display_name: "Background Person" }, { email: true });
     const fd = formData({ ...fields, background_subtracted: "1" });

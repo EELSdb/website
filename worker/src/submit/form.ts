@@ -24,6 +24,11 @@ export const VARIANTS: Record<string, string> = {
   raw: "Raw data",
 };
 export const variantUnits = (variant: string) => (variant.startsWith("os") ? "oscillator_strength" : null);
+/** Slots for related spectra that are not versions of this one (for example the same area after beam damage), each with a comment. */
+export const OTHER_CODES = ["other_1", "other_2", "other_3"];
+export const isOther = (variant: string | null | undefined) => !!variant?.startsWith("other");
+export const variantLabel = (variant: string) => (isOther(variant) ? "Other" : VARIANTS[variant] ?? variant);
+export const MAX_NOTE = 500;
 const MAX_ASSOCIATED = 20;
 
 /** The browser's check results, kept only if they have the expected shape (moderators' pages read them). */
@@ -287,20 +292,31 @@ export function slugify(title: string) {
   return s || "spectrum";
 }
 
-/** The variant files in a submission (form fields `variant_<code>_file`), checked like the spectrum file. */
+/** The variant files in a submission (form fields `variant_<code>_file`, and `variant_<code>_note` for "other"), checked like the spectrum file. */
 export async function variantUploads(body: Record<string, unknown>, errors: Record<string, string>) {
-  const out: [string, File][] = [];
-  for (const [code, label] of Object.entries(VARIANTS)) {
+  const out: [string, File, string | null][] = [];
+  for (const code of [...Object.keys(VARIANTS), ...OTHER_CODES]) {
     const f = body[`variant_${code}_file`];
     if (!(f instanceof File) || !f.size) continue;
+    const label = variantLabel(code);
     const e = await checkUpload(f, SPECTRUM_EXTENSIONS, `${label} file`);
-    if (e) errors[`variant_${code}_file`] = e;
-    else out.push([code, f]);
+    if (e) {
+      errors[`variant_${code}_file`] = e;
+      continue;
+    }
+    if (!isOther(code)) {
+      out.push([code, f, null]);
+      continue;
+    }
+    const note = typeof body[`variant_${code}_note`] === "string" ? (body[`variant_${code}_note`] as string).trim() : "";
+    if (!note) errors[`variant_${code}_note`] = `${f.name}: say what this spectrum is, for example "same area after 60 s of beam exposure".`;
+    else if (note.length > MAX_NOTE) errors[`variant_${code}_note`] = `${f.name}: the comment is longer than ${MAX_NOTE} characters.`;
+    else out.push([code, f, note]);
   }
   return out;
 }
 
-/** The spectrum file and the optional low-loss, companion and processed-version files, as [role, file, variant]. */
+/** The spectrum file and the optional low-loss, companion, processed-version and other files, as [role, file, variant, note]. */
 export async function collectUploads(body: Record<string, unknown>, errors: Record<string, string>) {
   const file = body.file instanceof File ? body.file : null;
   const optional = (key: string) => (body[key] instanceof File && (body[key] as File).size ? (body[key] as File) : null);
@@ -316,10 +332,10 @@ export async function collectUploads(body: Record<string, unknown>, errors: Reco
     const e = await checkUpload(companion, COMPANION_EXTENSIONS, "Companion file");
     if (e) errors.companion_file = e;
   }
-  const uploads: [string, File, string?][] = [["original", file!]];
+  const uploads: [string, File, string?, string?][] = [["original", file!]];
   if (lowloss) uploads.push(["lowloss", lowloss]);
   if (companion) uploads.push(["companion", companion]);
-  for (const [code, f] of await variantUploads(body, errors)) uploads.push(["variant", f, code]);
+  for (const [code, f, note] of await variantUploads(body, errors)) uploads.push(["variant", f, code, note ?? undefined]);
   return uploads;
 }
 

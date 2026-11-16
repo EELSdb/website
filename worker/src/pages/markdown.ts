@@ -98,7 +98,7 @@ export async function spectrumMarkdown(db: D1Database, slug: string) {
     r && ["## Reference", list([["Title", r.title], ["Authors", r.authors], ["Journal", r.journal], ["Year", r.year], ["DOI", r.doi_url], ["Link", r.url], ["Reference", r.freetext]])].join("\n\n"),
     s.associated.length && ["## Associated spectra", s.associated.map((x) => `- ${x.title} (${TYPE_NAMES[x.type] ?? x.type}): ${x.api_url}`).join("\n")].join("\n\n"),
     s.files.length &&
-      ["## Files\n", "| Role | File | Bytes | SHA-256 |\n| --- | --- | --- | --- |", ...s.files.map((f) => `| ${f.role} | [${f.filename}](${f.url}) | ${f.bytes ?? ""} | ${f.sha256 ?? ""} |`)].join("\n"),
+      ["## Files\n", "| Role | File | Bytes | SHA-256 |\n| --- | --- | --- | --- |", ...s.files.map((f) => `| ${f.variant ? `${f.role}: ${f.variant}${f.note ? ` (${f.note.replace(/\|/g, "/")})` : ""}` : f.role} | [${f.filename}](${f.url}) | ${f.bytes ?? ""} | ${f.sha256 ?? ""} |`)].join("\n"),
     "## Cite this spectrum",
     "Cite the contributor's paper, if there is one, and the EELS Data Base:",
     "```text\n" + cite.text + "\n```",

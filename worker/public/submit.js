@@ -488,13 +488,17 @@ $(".steps").addEventListener("click", (e) => {
 const ROLES = { raw: "Raw data", bgsub: "Background subtracted" };
 const INPUTS = { lowloss: "lowloss_file", companion: "companion_file" };
 // Processed versions (oscillator strength, smoothed…): the server renders one input each, only for new submissions.
-for (const input of $$(".variant-files input[type=file]", form)) {
+for (const input of $$(".variant-files input[type=file]:not([data-other])", form)) {
   if (input.name === "variant_raw_file") continue;
   const role = input.name.replace(/_file$/, "");
   ROLES[role] = `Processed: ${$(`label[for="${input.id}"]`, form).textContent.toLowerCase()}`;
   INPUTS[role] = input.name;
 }
+// Related spectra that are not versions of this one (beam damage, another area…): several allowed, each with a comment.
+const OTHER_SLOTS = $$(".variant-files input[data-other]", form).map((input) => input.name.replace(/_file$/, ""));
+if (OTHER_SLOTS.length) ROLES.other = "Other (with a comment)";
 Object.assign(ROLES, { lowloss: "Companion low-loss (for thickness)", companion: "Companion file (beam settings)", unused: "Leave out" });
+const others = () => files.filter((f) => f.role === "other");
 const isVariant = (role) => role?.startsWith("variant_");
 // An edit replaces the one spectrum file, so there raw and background subtracted take the same place.
 const slot = (role) => (editing && (role === "raw" || role === "bgsub") ? "main" : role);
@@ -507,6 +511,7 @@ const size = (n) => (n < 1024 * 1024 ? `${Math.max(1, Math.round(n / 1024))} KB`
 
 function filesReady() {
   if (files.some((f) => f.state === "reading")) return false;
+  if (others().length > OTHER_SLOTS.length || others().some((f) => !f.note?.trim())) return false;
   return editing || !!mainFile();
 }
 
@@ -515,6 +520,11 @@ function syncInputs() {
   const raw = files.find((f) => f.role === "raw");
   const chosen = { file: main, variant_raw_file: raw === main ? null : raw };
   for (const [role, name] of Object.entries(INPUTS)) chosen[name] = files.find((f) => f.role === role);
+  OTHER_SLOTS.forEach((code, i) => {
+    const f = others()[i];
+    chosen[`${code}_file`] = f;
+    field(`${code}_note`).value = f?.note?.trim() ?? "";
+  });
   for (const [name, entry] of Object.entries(chosen)) {
     if (!field(name)) continue;
     const dt = new DataTransfer();
@@ -571,6 +581,10 @@ function paintCard(f) {
   const leftOut = f.role === "unused" && f.result?.points !== undefined && !f.chosen;
   f.card.toggleAttribute("data-warn", leftOut);
   $(".unused-note", f.card).hidden = !leftOut;
+  const other = f.role === "other";
+  $(".other-note", f.card).hidden = !other;
+  const tooMany = other && others().indexOf(f) >= OTHER_SLOTS.length;
+  $(".other-limit", f.card).hidden = !tooMany;
 }
 
 let cards = 0;
@@ -580,11 +594,16 @@ function buildCard(f) {
   for (const [value, label] of Object.entries(ROLES)) select.append(el("option", { value, textContent: label }));
   select.addEventListener("change", () => {
     const role = select.value;
-    for (const other of files) if (other !== f && slot(other.role) === slot(role) && role !== "unused") other.chosen = false;
+    for (const other of files) if (other !== f && slot(other.role) === slot(role) && role !== "unused" && role !== "other") other.chosen = false;
     f.role = role;
     f.chosen = true;
     render();
     if (role !== "unused") applyResult(f);
+  });
+  const noteInput = el("input", { type: "text", id: `${id}-note`, maxLength: 500, value: f.note ?? "" });
+  noteInput.addEventListener("input", () => {
+    f.note = noteInput.value;
+    syncInputs();
   });
   const remove = el("button", { type: "button", className: "icon-button", title: "Remove", "aria-label": `Remove ${f.file.name}` });
   remove.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M6 6l12 12M18 6 6 18"/></svg>';
@@ -603,6 +622,14 @@ function buildCard(f) {
       remove),
     el("div", { className: "file-plot" }),
     el("div", { className: "file-role" }, el("label", { htmlFor: id, textContent: "This file is" }), select),
+    el(
+      "div",
+      { className: "field other-note", hidden: true },
+      el("label", { htmlFor: `${id}-note`, textContent: "Comment (required)" }),
+      noteInput,
+      el("p", { className: "hint", textContent: "What this spectrum shows, for example \"same area after 60 s of beam exposure\"." }),
+      el("p", { className: "error other-limit", hidden: true, textContent: `At most ${OTHER_SLOTS.length} other spectra per submission: leave this one out or send it separately.` }),
+    ),
     el(
       "p",
       { className: "hint unused-note", hidden: true },
@@ -1235,7 +1262,7 @@ function review() {
       dl));
   };
   const current = !mainFile() && files.find((f) => f.current);
-  group("files", "Files", [...(current ? [["Spectrum file", `${current.file.name} (current file)`]] : []), ...used.map((f) => [ROLES[f.role], f.file.name])]);
+  group("files", "Files", [...(current ? [["Spectrum file", `${current.file.name} (current file)`]] : []), ...used.map((f) => [ROLES[f.role], f.role === "other" ? `${f.file.name}: ${f.note?.trim()}` : f.file.name])]);
   for (const s of visible()) {
     const id = s.dataset.step;
     if (id === "files" || id === "review") continue;

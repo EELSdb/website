@@ -1,7 +1,7 @@
 // Spectrum metadata for harvesters and search engines: Dublin Core and DataCite (OAI-PMH), DCAT-AP and schema.org.
 // EELSdb mints no DOIs, so in every format a spectrum is identified by its page URL and the paper's DOI is a relation.
 import { EELSDB_CITATION, referenceText, stripTags } from "../pages/citation";
-import { variantUnits } from "../submit/form";
+import { isOther, variantUnits } from "../submit/form";
 import { isoTime, modifiedAt } from "./dates";
 import { API_HOST, SITE, loadMany, type SpectrumBundle } from "./format";
 
@@ -125,7 +125,7 @@ export function toRecord(b: SpectrumBundle, orcid: string | null = null): MetaRe
         bytes: f.bytes ?? null,
         sha256: f.sha256 ?? null,
         main: f.r2_key === b.legacyFile,
-        title: f.variant ? `Processed: ${f.variant.replaceAll("_", " ")}${variantUnits(f.variant) ? " (oscillator strength)" : ""}` : (FILE_TITLES[f.role] ?? f.role),
+        title: isOther(f.variant) ? `Other: ${f.note}` : f.variant ? `Processed: ${f.variant.replaceAll("_", " ")}${variantUnits(f.variant) ? " (oscillator strength)" : ""}` : (FILE_TITLES[f.role] ?? f.role),
       }))
       .sort((x, y) => Number(y.main) - Number(x.main)),
     energy: { min: s.min_energy_ev ?? null, max: s.max_energy_ev ?? null, step: s.step_ev ?? null },

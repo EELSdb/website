@@ -64,7 +64,7 @@ export async function createDraft(c: Context<AppEnv>) {
 
   const { id, slug } = await createSpectrum(db, form, user, "draft");
   const rows = [];
-  for (const [role, f, variant] of uploads) rows.push(await storeFile(c.env, id, role, f, variant));
+  for (const [role, f, variant, note] of uploads) rows.push(await storeFile(c.env, id, role, f, variant, note));
   await db.batch([
     ...rows,
     db.prepare("INSERT INTO history (spectrum_id, user_id, change_json) VALUES (?, ?, ?)").bind(id, user.id, JSON.stringify({ action: "draft created" })),

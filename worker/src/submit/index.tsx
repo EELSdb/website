@@ -6,7 +6,7 @@ import { requireUser, type AppEnv, type User } from "../auth";
 import { ELEMENTS } from "../elements";
 import NAMES from "../element-names.json";
 import { AccountLayout, Layout, RESEND_SCRIPT, TYPE_NAMES } from "../pages/layout";
-import { BEAM_ENERGIES, COMPANION_EXTENSIONS, MAX_FILE_BYTES, SPECTRUM_EXTENSIONS, UNIT_LABELS, VARIANTS, cleanBrowserChecks, collectUploads, parseForm } from "./form";
+import { BEAM_ENERGIES, COMPANION_EXTENSIONS, MAX_FILE_BYTES, MAX_NOTE, OTHER_CODES, SPECTRUM_EXTENSIONS, UNIT_LABELS, VARIANTS, cleanBrowserChecks, collectUploads, parseForm } from "./form";
 import { createSpectrum, instrumentOk, storeFile } from "./store";
 import { DEFAULT_LICENCE, licenceOf } from "../api/metadata";
 
@@ -328,13 +328,27 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 <input id="f-companion_file" name="companion_file" type="file" accept={COMPANION_EXTENSIONS.map((e) => `.${e}`).join(",")} />
               </Field>
               {!props.edit && (
-                <details class="variant-files" open={Object.keys(VARIANTS).some((code) => errors[`variant_${code}_file`])}>
+                <details class="variant-files" open={[...Object.keys(VARIANTS), ...OTHER_CODES].some((code) => errors[`variant_${code}_file`] || errors[`variant_${code}_note`])}>
                   <summary>Other versions of the same spectrum (optional)</summary>
                   <p class="hint">Each as its own file. If the spectrum file is background subtracted, add its raw data here.</p>
                   {Object.entries(VARIANTS).map(([code, label]) => (
                     <Field name={`variant_${code}_file`} label={label} errors={errors}>
                       <input id={`f-variant_${code}_file`} name={`variant_${code}_file`} type="file" accept={accept} />
                     </Field>
+                  ))}
+                  <p class="hint">
+                    Related spectra that are not versions of this one, for example the same area after beam damage. Each needs a comment that says what
+                    it shows.
+                  </p>
+                  {OTHER_CODES.map((code, i) => (
+                    <div class="grid-2 other-file">
+                      <Field name={`variant_${code}_file`} label={`Other spectrum ${i + 1}`} errors={errors}>
+                        <input id={`f-variant_${code}_file`} name={`variant_${code}_file`} type="file" accept={accept} data-other />
+                      </Field>
+                      <Field name={`variant_${code}_note`} label="Comment" errors={errors}>
+                        <input id={`f-variant_${code}_note`} name={`variant_${code}_note`} type="text" maxlength={MAX_NOTE} value={String(v[`variant_${code}_note`] ?? "")} />
+                      </Field>
+                    </div>
                   ))}
                 </details>
               )}
@@ -622,7 +636,7 @@ submit.post("/submit-data/", requireUser, async (c) => {
 
   const { id, slug } = await createSpectrum(c.env.DB, form, user);
   const fileRows = [];
-  for (const [role, f, variant] of uploads) fileRows.push(await storeFile(c.env, id, role, f, variant));
+  for (const [role, f, variant, note] of uploads) fileRows.push(await storeFile(c.env, id, role, f, variant, note));
   const checks = cleanBrowserChecks(body.browser_checks);
   await c.env.DB.batch([
     ...fileRows,

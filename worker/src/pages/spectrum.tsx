@@ -6,7 +6,7 @@ import { creatorOrcids, jsonLdScript, licenceOf, schemaOrg, toRecord } from "../
 import { EELSDB_BIBTEX, EELSDB_CITATION, referenceText, stripTags } from "./citation";
 import { isModerator } from "../instruments";
 import { accessionId } from "../accession";
-import { UNIT_LABELS, VARIANTS, variantUnits } from "../submit/form";
+import { UNIT_LABELS, isOther, variantLabel, variantUnits } from "../submit/form";
 import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge, fmt } from "./layout";
 import { HistoryTimeline, spectrumHistory } from "./history";
 import { HyperSpySnippet } from "./snippet";
@@ -193,7 +193,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
     ...(hspy ? [{ id: "hspy", label: "HyperSpy", hint: "HDF5 for HyperSpy, with the beam energy, angles and DOI in its metadata.", href: `${base}/hspy`, name: `${s.slug}.hspy` }] : []),
     ...(original ? [{ id: "original", label: "Original file", hint: <>As the contributor uploaded it: <code>{original.filename}</code></>, href: href(original.r2_key), name: original.filename }] : []),
   ];
-  const variants = b.files.filter((f) => f.role === "variant");
+  const variants = b.files.filter((f) => f.role === "variant" && !isOther(f.variant));
+  const others = b.files.filter((f) => f.role === "variant" && isOther(f.variant));
+  const short = (t: string) => (t.length > 40 ? `${t.slice(0, 39)}…` : t);
   const metadataFile = b.files.find((f) => f.role === "metadata");
   const axisLabel = (units: string) => (units === "counts" ? (s.type === "xrayabs" ? "Intensity" : "Counts") : UNIT_LABELS[units] ?? units);
   const versions = fileUrl
@@ -201,7 +203,10 @@ export async function spectrumPage(c: Context<AppEnv>) {
         { label: "Main spectrum", src: fileUrl, axis: axisLabel(s.intensity_units) },
         ...variants
           .filter((f) => PLOTTABLE.test(f.filename))
-          .map((f) => ({ label: VARIANTS[f.variant] ?? f.variant, src: href(f.r2_key), axis: axisLabel(variantUnits(f.variant) ?? s.intensity_units) })),
+          .map((f) => ({ label: variantLabel(f.variant), src: href(f.r2_key), axis: axisLabel(variantUnits(f.variant) ?? s.intensity_units) })),
+        ...others
+          .filter((f) => PLOTTABLE.test(f.filename))
+          .map((f) => ({ label: `Other: ${short(f.note ?? f.filename)}`, src: href(f.r2_key), axis: axisLabel(s.intensity_units) })),
       ]
     : [];
   const cite = spectrumCitation(b);
@@ -608,6 +613,18 @@ export async function spectrumPage(c: Context<AppEnv>) {
               </ul>
             </>
           )}
+          {others.length > 0 && (
+            <>
+              <h2>Other spectra from the contributor</h2>
+              <ul class="plain-list">
+                {others.map((f) => (
+                  <li>
+                    {f.note} <span class="muted small">(<a href={href(f.r2_key)} download={f.filename}>{f.filename}</a>{PLOTTABLE.test(f.filename) && versions.length > 1 ? ", choose it under Show to plot it" : ""})</span>
+                  </li>
+                ))}
+              </ul>
+            </>
+          )}
           {b.otherUrls.length > 0 && (
             <>
               <h2>Other links</h2>
@@ -665,7 +682,17 @@ export async function spectrumPage(c: Context<AppEnv>) {
               <h3>Other versions</h3>
               <ul class="plain-list small">
                 {variants.map((f) => (
-                  <li><a href={href(f.r2_key)} download={f.filename}>{VARIANTS[f.variant] ?? f.variant}</a> <span class="muted">({f.filename})</span></li>
+                  <li><a href={href(f.r2_key)} download={f.filename}>{variantLabel(f.variant)}</a> <span class="muted">({f.filename})</span></li>
+                ))}
+              </ul>
+            </>
+          )}
+          {others.length > 0 && (
+            <>
+              <h3>Other spectra from the contributor</h3>
+              <ul class="plain-list small">
+                {others.map((f) => (
+                  <li><a href={href(f.r2_key)} download={f.filename}>{f.filename}</a>: {f.note}</li>
                 ))}
               </ul>
             </>

@@ -55,7 +55,7 @@ export async function submissionDetail(db: D1Database, id: number) {
   const sub = await db.prepare(`${QUEUE_SQL} WHERE b.id = ?`).bind(id).first<any>();
   if (!sub) return null;
   const extra = await db.prepare("SELECT browser_checks_json, change_json, moderator_notes FROM submissions WHERE id = ?").bind(id).first<any>();
-  const { results: files } = await db.prepare("SELECT role, r2_key, filename, bytes, sha256 FROM files WHERE spectrum_id = ? ORDER BY id").bind(sub.spectrum_id).all<any>();
+  const { results: files } = await db.prepare("SELECT role, variant, note, r2_key, filename, bytes, sha256 FROM files WHERE spectrum_id = ? ORDER BY id").bind(sub.spectrum_id).all<any>();
   const change = parseJson(extra.change_json) as EditChange | null;
   // A new file in an edit is not attached to the spectrum until approval; reviewers get it as role "edit".
   if (change?.file) files.push({ role: "edit", r2_key: change.file.key, filename: change.file.name, bytes: change.file.bytes, sha256: null });
