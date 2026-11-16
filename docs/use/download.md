@@ -11,7 +11,7 @@ Most spectra are open data, under the [Open Database License (ODbL)](https://ope
 1. Open the spectrum page.
 2. Click **Download**. The dialog shows a citation for the spectrum.
 3. Copy the citation, or open **BibTeX** and copy the BibTeX entry.
-4. Choose a format, then click **Download** followed by the file name.
+4. Choose a format, then click **Download** followed by the file name. To paste the data into another program instead, click **Copy to clipboard**: it copies the file's text exactly as it would be downloaded. HyperSpy files, and original files that are not text, cannot be copied.
 
 The formats are:
 

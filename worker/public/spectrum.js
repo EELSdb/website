@@ -10,14 +10,34 @@ for (const button of document.querySelectorAll("[data-open]")) {
     document.getElementById(button.dataset.open).showModal();
   });
 }
+const downloadCopy = document.getElementById("download-copy");
 for (const radio of document.querySelectorAll("[name=download-format]")) {
   radio.addEventListener("change", () => {
     const link = document.getElementById("download-link");
     link.href = radio.value;
     link.download = radio.dataset.name;
     link.querySelector(".dl-name").textContent = `Download ${radio.dataset.name}`;
+    downloadCopy.disabled = !radio.dataset.text;
+    downloadCopy.title = radio.dataset.text ? "" : "This format is not text, so it cannot be copied. Download it instead.";
   });
 }
+// Copies the chosen format's text, exactly as the file would hold it.
+downloadCopy?.addEventListener("click", async () => {
+  const url = document.querySelector("[name=download-format]:checked").value;
+  const idle = downloadCopy.textContent;
+  try {
+    // Safari allows a clipboard write only if it starts in the click, so the text goes in as a promise.
+    const text = fetch(url).then(async (res) => {
+      if (!res.ok) throw new Error(res.statusText);
+      return new Blob([await res.text()], { type: "text/plain" });
+    });
+    await navigator.clipboard.write([new ClipboardItem({ "text/plain": text })]);
+    downloadCopy.textContent = "Copied";
+  } catch {
+    downloadCopy.textContent = "Copy failed: download instead";
+  }
+  setTimeout(() => (downloadCopy.textContent = idle), 2000);
+});
 // The usage dialog shows the spectrum's usage page, fetched when it first opens.
 const usageLink = document.querySelector("[data-open=usage-dialog]");
 usageLink?.addEventListener("click", async () => {
@@ -495,7 +515,7 @@ async function main() {
         : frd && lowlossState === "failed" ? `The low-loss spectrum ${link} could not be read, so the spectrum is not deconvolved.`
         : frd && main.frd?.error ? `Not deconvolved: ${esc(main.frd.error)}`
         : frd && main.frd
-          ? `Deconvolved with the low-loss spectrum ${link} (zero-loss width ${main.frd.fwhm.toFixed(2)} eV).${lowlossInfo.slug ? " It is an associated spectrum: check that it is from the same area." : ""} Deconvolution removes plural scattering but adds noise. Compared spectra are not deconvolved.`
+          ? `Deconvolved with the low-loss spectrum ${link}, whose zero-loss peak is ${main.frd.fwhm.toFixed(2)} eV wide.${lowlossInfo.slug ? " It is an associated spectrum: check that it is from the same area." : ""} Deconvolution removes plural scattering but adds noise. Compared spectra are not deconvolved.`
         : o.background && !main.fit && !(frd && bgSubtracted) ? "No power law fits that window. Pick a wider one before the edge, at positive energies."
         : "";
       bgStatus.innerHTML = text;
@@ -1143,16 +1163,16 @@ async function main() {
       // So that focusing it again opens the list for the next one.
       search.blur();
       if (compares.some((c) => c.slug === s.slug)) return;
-      status.textContent = `Loading ${s.title}…`;
+      status.textContent = `Loading ${s.name}…`;
       try {
         const res = await fetch(`/spectra/${encodeURIComponent(s.slug)}/download/json?preview`);
         if (!res.ok) throw new Error(`download failed (${res.status})`);
         const { data: d } = await res.json();
-        compares.push({ name: s.title, slug: s.slug, type: s.type, x: d.energy_ev, y: d.intensity });
+        compares.push({ name: s.name, slug: s.slug, type: s.type, x: d.energy_ev, y: d.intensity });
         update();
         status.textContent = NOTE;
       } catch (e) {
-        status.textContent = `${s.title} could not be loaded: ${e.message}`;
+        status.textContent = `${s.name} could not be loaded: ${e.message}`;
       }
     };
     const range = (s) => `${Math.round(s.min_energy_ev)}–${Math.round(s.max_energy_ev)} eV`;
@@ -1170,7 +1190,7 @@ async function main() {
               li.id = `compare-opt-${i}`;
               li.setAttribute("role", "option");
               li.innerHTML = '<span></span><span class="n"></span>';
-              li.firstChild.textContent = s.title;
+              li.firstChild.textContent = s.name;
               li.lastChild.textContent = [s.formula, TYPES[s.type], range(s)].filter(Boolean).join(" · ");
               li.addEventListener("mousedown", (e) => e.preventDefault());
               li.addEventListener("click", () => pick(matches[i]));

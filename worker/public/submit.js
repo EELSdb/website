@@ -1411,7 +1411,7 @@ if (editing && form.dataset.currentFile) {
   const renderChips = () => {
     chips.replaceChildren(
       ...[...chosen.values()].map((s) => {
-        const b = attrs(el("button", { type: "button", className: "chip" }, el("span", { textContent: s.title }), " ", attrs(el("span", { textContent: "×" }), { "aria-hidden": "true" })), { "aria-label": `Remove ${s.title}` });
+        const b = attrs(el("button", { type: "button", className: "chip" }, el("span", { textContent: s.name ?? s.title }), " ", attrs(el("span", { textContent: "×" }), { "aria-hidden": "true" })), { "aria-label": `Remove ${s.name ?? s.title}` });
         b.title = [s.formula, TYPES[s.type], s.author, s.status === "pending" ? "not published yet" : ""].filter(Boolean).join(" · ");
         b.addEventListener("click", () => {
           chosen.delete(s.slug);
@@ -1461,7 +1461,7 @@ if (editing && form.dataset.currentFile) {
     list.replaceChildren(
       ...(matches.length
         ? matches.map((s, i) => {
-            const li = attrs(el("li", { id: `associated-opt-${i}` }, el("span", { textContent: s.title }), el("span", { className: "n", textContent: [s.formula, TYPES[s.type], s.author].filter(Boolean).join(" · ") })), { role: "option" });
+            const li = attrs(el("li", { id: `associated-opt-${i}` }, el("span", { textContent: s.name }), el("span", { className: "n", textContent: [s.formula, TYPES[s.type], s.author].filter(Boolean).join(" · ") })), { role: "option" });
             li.addEventListener("mousedown", (e) => e.preventDefault());
             li.addEventListener("click", () => add(matches[i]));
             return li;

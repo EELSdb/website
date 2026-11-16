@@ -1369,7 +1369,14 @@ html:not(.js) .picture-file label { display: none; }
 .save-plot h2 { margin-top: 0; }
 .save-plot p { margin: 0 0 1rem; }
 .export-options { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: center; font-size: 0.875rem; }
-.export-options .choice-buttons { margin: 0; }
+/* A row of joined toggle buttons (radios): one border round the group, the chosen one filled. */
+.segmented { display: inline-flex; justify-self: start; border: 1px solid var(--line); border-radius: 6px; overflow: hidden; }
+.segmented input { position: absolute; opacity: 0; }
+.segmented span { display: block; padding: 0.35rem 1rem; background: var(--surface); cursor: pointer; }
+.segmented label + label span { border-left: 1px solid var(--line); }
+.segmented span:hover { background: var(--sunken); }
+.segmented input:checked + span { background: var(--ink); color: var(--bg); }
+.segmented label:has(input:focus-visible) { outline: 2px solid var(--focus); outline-offset: -2px; position: relative; }
 .save-plot .export-status { margin: 0.75rem 0 0; }
 .save-plot .export-status:empty { display: none; }
 .save-plot .export-heading { margin: 0 0 0.5rem; font-size: 0.95rem; }

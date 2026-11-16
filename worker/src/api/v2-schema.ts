@@ -175,8 +175,8 @@ export const Spectrum = z
       })
       .nullable(),
     associated: z
-      .array(z.strictObject({ id: z.number().int(), title: z.string(), type: z.string(), api_url: z.string() }))
-      .openapi({ description: "Related EELSdb spectra, for example the low-loss spectrum of the same specimen." }),
+      .array(z.strictObject({ id: z.number().int(), accession: text, title: z.string(), type: z.string(), api_url: z.string() }))
+      .openapi({ description: "Related EELSdb spectra, for example the low-loss spectrum of the same specimen, with their reference numbers." }),
     links: z.array(z.strictObject({ url: z.string(), title: text })),
     files: z.array(
       z.strictObject({

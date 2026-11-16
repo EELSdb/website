@@ -216,7 +216,7 @@ export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {
       year: r.year && /^\d{4}$/.test(r.year) ? Number(r.year) : null,
       freetext: r.freetext || null,
     },
-    associated: b.links.map((l) => ({ id: l.id, title: l.title, type: l.type, api_url: `${API_HOST}/v2/spectra/${l.id}` })),
+    associated: b.links.map((l) => ({ id: l.id, accession: l.accession ? accessionId(l.accession) : null, title: l.title, type: l.type, api_url: `${API_HOST}/v2/spectra/${l.id}` })),
     links: b.otherUrls,
     files: b.files
       .filter((f) => f.role !== "companion")

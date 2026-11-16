@@ -76,7 +76,7 @@ A field with no value is `null`.
 ## Reference and links
 
 - `reference`: The paper: `doi`, `doi_url`, `url`, `authors`, `title`, `journal`, `volume`, `issue`, `pages`, `year`, and `freetext` for a reference with no structured fields.
-- `associated`: Related EELSdb spectra, for example the low-loss spectrum of the same specimen.
+- `associated`: Related EELSdb spectra, for example the low-loss spectrum of the same specimen, each with its `id`, reference number (`accession`), `title`, `type` and `api_url`.
 - `links`: Other web pages, each with a `url` and a `title`.
 
 ## Files and processing

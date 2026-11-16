@@ -34,6 +34,7 @@ New tools go in one of the tabs by that rule, and a short result that viewers sh
   - In each column the stroke crosses, the trace takes the run of curve pixels nearest the stroke, at the middle of the run.
   - The trace becomes a compared spectrum, scaled to this spectrum's height over the same energies, because the figure's intensity scale is unknown.
   - The tracer does not calibrate the y axis or handle log axes. Two curves of the same colour under the brush can mix; the pink preview shows the viewer when that happens.
+- The page names another EELSdb spectrum with its reference number, "Diamond (EELSDB-0018)": in the associated spectra, the compare search and legend, and the deconvolution message. `/search/spectra.json` returns this as `name`.
 - Viewers can also add other EELSdb spectra. A type-ahead searches `/search/spectra.json?overlaps={slug}`, which returns spectra with an overlapping energy range. It lists spectra that share an edge first, then spectra that share an element. The page draws each one from its `/download/json`.
 - The page draws compared spectra only within the energy range of the reference.
 - "Independent y axes" gives each compared spectrum its own y scale. Each scale has a right-hand axis in the spectrum's colour (`--compare-1` to `--compare-4`). The checkbox is at the bottom of "Adjust the plot", with help text, and shows only while spectra are compared.

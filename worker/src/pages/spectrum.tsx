@@ -5,7 +5,7 @@ import { API_HOST, SITE, loadBundle, type SpectrumBundle } from "../api/format";
 import { creatorOrcids, jsonLdScript, licenceOf, schemaOrg, toRecord } from "../api/metadata";
 import { EELSDB_BIBTEX, EELSDB_CITATION, referenceText, stripTags } from "./citation";
 import { isModerator } from "../instruments";
-import { accessionId } from "../accession";
+import { accessionId, spectrumName } from "../accession";
 import { UNIT_LABELS, isOther, variantLabel, variantUnits } from "../submit/form";
 import { Avatar, Formula, Layout, TYPE_NAMES, TypeBadge, fmt } from "./layout";
 import { HistoryTimeline, spectrumHistory } from "./history";
@@ -36,6 +36,8 @@ function measured(value: number | null, unit: string, source: string | null, unc
 }
 
 const href = (key: string) => `/${key.split("/").map(encodeURIComponent).join("/")}`;
+// Downloads that are text, so the dialog can copy them to the clipboard.
+const TEXT_FILE = /\.(msa|emsa|txt|csv|json|xdi|dat|xmu|nor)$/i;
 // Formats spectrum.js can parse for the plot.
 const PLOTTABLE = /\.(msa|emsa|txt|csv)$/i;
 
@@ -228,7 +230,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
       : lowlossFile
         ? { src: href(lowlossFile.r2_key), name: lowlossFile.filename, text: PLOTTABLE.test(lowlossFile.filename), hyperspy: `${SITE}${href(lowlossFile.r2_key)}` }
         : lowlossLink
-          ? { src: `/spectra/${encodeURIComponent(lowlossLink.slug)}/download/json`, name: lowlossLink.title, slug: lowlossLink.slug, hyperspy: `${SITE}/spectra/${lowlossLink.slug}/download/hspy` }
+          ? { src: `/spectra/${encodeURIComponent(lowlossLink.slug)}/download/json`, name: spectrumName(lowlossLink.title, lowlossLink.accession), slug: lowlossLink.slug, hyperspy: `${SITE}/spectra/${lowlossLink.slug}/download/hspy` }
           : null;
   // Quick quantification needs counts, the beam energy and the collection angle; it runs in the browser.
   const quant =
@@ -342,15 +344,15 @@ export async function spectrumPage(c: Context<AppEnv>) {
                 <CopyButton target="permalink" what="permalink" />
               </div>
               <h3 class="export-heading export-image">Image of the plot</h3>
-              <p class="muted small">As it is now: the zoom, the compared spectra and the settings from "Adjust the plot". For the data, use Download.</p>
+              <p class="muted small">Includes your zoom, compared spectra and processing. For the data, use Download.</p>
               <div class="export-options">
                 <span id="export-format-label">Format</span>
-                <div class="choice-buttons" role="radiogroup" aria-labelledby="export-format-label">
+                <div class="segmented" role="radiogroup" aria-labelledby="export-format-label">
                   <label><input type="radio" name="export-format" value="png" checked /><span>PNG</span></label>
                   <label><input type="radio" name="export-format" value="svg" /><span>SVG</span></label>
                 </div>
                 <span id="export-theme-label">Background</span>
-                <div class="choice-buttons" role="radiogroup" aria-labelledby="export-theme-label">
+                <div class="segmented" role="radiogroup" aria-labelledby="export-theme-label">
                   <label><input type="radio" name="export-theme" value="light" checked /><span>Light</span></label>
                   <label><input type="radio" name="export-theme" value="dark" /><span>Dark</span></label>
                 </div>
@@ -669,7 +671,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
               <ul class="plain-list">
                 {b.links.map((l) => (
                   <li>
-                    <a href={`/spectra/${encodeURIComponent(l.slug)}/`}>{l.title}</a> <TypeBadge type={l.type} />
+                    <a href={`/spectra/${encodeURIComponent(l.slug)}/`}>{spectrumName(l.title, l.accession)}</a> <TypeBadge type={l.type} />
                   </li>
                 ))}
               </ul>
@@ -734,7 +736,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
             <legend>Format</legend>
             {downloads.map((d, i) => (
               <label>
-                <input type="radio" name="download-format" value={d.href} data-name={d.name} checked={i === 0} />
+                <input type="radio" name="download-format" value={d.href} data-name={d.name} data-text={TEXT_FILE.test(d.name) ? "1" : undefined} checked={i === 0} />
                 <span><strong>{d.label}</strong> <span class="muted small">{d.hint}</span></span>
               </label>
             ))}
@@ -761,6 +763,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
           )}
           <div class="dialog-actions">
             <button class="button secondary" type="button" data-close>Close</button>
+            <button class="button secondary" type="button" id="download-copy" disabled={!TEXT_FILE.test(downloads[0]?.name ?? "")}>
+              Copy to clipboard
+            </button>
             <a class="button" id="download-link" href={downloads[0]?.href ?? fileUrl} download={downloads[0]?.name ?? fileName} autofocus>
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true">
                 <path d="M12 4v11M7 10.5l5 5 5-5M5 20h14" />

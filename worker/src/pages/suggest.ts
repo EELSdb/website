@@ -1,5 +1,6 @@
 import type { Context } from "hono";
 import type { AppEnv } from "../auth";
+import { accessionId, spectrumName } from "../accession";
 
 const like = (s: string) => "%" + s.replace(/[\\%_]/g, (ch) => "\\" + ch) + "%";
 
@@ -38,10 +39,12 @@ export async function suggestSpectra(c: Context<AppEnv>) {
   order.push("s.title LIKE ? ESCAPE '\\' DESC", "s.title COLLATE NOCASE");
   orderBinds.push(q ? q.replace(/[\\%_]/g, (ch) => "\\" + ch) + "%" : "");
   const { results } = await c.env.DB.prepare(
-    `SELECT s.slug, s.title, s.formula, s.type, s.status, s.author_display AS author, s.min_energy_ev, s.max_energy_ev
+    `SELECT s.slug, s.title, s.accession, s.formula, s.type, s.status, s.author_display AS author, s.min_energy_ev, s.max_energy_ev
      FROM spectra s${overlaps ? ", spectra r" : ""} WHERE ${where.join(" AND ")} ORDER BY ${order.join(", ")} LIMIT 10`,
   )
     .bind(...binds, ...orderBinds)
     .all();
-  return c.json(results, 200, { "Cache-Control": "private, no-store" });
+  // `name` is how the page shows the spectrum: its title and reference number.
+  const named = results.map((r: any) => ({ ...r, accession: r.accession ? accessionId(r.accession) : null, name: spectrumName(r.title, r.accession) }));
+  return c.json(named, 200, { "Cache-Control": "private, no-store" });
 }

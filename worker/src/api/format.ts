@@ -23,7 +23,7 @@ export type SpectrumBundle = {
   elements: string[];
   edges: { element: string; edge: string }[];
   keywords: string[];
-  links: { id: number; title: string; slug: string; type: string }[];
+  links: { id: number; title: string; slug: string; type: string; accession: number | null }[];
   otherUrls: { url: string; title: string | null }[];
   /** The public download: the legacy file, else the reviewed MSA (exSpy reads only .msa), else the upload. */
   legacyFile: string | null;
@@ -54,7 +54,7 @@ export async function loadMany(db: D1Database, ids: number[]): Promise<SpectrumB
     q("SELECT spectrum_id, element FROM spectrum_elements WHERE spectrum_id IN (?) ORDER BY position"),
     q("SELECT spectrum_id, element, edge FROM spectrum_edges WHERE spectrum_id IN (?) ORDER BY position"),
     q("SELECT spectrum_id, keyword FROM spectrum_keywords WHERE spectrum_id IN (?) ORDER BY position"),
-    q(`SELECT l.spectrum_id, r.id, r.title, r.slug, r.type FROM spectrum_links l JOIN spectra r ON r.id = l.related_id
+    q(`SELECT l.spectrum_id, r.id, r.title, r.slug, r.type, r.accession FROM spectrum_links l JOIN spectra r ON r.id = l.related_id
        WHERE l.spectrum_id IN (?) AND r.status = 'published' ORDER BY l.position`),
     q("SELECT spectrum_id, url, title FROM spectrum_other_urls WHERE spectrum_id IN (?) ORDER BY position"),
     q("SELECT * FROM files WHERE spectrum_id IN (?) ORDER BY id"),
