@@ -440,7 +440,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                 </div>
                 <div class="compare-empty">
                   <ul class="compare-notes">
-                    <li>Upload a spectra file above, or drag &amp; drop onto the plot.</li>
+                    <li>Upload a spectrum file above, or drag &amp; drop onto the plot.</li>
                     <li>Paste / upload a screenshot of a plot to trace it and overlay.</li>
                     <li>Files are read in your browser and not uploaded.</li>
                   </ul>
