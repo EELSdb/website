@@ -65,6 +65,7 @@ describe("API v2", () => {
       csv: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/csv",
       json: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/json",
       hspy: "https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/hspy",
+      xdi: null,
     });
     expect(s.associated[0]).toMatchObject({ title: "MLC Nanotube YS-TaS2", type: "coreloss" });
     expect((await get("/spectra/999999")).status).toBe(404);

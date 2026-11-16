@@ -1,6 +1,7 @@
 import { env, exports } from "cloudflare:workers";
 import { describe, expect, it, vi } from "vitest";
 import { htmlToMarkdown } from "../src/pages/markdown";
+import { xdiEdge } from "../src/pages/download";
 import { sessionFor } from "./helpers/session";
 
 const page = async (path: string) => {
@@ -228,6 +229,24 @@ describe("pages", () => {
     expect(html).toContain('value="/spectra/mlc-nanotube-ylas-tas2/download/hspy"');
     expect(html).toContain("https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/hspy");
     expect(html).not.toContain('signal_type');
+  });
+
+  it("offers X-ray absorption spectra as XDI in place of the EELS formats", async () => {
+    const key = await env.DB.prepare("SELECT r2_key FROM files f JOIN spectra s ON s.id = f.spectrum_id WHERE s.slug = 'alumina-alpha' AND f.role = 'legacy'").first<string>("r2_key");
+    await env.FILES.put(key!, "1555 0.0096785\n1555.2 0.0063186\n1555.4 0.0049268\n");
+    const res = await exports.default.fetch("https://eelsdb.eu/spectra/alumina-alpha/download/xdi");
+    expect(res.headers.get("content-disposition")).toContain('filename="alumina-alpha.xdi"');
+    const xdi = await res.text();
+    expect(xdi.split("\n").slice(0, 5)).toEqual(["# XDI/1.0 EELSdb/2", "# Column.1: energy eV", "# Column.2: mu", "# Element.symbol: Al", "# Element.edge: K"]);
+    expect(xdi).toContain("# EELSdb.url: https://eelsdb.eu/spectra/alumina-alpha/\n");
+    expect(xdi).toMatch(/#----\n# energy mu\n1555 0\.0096785\n/);
+    const html = await (await page("/spectra/alumina-alpha/")).html;
+    expect(html).toContain('value="/spectra/alumina-alpha/download/xdi"');
+    expect(html).not.toContain('value="/spectra/alumina-alpha/download/msa"');
+    expect((await exports.default.fetch("https://eelsdb.eu/spectra/diamond/download/xdi")).status).toBe(404);
+    expect(xdiEdge("L2,3")).toBe("L3");
+    expect(xdiEdge("M4,5")).toBe("M5");
+    expect(xdiEdge("K")).toBe("K");
   });
 
   it("shows the masked address of a migrated uploader until a sign-in is linked", async () => {

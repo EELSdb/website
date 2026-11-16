@@ -9,9 +9,10 @@ import { attachment } from "../files";
 import { parseSpectrum } from "../preview";
 import { recordDownload } from "../usage";
 import { visibleSpectrumId } from "./spectrum";
+import { accessionId } from "../accession";
 
-export const FORMATS = ["msa", "csv", "json", "hspy"] as const;
-const TYPES = { msa: "text/plain; charset=utf-8", csv: "text/csv; charset=utf-8", json: "application/json", hspy: "application/x-hdf5" };
+export const FORMATS = ["msa", "csv", "json", "hspy", "xdi"] as const;
+const TYPES = { msa: "text/plain; charset=utf-8", csv: "text/csv; charset=utf-8", json: "application/json", hspy: "application/x-hdf5", xdi: "text/plain; charset=utf-8" };
 
 const UNITS: Record<string, string> = { counts: "counts", oscillator_strength: "oscillator strength", mu: "mu", optical_density: "optical density", normalised: "normalised" };
 
@@ -46,6 +47,53 @@ export function toMsa(b: SpectrumBundle, x: number[], y: number[]) {
   return lines.join("\r\n") + "\r\n";
 }
 
+/** XDI's edge names are single subshells: an EELS-style group such as L2,3 or M4,5 becomes its lowest-energy member. */
+export const xdiEdge = (edge: string) => edge.replace(/^([A-Z])(\d),(\d)$/, (_, shell, a, b) => `${shell}${Math.max(+a, +b)}`);
+
+/** XDI 1.0 for X-ray absorption spectra, readable by Larch, Athena and other XAS software; EELSdb's own fields are in an EELSdb namespace. */
+export function toXdi(b: SpectrumBundle, x: number[], y: number[]) {
+  const s = b.spectrum;
+  const xas = b.xas ?? {};
+  const mode = String(xas.detection_mode ?? "").toLowerCase();
+  const kind = /fluor/.test(mode) ? "fluor" : /yield|tey|electron/.test(mode) ? "tey" : /trans/.test(mode) ? "trans" : "";
+  // XDI defines mutrans, mufluor, normtrans and normfluor. It has none for electron yield or an unknown mode, so those
+  // use Larch's mutey and plain mu (Larch makes every label an array of the same name).
+  const label = s.intensity_units === "normalised" ? (kind === "fluor" || kind === "trans" ? `norm${kind}` : "norm") : `mu${kind}`;
+  const edge = b.edges[0];
+  const doi = b.reference?.doi;
+  const field = (k: string, v: unknown) => (v === null || v === undefined || v === "" ? [] : [`# ${k}: ${String(v).replace(/[\r\n]+/g, " ")}`]);
+  const lines = [
+    "# XDI/1.0 EELSdb/2",
+    "# Column.1: energy eV",
+    `# Column.2: ${label}`,
+    ...(edge ? [...field("Element.symbol", edge.element), ...field("Element.edge", xdiEdge(edge.edge))] : []),
+    ...field("Facility.name", xas.facility),
+    ...field("Facility.xray_source", xas.source_type),
+    ...field("Beamline.name", xas.beamline),
+    ...field("Mono.name", xas.monochromator),
+    ...field("Sample.name", s.title),
+    ...field("Sample.formula", s.formula),
+    ...field("EELSdb.accession", s.accession ? accessionId(s.accession) : null),
+    ...field("EELSdb.url", `${SITE}/spectra/${s.slug}/`),
+    ...field("EELSdb.licence", licenceOf(s.licence).short),
+    ...field("EELSdb.doi", doi),
+    ...field("EELSdb.edges", b.edges.map((e) => `${e.element}_${e.edge}`).join(" ")),
+    ...field("EELSdb.intensity_units", s.intensity_units),
+    ...field("EELSdb.detection_mode", xas.detection_mode),
+    ...field("EELSdb.resolving_power", xas.resolving_power),
+    ...field("EELSdb.polarisation", xas.polarisation),
+    ...field("EELSdb.calibration_reference", xas.calibration_reference),
+    ...field("EELSdb.i0_normalisation", xas.i0_normalisation),
+    "# ///",
+    ...String(s.description ?? "").split(/\r?\n/).filter((l) => l.trim()).map((l) => `# ${l.trim()}`),
+    `# Cite the contributor${doi ? ` (doi:${doi})` : ""} and the EELS Data Base. Licence: ${licenceOf(s.licence).short}.`,
+    "#----",
+    `# energy ${label}`,
+    ...x.map((e, i) => `${e} ${y[i]}`),
+  ];
+  return lines.join("\n") + "\n";
+}
+
 export const toCsv = (b: SpectrumBundle, x: number[], y: number[]) =>
   [`energy_ev,${b.spectrum.intensity_units}`, ...x.map((e, i) => `${e},${y[i]}`)].join("\n") + "\n";
 
@@ -57,13 +105,13 @@ export async function downloadSpectrum(c: Context<AppEnv>) {
   const b = id === null ? null : await loadBundle(c.env.DB, id);
   const hspy = b?.files.find((f) => f.role === "hspy");
   const key = format === "hspy" ? hspy?.r2_key : b?.legacyFile;
-  const object = key ? await c.env.FILES.get(key) : null;
+  const object = key && !(format === "xdi" && b?.spectrum.technique !== "xas") ? await c.env.FILES.get(key) : null;
   if (!b || !object) return c.notFound();
   let body: BodyInit = object.body;
   if (format !== "hspy") {
     const [x, y] = parseSpectrum(await object.text());
     if (x.length < 2) return c.notFound();
-    body = { msa: toMsa, csv: toCsv, json: toJson }[format](b, x, y);
+    body = { msa: toMsa, csv: toCsv, json: toJson, xdi: toXdi }[format](b, x, y);
   }
   const name = `${b.spectrum.slug}.${format}`;
   recordDownload(c, b.spectrum.id, format);

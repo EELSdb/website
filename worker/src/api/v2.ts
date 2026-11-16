@@ -117,7 +117,13 @@ const fileUrl = (key: string) => `${SITE}/${key.split("/").map(encodeURIComponen
 function downloads(b: SpectrumBundle) {
   const url = (format: string) => `${SITE}/spectra/${encodeURIComponent(b.spectrum.slug)}/download/${format}`;
   const converted = (format: string) => (b.legacyFile ? url(format) : null);
-  return { msa: converted("msa"), csv: converted("csv"), json: converted("json"), hspy: b.files.some((f) => f.role === "hspy") ? url("hspy") : null };
+  return {
+    msa: converted("msa"),
+    csv: converted("csv"),
+    json: converted("json"),
+    hspy: b.files.some((f) => f.role === "hspy") ? url("hspy") : null,
+    xdi: b.spectrum.technique === "xas" ? converted("xdi") : null,
+  };
 }
 
 export function formatV2(b: SpectrumBundle): z.infer<typeof Spectrum> {

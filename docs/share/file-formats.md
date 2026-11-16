@@ -9,8 +9,17 @@ EELSdb accepts files of up to 50 MB in these formats, and reads these values fro
 - EMSA/MSA (`.msa`, `.emsa`): The spectrum, the energy axis, and the `#BEAMKV`, `#CONVANGLE`, `#COLLANGLE`, `#PHASE` and `#REFERENCE` header fields.
 - Velox EMD (`.emd`): The spectrum and the acquisition values in the file.
 - HyperSpy (`.hspy`): The spectrum and the acquisition values in the signal's metadata.
-- XAS Data Interchange (`.xdi`): The energy column, the absorption column, and the facility, beamline, monochromator and sample fields.
 - Two-column text (`.txt`, `.csv`): Energy in the first column, intensity in the second.
+
+For X-ray absorption spectra, EELSdb also reads:
+
+- XAS Data Interchange (`.xdi`): The energy column, the absorption column, and the facility, beamline, monochromator and sample fields.
+- SPEC scan files (`.spec`, `.spc`): The first scan that has an energy column.
+- Athena project files (`.prj`): The first spectrum in the project. If the project holds more than one, upload each as its own submission (export it from Athena as XDI).
+- NeXus and other HDF5 files (`.nxs`, `.h5`, `.hdf5`): An NXxas entry, or else a data group whose axis is an energy.
+- Beamline column files (`.dat`, `.xmu`, `.nor`): Text with a line of column labels before the numbers.
+
+In all of these, EELSdb takes the absorption from a column named `mutrans`, `mufluor`, `mu`, `xmu` or `norm…`. If there is none, it calculates ln(I0/It) from the `i0` and `itrans` (or `it`) columns, or If/I0 from the `i0` and `ifluor` columns, as Larch does. Check the plot on the submit form: if it shows the wrong column, export the spectrum from your software as two columns or as XDI with a `mutrans` or `mufluor` column.
 
 EELSdb stores the file that you upload without a change.
 At review, the moderator adds an MSA file and a HyperSpy file made from it.

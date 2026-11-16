@@ -3,7 +3,7 @@ import { ELEMENTS } from "../elements";
 
 export const SOURCES = ["file", "companion", "profile", "user", "estimate", "unknown"] as const;
 export const BEAM_ENERGIES = [60, 80, 120, 200, 300];
-export const SPECTRUM_EXTENSIONS = ["dm3", "dm4", "msa", "emsa", "emd", "hspy", "txt", "csv", "xdi"];
+export const SPECTRUM_EXTENSIONS = ["dm3", "dm4", "msa", "emsa", "emd", "hspy", "txt", "csv", "xdi", "spec", "spc", "prj", "nxs", "h5", "hdf5", "dat", "xmu", "nor"];
 export const INTENSITY_UNITS = ["counts", "oscillator_strength", "mu", "optical_density", "normalised"];
 export const UNIT_LABELS: Record<string, string> = {
   counts: "Counts",

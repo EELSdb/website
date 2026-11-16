@@ -182,15 +182,25 @@ export async function spectrumPage(c: Context<AppEnv>) {
   const base = `/spectra/${encodeURIComponent(s.slug)}/download`;
   const original = b.files.find((f) => f.role === "original" || f.role === "legacy");
   const hspy = b.files.find((f) => f.role === "hspy");
+  // X-ray absorption gets XDI, the format XAS software reads, in place of the EELS formats (the MSA and HSPY
+  // addresses still work).
+  const xas = s.technique === "xas";
   const downloads = [
-    ...(fileName && PLOTTABLE.test(fileName)
+    ...(fileName && PLOTTABLE.test(fileName) && xas
+      ? [
+          { id: "xdi", label: "XDI", hint: "XAS Data Interchange text, with the facility, beamline and edge. Opens in Larch, Athena and most XAS software.", href: `${base}/xdi`, name: `${s.slug}.xdi` },
+          { id: "csv", label: "CSV", hint: "Two columns, energy in eV and intensity, for spreadsheets, Python or MATLAB.", href: `${base}/csv`, name: `${s.slug}.csv` },
+          { id: "json", label: "JSON", hint: "The data with all the metadata on this page, as in API v2.", href: `${base}/json`, name: `${s.slug}.json` },
+        ]
+      : []),
+    ...(fileName && PLOTTABLE.test(fileName) && !xas
       ? [
           { id: "msa", label: "MSA", hint: "EMSA/MAS text with the EELS header fields. Opens in HyperSpy, DigitalMicrograph and most EELS software.", href: `${base}/msa`, name: `${s.slug}.msa` },
           { id: "csv", label: "CSV", hint: "Two columns, energy in eV and intensity, for spreadsheets, Python or MATLAB.", href: `${base}/csv`, name: `${s.slug}.csv` },
           { id: "json", label: "JSON", hint: "The data with all the metadata on this page, as in API v2.", href: `${base}/json`, name: `${s.slug}.json` },
         ]
       : []),
-    ...(hspy ? [{ id: "hspy", label: "HyperSpy", hint: "HDF5 for HyperSpy, with the beam energy, angles and DOI in its metadata.", href: `${base}/hspy`, name: `${s.slug}.hspy` }] : []),
+    ...(hspy && !xas ? [{ id: "hspy", label: "HyperSpy", hint: "HDF5 for HyperSpy, with the beam energy, angles and DOI in its metadata.", href: `${base}/hspy`, name: `${s.slug}.hspy` }] : []),
     ...(original ? [{ id: "original", label: "Original file", hint: <>As the contributor uploaded it: <code>{original.filename}</code></>, href: href(original.r2_key), name: original.filename }] : []),
   ];
   const variants = b.files.filter((f) => f.role === "variant" && !isOther(f.variant));
@@ -413,7 +423,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <p><strong>Check your data against this reference.</strong> Overlay spectra from your computer or from EELSdb on the plot, each in its own colour.</p>
                 </div>
                 <label class="button secondary compare-pick">
-                  <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi,image/*" />
+                  <input type="file" id="compare-file" multiple accept=".msa,.emsa,.txt,.csv,.dm3,.dm4,.emd,.hspy,.xdi,.spec,.spc,.prj,.nxs,.h5,.hdf5,.dat,.xmu,.nor,image/*" />
                   Compare with your spectra
                 </label>
                 <div class="picker compare-search">
@@ -426,7 +436,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <ul class="picker-list" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
                 </div>
                 <div class="compare-empty">
-                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD, HSPY and XDI files are read in your browser and never uploaded. To trace a spectrum from a published figure, drop or paste a screenshot of it.</p>
+                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD and HSPY files, and X-ray absorption files (XDI, SPEC, Athena, NeXus and beamline columns), are read in your browser and never uploaded. To trace a spectrum from a published figure, drop or paste a screenshot of it.</p>
                 </div>
                 <span class="hint" id="compare-status" aria-live="polite"></span>
                 <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>

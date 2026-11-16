@@ -317,7 +317,7 @@ export function SubmitPage(props: { c: C; v: Values; errors: Record<string, stri
                 label={props.edit ? "Replace the spectrum file (optional)" : "Spectrum file"}
                 errors={errors}
                 required={!props.edit}
-                hint="DM3/DM4, MSA, Velox EMD, HyperSpy HSPY, XDI, or two columns of numbers (.txt, .csv)."
+                hint="DM3/DM4, MSA, Velox EMD, HyperSpy HSPY, or two columns of numbers (.txt, .csv). For X-ray absorption: XDI, SPEC, Athena project (.prj), NeXus or HDF5 (.nxs, .h5), or beamline column files (.dat, .xmu, .nor)."
               >
                 <input id="f-file" name="file" type="file" required={!props.edit} accept={accept} />
               </Field>

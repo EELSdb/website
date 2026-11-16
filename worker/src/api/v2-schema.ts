@@ -197,8 +197,11 @@ export const Spectrum = z
     ),
     download_url: text.openapi({ description: "The main data file: the old upload, else the reviewed MSA, else the submitted file." }),
     downloads: z
-      .strictObject({ msa: text, csv: text, json: text, hspy: text })
-      .openapi({ description: "The spectrum in each download format, as on the spectrum page. MSA, CSV and JSON are converted from the main data file on request." }),
+      .strictObject({ msa: text, csv: text, json: text, hspy: text, xdi: text })
+      .openapi({
+        description:
+          "The spectrum in each download format. MSA, CSV, JSON and XDI are converted from the main data file on request. XDI is only for X-ray absorption spectra, with `Element.edge` as one subshell (L2,3 becomes L3) and EELSdb's fields in an `EELSdb` namespace.",
+      }),
     processing: z
       .array(z.strictObject({ tool: z.string(), version: text, run_at: text }))
       .openapi({ description: "The tools and versions the moderator used at review." }),
@@ -277,7 +280,7 @@ const measuredField = (what: string, unit: string, example: string) =>
 // Every field is optional here: the handler checks the token first, then the fields, and names each problem.
 export const DraftForm = z
   .looseObject({
-    file: z.custom<File>((v) => v instanceof File).optional().openapi({ type: "string", format: "binary", description: "Required. The spectrum file: .msa, .dm3, .dm4, .emd, .hspy, .txt, .csv or .xdi." }),
+    file: z.custom<File>((v) => v instanceof File).optional().openapi({ type: "string", format: "binary", description: "Required. The spectrum file: .msa, .dm3, .dm4, .emd, .hspy, .txt or .csv; for X-ray absorption also .xdi, .spec, .prj (Athena), .nxs or .h5 (NeXus), .dat, .xmu or .nor." }),
     title: field("The specimen name. Default: the file name.", "Hematite"),
     type: z.enum(TYPES).optional().openapi({ description: "Required. Spectrum type." }),
     formula: field("Required. Chemical formula.", "Fe2O3"),

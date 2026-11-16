@@ -32,6 +32,7 @@ const FORMATS: Names = {
   csv: ["CSV", "--series-2"],
   json: ["JSON", "--series-3"],
   hspy: ["HyperSpy", "--series-4"],
+  xdi: ["XDI", "--series-4"],
   original: ["Original file", "--series-5"],
   // The original file of a spectrum from the old site.
   legacy: ["Original file", "--series-5"],

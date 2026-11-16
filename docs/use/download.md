@@ -21,7 +21,13 @@ The formats are:
 - **HyperSpy**: an `.hspy` file that loads in HyperSpy with the beam energy, the angles and the DOI in its metadata.
 - **Original file**: the file as the contributor uploaded it.
 
-EELSdb makes the MSA, CSV and JSON files from the stored data when you download them, so every spectrum has them, whatever format it was uploaded in.
+X-ray absorption spectra have XDI in place of MSA and HyperSpy:
+
+- **XDI**: XAS Data Interchange text, which Larch, Athena and most XAS software read. The header has the edge, the facility, beamline and monochromator, and EELSdb's own fields (reference number, address, licence, DOI) in an `EELSdb` namespace. XDI names one subshell per edge, so an L2,3 edge is written as L3; all the edges are in `EELSdb.edges`.
+
+In Larch, `read_xdi` loads the file: `g = read_xdi("graphite.xdi")`, with the absorption in `g.mu` or in the array named in `Column.2`.
+
+EELSdb makes the MSA, CSV, JSON and XDI files from the stored data when you download them, so every spectrum has them, whatever format it was uploaded in.
 Their addresses do not change, so you can use them in scripts: for example `https://eelsdb.eu/spectra/graphite/download/csv`.
 The HyperSpy file has an address of the same form: `https://eelsdb.eu/spectra/graphite/download/hspy`.
 

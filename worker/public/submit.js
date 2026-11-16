@@ -7,7 +7,7 @@ import { RSCIIO, loadReader } from "./pyreader.js";
 
 const TIMEOUT_MS = 90_000;
 const MAX_BYTES = 50 * 1024 * 1024;
-const SPECTRUM_EXT = ["dm3", "dm4", "msa", "emsa", "emd", "hspy", "txt", "csv", "xdi"];
+const SPECTRUM_EXT = ["dm3", "dm4", "msa", "emsa", "emd", "hspy", "txt", "csv", "xdi", "spec", "spc", "prj", "nxs", "h5", "hdf5", "dat", "xmu", "nor"];
 const COMPANION_EXT = ["emd", "ser", "emi", "dm3", "dm4"];
 
 const $ = (sel, root = document) => root.querySelector(sel);

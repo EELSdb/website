@@ -33,6 +33,7 @@ These records explain the main design decisions in EELSdb. Each record gives the
 | [0023. Licences](/docs/adr/0023-licences/) | Spectra are under ODbL 1.0 unless their record states another licence: CC0 for Corex, or a licence an admin agreed with the contributor. |
 | [0024. Gas phase and X-ray data](/docs/adr/0024-scope-gas-phase-and-xas/) | EELSdb includes gas-phase EELS and soft X-ray absorption spectra, and links to other sites for hard X-ray data. |
 | [0025. HSPY files](/docs/adr/0025-hspy-files/) | Every spectrum has an HSPY file, which RosettaSciIO writes without HyperSpy. |
+| [0040. X-ray absorption file formats](/docs/adr/0040-x-ray-absorption-formats/) | EELSdb reads the common XAS file formats in the browser, and offers X-ray absorption spectra as XDI instead of the EELS formats. |
 | [0026. Metadata harvesting](/docs/adr/0026-metadata-harvesting/) | EELSdb serves OAI-PMH, DCAT-AP and schema.org metadata, with page URLs as identifiers. |
 | [0027. Bulk download](/docs/adr/0027-bulk-download/) | A script outside Cloudflare builds the bulk download from API v2. |
 | [0028. Access for AI agents](/docs/adr/0028-agent-facing-surface/) | AI agents read EELSdb through llms.txt, Markdown pages and a skill, without an MCP server. |
