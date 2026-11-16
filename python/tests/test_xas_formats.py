@@ -91,3 +91,13 @@ def test_beamline_columns(tmp_path):
     sp = read_any(path)
     np.testing.assert_allclose(sp.energy, E)
     np.testing.assert_allclose(sp.intensity, np.log(200 / np.array([100, 80, 40, 50])))
+
+
+def test_msa_in_mev(tmp_path):
+    path = tmp_path / "vib.msa"
+    path.write_text(
+        "#FORMAT      : EMSA/MAS Spectral Data File\n#VERSION     : 1.0\n#TITLE       : hBN phonons\n#NPOINTS     : 3\n#NCOLUMNS    : 1\n"
+        "#XUNITS      : meV\n#YUNITS      : counts\n#DATATYPE    : Y\n#XPERCHAN    : 1.0\n#OFFSET      : -1.0\n"
+        "#SPECTRUM    : Spectral Data Starts Here\n10\n1000\n12\n#ENDOFDATA   :\n"
+    )
+    np.testing.assert_allclose(read_any(path).energy, [-0.001, 0.0, 0.001])

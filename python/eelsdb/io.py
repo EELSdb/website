@@ -22,6 +22,9 @@ class Spectrum:
     original_metadata: dict = field(default_factory=dict)  # every tag in the file, as the reader gives it
 
 
+UNIT_SCALE = {"keV": 1000.0, "eV": 1.0, "meV": 0.001}
+
+
 def msa_x_column(path):
     """X values of an XY MSA file, read directly (RosettaSciIO ignores them)."""
     xs, in_data = [], False
@@ -53,6 +56,11 @@ def read_msa(path):
     energy = msa_x_column(path) if datatype == "XY" else header_axis
     if energy is None:
         raise ValueError("MSA file has no energy axis: DATATYPE is Y but OFFSET or XPERCHAN is missing")
+    # Monochromated (vibrational) spectra are often in meV.
+    scale = UNIT_SCALE.get(str(header.get("XUNITS", "eV")).strip(), 1.0)
+    if scale != 1.0:
+        energy = energy * scale
+        header_axis = None if header_axis is None else header_axis * scale
     return Spectrum(energy, np.asarray(sig["data"], dtype=float), "msa", header, header_axis=header_axis,
                     original_metadata=dict(header))
 
@@ -326,7 +334,7 @@ def read_any(path):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
         signals = reader.file_reader(str(path))
-    is_eels = lambda s: s["axes"] and s["axes"][-1].get("units") in ("eV", "keV")  # noqa: E731
+    is_eels = lambda s: s["axes"] and s["axes"][-1].get("units") in UNIT_SCALE  # noqa: E731
     sig = next((s for s in signals if is_eels(s)), signals[0])
     tem = _get(sig.get("metadata", {}), "Acquisition_instrument.TEM") or {}
     header = {
@@ -344,7 +352,7 @@ def read_any(path):
     while data.ndim > 1:
         data = data.sum(axis=0)
     ax = sig["axes"][-1]
-    factor = 1000.0 if ax.get("units") == "keV" else 1.0
+    factor = UNIT_SCALE[ax["units"]]
     energy = np.asarray(ax["axis"], float) if "axis" in ax else ax.get("offset", 0) + ax.get("scale", 1) * np.arange(data.size)
     energy = energy * factor
     return Spectrum(energy, data, ext.lstrip("."), header, header_axis=energy, navigation_shape=navigation_shape,
