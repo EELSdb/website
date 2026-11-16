@@ -36,7 +36,8 @@ You can go back to an earlier step at any time from the list of steps.
 
    - **Raw data** or **Background subtracted**: the spectrum. If you send both, the background-subtracted file is the main spectrum, and EELSdb keeps the raw data with it.
    - **Processed**: a processed version of the same spectrum, for example oscillator strength or smoothed (see [Processed versions](/docs/share/file-formats/#processed-versions)).
-   - **Companion low-loss (for thickness)**: EELSdb uses it to estimate the specimen thickness.
+   - **Other (with a comment)**: a related spectrum that is not a version of this one, for example the same area after beam damage. Type what it shows in **Comment**. You can add up to three (see [Other spectra](/docs/share/file-formats/#other-spectra)).
+   - **Companion low-loss (for thickness and deconvolution)**: EELSdb uses it to estimate the specimen thickness, and the spectrum page uses it for Fourier-ratio deconvolution.
    - **Companion file (beam settings)**: a file from the same session, for example a Velox `.emd` or TIA `.ser` survey. These files often record the beam energy and the convergence angle.
 
    The form makes a first choice for each file. Check it.

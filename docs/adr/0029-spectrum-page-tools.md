@@ -13,7 +13,9 @@ Viewers want to check a reference against their own data and make figures. They 
 
 ### Layout
 
-Below the plot are two boxes side by side. The left box is "Compare spectra". The right box has two tabs: "Adjust the plot" (first) and "Use in HyperSpy". The tabs are radio buttons styled as tabs, so switching them needs no JS. Both boxes appear when the plot has loaded, because their tools need it.
+Below the plot are two boxes side by side. The left box is "Compare spectra". The right box has three tabs: "Adjust the plot" (first), "Analyse" and "Use in HyperSpy". "Adjust the plot" holds what changes the curve (background and deconvolution, smoothing, normalisation, log scale, independent axes). "Analyse" holds what reads values off it (quick quantification and peak labels). The tabs are radio buttons styled as tabs, so switching them needs no JS. Both boxes appear when the plot has loaded, because their tools need it.
+
+New tools go in one of the tabs by that rule, and a short result that viewers should see without opening a tab goes in the bar under the plot, as the quantification estimate does. A fourth tab would not fit the box at phone width with the current labels.
 
 ### Plot
 
@@ -72,6 +74,16 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 - Processing never changes downloads.
 - The "Use in HyperSpy" snippet reproduces the view. It loads every plotted spectrum: EELSdb spectra from their HSPY download (`/spectra/{slug}/download/hspy`), which carries their metadata, and the viewer's files by file name, because a page cannot know a file's folder. HyperSpy cannot read TXT, CSV and XDI files, so the code names them in a comment and leaves them out. Each spectrum gets the processing lines (`remove_background(signal_range=(a, b))` with its own window, `smooth_savitzky_golay(...)`, `s / s.data.max()`), then its energy shift as an axis offset. The code ends with `s.plot()` for one spectrum or `hs.plot.plot_spectra([...])` for several, with a log y axis if the plot has one, then `plt.show()`. HyperSpy has no independent y axes, so the overlay shares one axis. For one EELS spectrum, `s.plot(plot_edges=[...], only_edges=...)` marks the edges that the plot shows; `plot_spectra` cannot draw edge markers.
 - The code starts with inline script metadata (PEP 723) that lists `hyperspy` and `exspy`, so `uv run` can run it as a file. exSpy provides `EELSSpectrum`: without it, HyperSpy loads EELS files as plain signals and warns.
+
+### Quick quantification
+
+- For core-loss spectra in counts whose record has the beam energy and the collection angle, the page estimates element ratios when it loads (`worker/public/quant.js`, loaded on demand). The estimate shows in the bar under the plot ("≈ B 46% · N 54%"), and the "Analyse" tab has the table, the window and angles used, the edges left out and the caveats. A "?" next to both links to the documentation page that explains the method and its limits.
+- It uses Egerton's integral method: one window Δ for every edge (50 eV, less if the next edge or the end of the data is closer, at least 20 eV), a power law fitted by least squares to log counts over the 30 eV before each onset (from 3 eV before it, and after the previous edge), the counts above it from the onset to onset + Δ, divided by the partial cross-section σ(β, Δ).
+- σ comes from exSpy's hydrogenic GOS (Egerton's SIGMAK3 and SIGMAL3), reimplemented in JS: the same tabulated energies, the same q integral (adaptive Simpson in place of scipy's `quad`), Egerton's effective collection angle for a convergent beam, and linear interpolation between energies, as exSpy's spline of order 1. `worker/test/quant.test.ts` checks ten K and L3 cases against `data/fixtures/quant.json` (from `python/record_quant.py`) to 1e-7, and a spectrum built from the cross-sections gives back its ratio.
+- Only K and L2,3 edges have hydrogenic cross-sections. An element with both in range uses its K edge.
+- The page quantifies the spectrum as published, not the view, so the result does not change with the plot settings.
+- On the seed data, hexagonal BN gives B 46%, N 54%, and LaCoO3 gives O 74%, Co 26% (Co L2,3 and O K). Cr2O3 gives too much Cr, because of the white lines.
+- Fitting a model with exSpy in Pyodide was not chosen: it needs HyperSpy loaded (seconds), and exSpy's better cross-sections (Hartree–Slater, Dirac) are separate downloads under their own licences.
 
 ### Peak labels
 

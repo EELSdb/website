@@ -38,6 +38,14 @@ The spectrum page shows each version in the plot and offers it for download.
 If you send the spectrum as raw data and background subtracted, the background-subtracted file is the main file.
 Otherwise, upload the spectrum with the least processing as the main file.
 
+## Other spectra
+
+You can also add up to three related spectra that are not versions of this one, for example the same area after a longer exposure, to show beam damage.
+Choose **Other (with a comment)** in **This file is**, and type what the spectrum shows in **Comment**, for example "same area after 60 s of beam exposure".
+The comment is required.
+The spectrum page lists these files with their comments, can plot them, and offers them for download.
+They share the metadata of the main spectrum. A spectrum of a different specimen, or with different settings that matter, needs its own submission.
+
 ## DigitalMicrograph files often lack the beam energy
 
 On many microscopes, DigitalMicrograph is not connected to the microscope.

@@ -497,7 +497,7 @@ for (const input of $$(".variant-files input[type=file]:not([data-other])", form
 // Related spectra that are not versions of this one (beam damage, another area…): several allowed, each with a comment.
 const OTHER_SLOTS = $$(".variant-files input[data-other]", form).map((input) => input.name.replace(/_file$/, ""));
 if (OTHER_SLOTS.length) ROLES.other = "Other (with a comment)";
-Object.assign(ROLES, { lowloss: "Companion low-loss (for thickness)", companion: "Companion file (beam settings)", unused: "Leave out" });
+Object.assign(ROLES, { lowloss: "Companion low-loss (for thickness and deconvolution)", companion: "Companion file (beam settings)", unused: "Leave out" });
 const others = () => files.filter((f) => f.role === "other");
 const isVariant = (role) => role?.startsWith("variant_");
 // An edit replaces the one spectrum file, so there raw and background subtracted take the same place.

@@ -653,7 +653,17 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .tool-tab-bar input:focus-visible + span { outline: 2px solid var(--focus); outline-offset: 2px; }
 .tool-panel { padding: 1rem; }
 .tool-panel .hint { margin: 0.5rem 0 0; }
-.tool-tabs:has([value=process]:not(:checked)) .process-panel, .tool-tabs:has([value=snippet]:not(:checked)) .snippet-panel { display: none; }
+.tool-tabs:has([value=process]:not(:checked)) .process-panel, .tool-tabs:has([value=analyse]:not(:checked)) .analyse-panel, .tool-tabs:has([value=snippet]:not(:checked)) .snippet-panel { display: none; }
+.analyse-panel section + section { margin-top: 1.25rem; padding-top: 1rem; border-top: 1px solid var(--rule); }
+.analyse-panel h3 { margin: 0 0 0.5rem; font-size: 0.95rem; display: flex; align-items: center; gap: 0.4rem; }
+.help-link { display: inline-grid; place-items: center; width: 1.15rem; height: 1.15rem; border: 1px solid var(--line); border-radius: 50%; font-size: 0.75rem; font-weight: 700; color: var(--muted); text-decoration: none; line-height: 1; }
+.help-link:hover, .help-link:focus-visible { color: var(--ink); border-color: var(--accent); }
+.quant-table { width: 100%; border-collapse: collapse; font-size: 0.875rem; font-variant-numeric: tabular-nums; }
+.quant-table th, .quant-table td { text-align: left; padding: 0.3rem 0.5rem 0.3rem 0; border-bottom: 1px solid var(--rule); }
+.quant-table td.num, .quant-table th.num { text-align: right; }
+.quant-summary { display: inline-flex; align-items: center; gap: 0.4rem; color: var(--ink); }
+.quant-summary button { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
+.quant-summary button:hover, .quant-summary button:focus-visible { text-decoration-color: currentColor; }
 .process-controls { display: grid; justify-items: start; gap: 0.6rem; }
 .bg-row, .peaks-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
 .fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }

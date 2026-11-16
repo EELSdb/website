@@ -99,6 +99,8 @@ function parseSpectrum(text) {
   return [order.map((i) => x[i]), order.map((i) => y[i])];
 }
 
+const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => `&#${ch.charCodeAt(0)};`);
+
 /** A colour token resolved for canvas drawing (tokens use light-dark(), which only the cascade resolves). */
 const probe = document.createElement("span");
 probe.hidden = true;
@@ -775,6 +777,39 @@ async function main() {
   };
   const proc = document.getElementById("process");
   if (proc) proc.hidden = false;
+  // Quick quantification of the spectrum as published, run once the plot is up. The summary under the plot opens
+  // the Analyse tab, which has the table and the caveats.
+  const quantInfo = el.dataset.quant ? JSON.parse(el.dataset.quant) : null;
+  const quantResult = document.getElementById("quant-result");
+  if (quantInfo && quantResult) {
+    const [qx, qy] = data;
+    import("/quant.js").then(({ quantify }) => {
+      const q = quantify(qx, qy, JSON.parse(el.dataset.edges || "[]"), table, quantInfo, { backgroundSubtracted: quantInfo.bgsub });
+      const pct = (f) => `${(100 * f).toFixed(f < 0.1 ? 1 : 0)}%`;
+      const skipped = q.skipped?.length
+        ? `<p class="hint">Left out: ${q.skipped.map((k) => `${esc(k.edge)} (${esc(k.reason)})`).join("; ")}.</p>`
+        : "";
+      if (q.error) {
+        quantResult.innerHTML = `<p class="hint">Not possible for this spectrum: it ${esc(q.error)}</p>${skipped}`;
+        return;
+      }
+      const first = q.elements[0];
+      const rows = q.elements
+        .map((e) => `<tr><td>${esc(e.element)}</td><td>${esc(e.edge)}</td><td class="num">${pct(e.fraction)}</td><td class="num">${(e.fraction / first.fraction).toFixed(2)}</td></tr>`)
+        .join("");
+      const angle = quantInfo.alpha ? `β = ${quantInfo.beta} mrad and α = ${quantInfo.alpha} mrad` : `β = ${quantInfo.beta} mrad`;
+      quantResult.innerHTML = `<table class="quant-table"><thead><tr><th>Element</th><th>Edge</th><th class="num">Atoms</th><th class="num">Ratio</th></tr></thead><tbody>${rows}</tbody></table>
+<p class="hint">An estimate, often 10–20% out, and worse for L edges with strong white lines. It compares the counts in a ${+q.delta.toFixed(1)} eV window after each edge, above a power-law background, with hydrogenic cross-sections for ${quantInfo.E0} kV, ${angle}. Only the elements listed are counted.</p>${skipped}`;
+      const summary = document.getElementById("quant-summary");
+      summary.innerHTML = `<button type="button" title="Show the quantification">≈ ${q.elements.map((e) => `${esc(e.element)} ${pct(e.fraction)}`).join(" · ")}</button> <a class="help-link" href="/docs/use/quantify/" title="How this is calculated, and why to treat it with care" aria-label="How quick quantification works">?</a>`;
+      summary.querySelector("button").addEventListener("click", () => {
+        const tab = document.querySelector("[name=tool-tab][value=analyse]");
+        tab.checked = true;
+        tab.closest(".tool-box").scrollIntoView({ behavior: "smooth", block: "nearest" });
+      });
+      summary.hidden = false;
+    });
+  }
   showValues();
   // Viewers who have used "Label peaks" get HyperSpy loaded in the background, so the box answers at once.
   try {
@@ -1233,7 +1268,6 @@ async function main() {
   const H = 560;
   const HEAD = 64;
   const pageUrl = `EELSdb • ${location.origin}${location.pathname}`;
-  const esc = (t) => String(t).replace(/[&<>"]/g, (ch) => `&#${ch.charCodeAt(0)};`);
 
   /** A copy of the plot at a fixed size in the given theme, over the current energy range; call done() after use. */
   async function themedPlot(theme) {

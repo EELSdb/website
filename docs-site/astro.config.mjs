@@ -95,7 +95,7 @@ export default defineConfig({
         { label: 'Overview', link: '/' },
         {
           label: 'Use the data',
-          items: ['use/find', 'use/view', 'use/download', 'use/python', 'use/api', 'use/harvest', 'use/agents'],
+          items: ['use/find', 'use/view', 'use/quantify', 'use/download', 'use/python', 'use/api', 'use/harvest', 'use/agents'],
         },
         {
           label: 'Share spectra',

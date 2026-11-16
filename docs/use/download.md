@@ -47,7 +47,7 @@ Some spectra have a different licence. The download dialog and the `licence` fie
 
 ## Cite a spectrum
 
-Each spectrum has a reference number, such as EELSDB-0042, next to its type under the title. Use it to point people to the spectrum on a poster or a slide: `eelsdb.eu/EELSDB-0042` opens its page. The citation includes it.
+Each spectrum has a reference number, such as EELSDB-0042, after its title. Click it to copy the spectrum's permanent link. Use it to point people to the spectrum on a poster or a slide: `eelsdb.eu/EELSDB-0042` opens its page. The citation includes it.
 
 Cite two things:
 

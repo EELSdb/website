@@ -6,7 +6,8 @@ description: Read a spectrum page on EELSdb, use its plot, compare other spectra
 Each spectrum has its own page, at an address such as [`/spectra/graphite/`](/spectra/graphite/).
 The page shows the plot of the spectrum, the contributor's comments and all its metadata.
 
-At the top of the page are the title, the type of spectrum, the formula, the contributor and the date it was added.
+At the top of the page are the title, the reference number (such as EELSDB-0042), the type of spectrum and the formula.
+Click the reference number to copy the spectrum's permanent link, `https://eelsdb.eu/EELSDB-0042`, which you can quote on a poster or a slide.
 The **Beam energy and angles known** label tells you that the beam energy and both semi-angles are recorded.
 You need these values to compare fine structure between spectra or to do quantification.
 
@@ -18,7 +19,8 @@ The contributor's comments are in the box below the title.
 - Hold the pointer over the plot to see the energy, and the intensity of each spectrum at that energy.
 - **Edge onsets (exSpy)** marks the onset energy of each listed edge, from the exSpy edge table.
 - **Minor edges** adds the weaker edges of the same elements.
-- **Show** switches between the main spectrum and its processed versions, for example oscillator strength, if the contributor added them.
+- **Show** switches between the main spectrum and its processed versions, for example oscillator strength, if the contributor added them. It also lists the other spectra that the contributor added, such as the same area after beam damage.
+- For core-loss spectra, an estimate of the element ratios shows next to these settings when the page can calculate one. See [Quick quantification](/docs/use/quantify/).
 
 The y axis shows the name of the sample and the unit, for example "Graphite (counts)".
 
@@ -72,9 +74,16 @@ When you hold the pointer over an axis, the half that a drag moves is tinted.
 When you zoom, the compared spectra keep their position relative to the reference.
 Clear **Independent y axes** to plot them on the same axis as the reference.
 
+## The tools box
+
+The box below the plot, on the right, has three tabs:
+
+- **Adjust the plot**: settings that change what the plot shows.
+- **Analyse**: quick quantification, for core-loss spectra, and peak labels.
+- **Use in HyperSpy**: Python code that does the same in HyperSpy.
+
 ## Adjust the plot
 
-The **Adjust the plot** box is below the plot, on the right.
 These settings change only what the plot shows. Downloads always contain the original data.
 Compared spectra get the same settings, each on its own data.
 
@@ -86,9 +95,13 @@ Compared spectra get the same settings, each on its own data.
   - The plot marks the window with a dashed line along the bottom. While you drag a handle, the plot also shades the window.
   - A compared spectrum is fitted over the part of the window that its data covers. If fewer than 10 of its data points are in the window, it is not fitted or subtracted.
   - If no power law fits the window of the main spectrum, a message under the settings tells you. Pick a wider window before the edge.
+  - **Subtract, then Fourier-ratio deconvolution** shows only for core-loss spectra that have a low-loss spectrum of the same area: the low-loss file the contributor uploaded, or else an associated low-loss spectrum. It subtracts the background, then removes plural scattering with the low-loss spectrum, as exSpy's `fourier_ratio_deconvolution` does. The message under the settings names the low-loss spectrum and the width of its zero-loss peak. An associated spectrum may not be from the same area of the specimen: check its page. Deconvolution adds noise, mainly at high energies. Compared spectra get only the background subtraction. If the spectrum is already background subtracted, the option is called **Fourier-ratio deconvolution** and does not fit a background.
 - **Smoothing** applies a Savitzky–Golay filter. Drag the slider, or click the value and type the number of points, an odd number from 3 to 51.
 - **Normalise intensity** divides each spectrum by its maximum or by its area. This clears **Independent y axes**, because the spectra then have the same units. If the page cleared it, setting normalisation back to **Off** turns it on again.
 - **Log intensity scale** shows the y axis on a log scale. The plot does not show values at or below zero.
+## Analyse
+
+- **Quick quantification**, for core-loss spectra, estimates the ratio of the elements from their K and L2,3 edges. It runs by itself when the page opens. The **?** next to the title links to [how it is calculated, and why to treat it with care](/docs/use/quantify/).
 - **Label peaks** finds the peaks of the main spectrum with HyperSpy and labels each one with its energy in eV.
   - HyperSpy runs in your browser. The first time you tick the box, it takes a few seconds to load, and the plot is blurred until it is ready. HyperSpy then stays loaded while you move from one spectrum to the next, so the box answers at once. After you have used it once, spectrum pages also load HyperSpy in the background when they open. They do not tick the box for you.
   - **Sensitivity** sets how sharp a peak must be, compared with the sharpest peak in the spectrum. Drag it left for fewer peaks and right for more.
@@ -97,7 +110,7 @@ Compared spectra get the same settings, each on its own data.
   - Compared spectra do not get labels.
   - On low-loss spectra, the zero-loss peak is much sharper than the plasmon peaks, so the plasmons get labels only at a high sensitivity. HyperSpy never finds the zero-loss peak, because it ignores peaks at 0 eV or below.
 
-The steps run in this order: background, smoothing, normalisation.
+The steps run in this order: background, Fourier-ratio deconvolution, smoothing, normalisation. Peak labels come last.
 
 ## Use in HyperSpy
 
@@ -109,14 +122,21 @@ Your own files load by their file name. Change the path if the file is in anothe
 HyperSpy cannot read CSV, text and XDI files, so the code leaves them out.
 For one spectrum, the plot also marks the same edge onsets as the page, from the exSpy edge table.
 If **Label peaks** is on, the code prints the peak energies of the main spectrum.
+With Fourier-ratio deconvolution, the code downloads the low-loss spectrum and calls `fourier_ratio_deconvolution`.
 
 The code starts with a short header that lists HyperSpy and exSpy.
 Save the code as a file, for example `spectrum.py`, and run it with `uv run spectrum.py`: [uv](https://docs.astral.sh/uv/) installs both packages for you.
 In a notebook, install `hyperspy` and `exspy` first. Without exSpy, HyperSpy loads the files as plain spectra and gives a warning.
 
-## Export an image of the plot
+## Copy or export the plot
 
-Click **Export**, then choose PNG or SVG, and a light or dark background.
+Click **Export**.
+
+- **Copy: Image** copies a PNG image of the plot, on a light background, to paste into slides or documents.
+- **Copy: Data** copies the values in the plot as columns separated by tabs, with a header row: the energy, then each spectrum. Paste them into a spreadsheet or a plotting program. The copy has only the energy range you zoomed to, and the values after the **Adjust the plot** settings. Compared spectra and fits are extra columns, empty where a spectrum has no value at that energy.
+- **PNG** and **SVG** save an image file, with a light or dark background.
+- **Link: Copy permalink** copies the spectrum's permanent link, with its reference number.
+
 The image shows the plot as it is on the page: the area you zoomed to, the edge markers, the peak labels, any spectra you compare with it and the settings from **Adjust the plot**.
 If you changed the settings, the image says which processing it shows.
 It has the title of the spectrum and its address at the top.
@@ -130,6 +150,7 @@ Below the plot, the metadata is in sections:
 - **Treatment**: corrections and deconvolutions applied to the data.
 - **Reference**: the paper the spectrum comes from, if there is one.
 - **Associated spectra**: related spectra, for example the low-loss spectrum of the same specimen.
+- **Other spectra from the contributor**: related spectra uploaded with this one, such as the same area after beam damage, each with the contributor's comment.
 - **Metadata from the file**: every tag in the uploaded file, for spectra reviewed on the new site. A person has not checked these values.
 
 To download the data or cite the spectrum, see [Download and cite spectra](/docs/use/download/).

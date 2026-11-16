@@ -220,6 +220,11 @@ export async function spectrumPage(c: Context<AppEnv>) {
         : lowlossLink
           ? { src: `/spectra/${encodeURIComponent(lowlossLink.slug)}/download/json`, name: lowlossLink.title, slug: lowlossLink.slug, hyperspy: `${SITE}/spectra/${lowlossLink.slug}/download/hspy` }
           : null;
+  // Quick quantification needs counts, the beam energy and the collection angle; it runs in the browser.
+  const quant =
+    s.type === "coreloss" && s.intensity_units === "counts" && a.beam_energy_kv && a.collection_mrad
+      ? { E0: a.beam_energy_kv, alpha: a.convergence_mrad ?? 0, beta: a.collection_mrad, bgsub: !!Number(t.background_subtracted) }
+      : null;
   const cite = spectrumCitation(b);
   const licence = licenceOf(s.licence);
   const deconv = [
@@ -372,6 +377,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           data-versions={JSON.stringify(versions)}
           data-lowloss={lowloss ? JSON.stringify(lowloss) : ""}
           data-bg-subtracted={Number(t.background_subtracted) ? "1" : ""}
+          data-quant={quant ? JSON.stringify(quant) : ""}
         >
           <p class="plot-message">{fileUrl ? "Loading spectrum…" : "No data file for this spectrum."}</p>
         </div>
@@ -387,6 +393,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           )}
           <label><input type="checkbox" id="show-edges" checked /> Edge onsets (exSpy)</label>
           <label><input type="checkbox" id="show-minor" /> Minor edges</label>
+          <span class="quant-summary" id="quant-summary" hidden></span>
           <span class="plot-hint">Drag a box to zoom, double-click to reset</span>
         </div>
       </div>
@@ -431,6 +438,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
           <div class="tool-box tool-tabs" id="process" hidden>
             <div class="tool-tab-bar" role="radiogroup" aria-label="Spectrum tools">
               <label><input type="radio" name="tool-tab" value="process" checked /><span>Adjust the plot</span></label>
+              <label><input type="radio" name="tool-tab" value="analyse" /><span>Analyse</span></label>
               {s.status === "published" && <label><input type="radio" name="tool-tab" value="snippet" /><span>Use in HyperSpy</span></label>}
             </div>
             <div class="tool-panel process-panel">
@@ -477,6 +485,30 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </select>
                 </label>
                 <label><input type="checkbox" id="log-y" /> Log intensity scale</label>
+                <div class="scale-row" hidden>
+                  <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
+                  <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>
+                </div>
+              </div>
+              <p class="hint" id="process-status" aria-live="polite">Applies to compared spectra too. Only the view changes: downloads are the original data.</p>
+            </div>
+            <div class="tool-panel analyse-panel">
+              {s.type === "coreloss" && (
+                <section class="quant" aria-labelledby="quant-title">
+                  <h3 id="quant-title">
+                    Quick quantification{" "}
+                    <a class="help-link" href="/docs/use/quantify/" title="How this is calculated, and why to treat it with care" aria-label="How quick quantification works">?</a>
+                  </h3>
+                  {quant ? (
+                    <div id="quant-result" aria-live="polite"><p class="hint">Calculating…</p></div>
+                  ) : (
+                    <p class="hint">
+                      Needs the {s.intensity_units !== "counts" ? "spectrum in counts" : [!a.beam_energy_kv && "beam energy", !a.collection_mrad && "collection angle"].filter(Boolean).join(" and ")}, which this spectrum does not record.
+                    </p>
+                  )}
+                </section>
+              )}
+              <section class="peaks" aria-label="Peaks">
                 <div class="peaks-row">
                   <label><input type="checkbox" id="find-peaks" /> Label peaks</label>
                   <label class="peak-level">
@@ -484,12 +516,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   </label>
                   <span class="hint" id="peaks-status" aria-live="polite"></span>
                 </div>
-                <div class="scale-row" hidden>
-                  <label><input type="checkbox" id="compare-scale" checked aria-describedby="scale-note" /> Independent y axes</label>
-                  <p class="hint" id="scale-note">Gives each compared spectrum its own axis on the right. Drag the top or bottom half of an axis to move its maximum or minimum, and double-click it to reset.</p>
-                </div>
-              </div>
-              <p class="hint" id="process-status" aria-live="polite">Applies to compared spectra too. Only the view changes: downloads are the original data.</p>
+              </section>
             </div>
             {s.status === "published" && (
               <div class="tool-panel snippet-panel">
