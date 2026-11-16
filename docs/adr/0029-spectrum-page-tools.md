@@ -56,6 +56,13 @@ Viewers can export the current view as PNG or SVG, in light or dark. The page dr
 The page does view processing in plain JS (`worker/public/process.js`), not with HyperSpy in Pyodide. [ADR 0003](/docs/adr/0003-small-browser-python-stack/) has the timings.
 
 - Power-law background: the viewer sets the window with a two-thumb slider or types its ends. Dragging one thumb past the other pushes it along, because once the thumbs meet, only the top one can be grabbed. The plot marks the window with a capped, dashed `--edge` line along its bottom, and shades it only while the slider is dragged. The page can show the fit or subtract it. Each compared spectrum gets its own fit, drawn dashed in its colour, over the part of the window its data covers. With fewer than 10 of its channels in the window, it is neither fitted nor subtracted. This tool is for core-loss spectra only.
+- Fourier-ratio deconvolution removes plural scattering from a core-loss spectrum. It is an option of the Background menu, "Subtract, then Fourier-ratio deconvolution", shown only when a low-loss spectrum of the same area exists: the low-loss file uploaded with the spectrum, else the first associated spectrum of type low loss (36 legacy core-loss spectra have one). The page notes that an associated spectrum may not be from the same area. For a spectrum whose main file is already background subtracted, the option is "Fourier-ratio deconvolution" and does not fit a background.
+  - It reproduces exSpy's `fourier_ratio_deconvolution(ll)` with its defaults. The elastic threshold is the first minimum of the smoothed slope between 1 and 11 eV (`estimate_elastic_scattering_threshold`). Both spectra get exSpy's power-law extrapolation (20 and 100 channels wide, 100 added) and Hanning taper. The zero-loss intensity is summed below the threshold after the taper, as exSpy does. Both are padded to scipy's `next_fast_len`, the ratio of their transforms is reconvolved with a unit-area Gaussian as wide as the zero-loss peak, and the result is scaled by the zero-loss intensity.
+  - The page computes transforms of any length with Bluestein's chirp-z on a power-of-two FFT, and copies numpy's `irfft`, whose default output length is 2 (m − 1) for m bins.
+  - HyperSpy measures the zero-loss width with an interpolating spline through every channel. The page interpolates each half-maximum crossing with a cubic through four channels. On the test spectrum the widths differ by 1%.
+  - A low-loss spectrum on a different channel width is interpolated linearly onto the core-loss width. exSpy requires the same width, so the snippet says to interpolate first.
+  - The order is background, deconvolution, smoothing, normalisation. Compared spectra get only the background step, because the page has no low-loss spectrum for them.
+  - The snippet loads the low-loss spectrum and calls `fourier_ratio_deconvolution(ll)` after `remove_background`.
 - The two-area estimate matches exSpy's `remove_background(signal_range=…)`. Like exSpy, it treats EELS counts as binned: A comes from plain sums, and the model is multiplied by the channel width.
 - Savitzky–Golay smoothing uses order 2 and a window slider. The window length is also an editable number. It matches scipy's `savgol_filter` with mode "interp", which exSpy uses.
 - The viewer can normalise to the maximum or to the area.
@@ -93,10 +100,10 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 
 ## Consequences
 
-- `worker/test/process.test.ts` checks the JS against exSpy output that `python/record_process.py` records. The tolerance is 1e-9 relative.
+- `worker/test/process.test.ts` checks the JS against exSpy output that `python/record_process.py` records. The tolerance is 1e-9 relative, and 1% for Fourier-ratio deconvolution with exSpy's own zero-loss width. The deconvolution's inputs are stored at full precision, because it amplifies rounding.
 - For X-ray absorption spectra, HyperSpy integrates differently because the data is not binned. The snippet line for area normalisation would therefore give a slightly different result.
 - uPlot sets scales on its first commit. A read of the scales in the same tick as a rebuild returns `null`. Check for `null` before you reuse them.
 - These tools are not built:
   - Edge-jump normalisation. It needs a second window.
   - Derivatives.
-  - Deconvolution. It needs a matching low-loss spectrum, and most entries do not have one.
+  - Other deconvolutions (Fourier-log, Richardson–Lucy).

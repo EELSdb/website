@@ -32,6 +32,13 @@ describe("HyperSpy snippet", () => {
     expect(code).toContain('ax = hs.plot.plot_spectra([s, s2, s4], legend=["A", "B", "mine.dm4"])\nax.set_yscale("log")');
   });
 
+  it("deconvolves with the low-loss spectrum after the background step", () => {
+    const code = hyperspyCode([{ name: "A", url: "https://eelsdb.eu/a.hspy", file: "spectrum.hspy", window: [250, 280], lowloss: { url: "https://eelsdb.eu/spectra/b/download/hspy", file: "b.hspy" } }], { smooth: 5 });
+    expect(code).toContain(
+      's = s.remove_background(signal_range=(250.0, 280.0))\npath, _ = urlretrieve("https://eelsdb.eu/spectra/b/download/hspy", "b.hspy")\nll = hs.load(path, signal_type="EELS")\ns = s.fourier_ratio_deconvolution(ll)\ns.smooth_savitzky_golay(',
+    );
+  });
+
   it("highlights like the docs", () => {
     const html = highlightPython('s = hs.load(path, signal_type="EELS")  # note');
     expect(html).toBe(

@@ -209,6 +209,17 @@ export async function spectrumPage(c: Context<AppEnv>) {
           .map((f) => ({ label: `Other: ${short(f.note ?? f.filename)}`, src: href(f.r2_key), axis: axisLabel(s.intensity_units) })),
       ]
     : [];
+  // Fourier-ratio deconvolution needs a low-loss spectrum of the same area: the uploaded one, else a linked low-loss spectrum.
+  const lowlossFile = b.files.find((f) => f.role === "lowloss");
+  const lowlossLink = b.links.find((l) => l.type === "lowloss");
+  const lowloss =
+    s.type !== "coreloss"
+      ? null
+      : lowlossFile
+        ? { src: href(lowlossFile.r2_key), name: lowlossFile.filename, text: PLOTTABLE.test(lowlossFile.filename), hyperspy: `${SITE}${href(lowlossFile.r2_key)}` }
+        : lowlossLink
+          ? { src: `/spectra/${encodeURIComponent(lowlossLink.slug)}/download/json`, name: lowlossLink.title, slug: lowlossLink.slug, hyperspy: `${SITE}/spectra/${lowlossLink.slug}/download/hspy` }
+          : null;
   const cite = spectrumCitation(b);
   const licence = licenceOf(s.licence);
   const deconv = [
@@ -359,6 +370,8 @@ export async function spectrumPage(c: Context<AppEnv>) {
           data-edges={JSON.stringify(b.edges.map((e) => `${e.element}_${e.edge}`))}
           data-type={s.type}
           data-versions={JSON.stringify(versions)}
+          data-lowloss={lowloss ? JSON.stringify(lowloss) : ""}
+          data-bg-subtracted={Number(t.background_subtracted) ? "1" : ""}
         >
           <p class="plot-message">{fileUrl ? "Loading spectrum…" : "No data file for this spectrum."}</p>
         </div>
@@ -430,6 +443,9 @@ export async function spectrumPage(c: Context<AppEnv>) {
                         <option value="">Off</option>
                         <option value="fit">Show power-law fit</option>
                         <option value="subtract">Subtract power law</option>
+                        {lowloss && (
+                          <option value="frd">{Number(t.background_subtracted) ? "Fourier-ratio deconvolution" : "Subtract, then Fourier-ratio deconvolution"}</option>
+                        )}
                       </select>
                     </label>
                     <span class="fit-window">

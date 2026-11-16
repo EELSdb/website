@@ -36,7 +36,8 @@ const NOT_HYPERSPY = /\.(txt|csv|xdi)$/i;
 /**
  * Python that loads the spectra in HyperSpy, applies the plot's processing to each and plots them. The inline script
  * metadata (PEP 723) lets `uv run` install HyperSpy and exSpy; exSpy makes EELS files load as EELSSpectrum.
- * spectra: [{ name, file, url?, signalType?, window?: [lo, hi], shift? }]; a spectrum without a url is a local file.
+ * spectra: [{ name, file, url?, signalType?, window?: [lo, hi], shift?, lowloss?: { url, file } }]; a spectrum without a
+ * url is a local file, and one with `lowloss` gets Fourier-ratio deconvolution with that spectrum.
  * o: { smooth, normalise, log, edges?: { elements, minor } } as on the page; a spectrum's `window` means its background
  * is subtracted. Edge markers need an EELSSpectrum, and plot_spectra cannot draw them, so only one spectrum gets them.
  */
@@ -57,6 +58,11 @@ export function hyperspyCode(spectra, o = {}) {
     if (sp.url) lines.push(`url = ${q(sp.url)}`, `path, _ = urlretrieve(url, ${q(sp.file)})`, `${v} = hs.load(path${type})`);
     else lines.push(`${v} = hs.load(${q(sp.file)}${type})  # your file: change the path if it is elsewhere`);
     if (sp.window) lines.push(`${v} = ${v}.remove_background(signal_range=(${num(sp.window[0])}, ${num(sp.window[1])}))`);
+    if (sp.lowloss) {
+      lines.push(`path, _ = urlretrieve(${q(sp.lowloss.url)}, ${q(sp.lowloss.file)})`, 'll = hs.load(path, signal_type="EELS")');
+      if (sp.lowloss.resample) lines.push("# The low-loss channels differ in width: interpolate it onto the core-loss channel width first.");
+      lines.push(`${v} = ${v}.fourier_ratio_deconvolution(ll)`);
+    }
     if (o.smooth) lines.push(`${v}.smooth_savitzky_golay(window_length=${o.smooth}, polynomial_order=2)`);
     if (o.normalise) lines.push(`${v} = ${v} / ${v}.data.${o.normalise === "max" ? "max" : "sum"}()`);
     // The page finds peaks on the main spectrum only. o.peaks is the slope_thresh it used.

@@ -172,6 +172,32 @@ async function main() {
   const procStatus = document.getElementById("process-status");
   const PROC_NOTE = procStatus?.textContent;
   const snippet = document.getElementById("snippet-code");
+  // The low-loss spectrum of the same area, for Fourier-ratio deconvolution; loaded when first chosen.
+  const lowlossInfo = el.dataset.lowloss ? JSON.parse(el.dataset.lowloss) : null;
+  const bgSubtracted = !!el.dataset.bgSubtracted;
+  let lowloss = null;
+  let lowlossState = "";
+  const loadLowloss = async () => {
+    if (lowloss || lowlossState === "loading") return;
+    lowlossState = "loading";
+    try {
+      let x, y;
+      if (lowlossInfo.slug) {
+        const { data: d } = await (await fetch(`${lowlossInfo.src}?preview`)).json();
+        [x, y] = [d.energy_ev, d.intensity];
+      } else if (lowlossInfo.text) [x, y] = await load(lowlossInfo.src);
+      else {
+        const blob = await (await fetch(`${lowlossInfo.src}?preview`)).blob();
+        [x, y] = await (await import("/pyreader.js")).readXY(new File([blob], lowlossInfo.name));
+      }
+      const order = x.map((_, i) => i).sort((a, b) => x[a] - x[b]);
+      lowloss = { x: order.map((i) => x[i]), y: order.map((i) => y[i]) };
+      lowlossState = "";
+    } catch {
+      lowlossState = "failed";
+    }
+    rebuild(true);
+  };
   if (bgFrom) {
     // From the start of the data to just before the first major edge, where the pre-edge background usually is.
     const span = xmax - xmin;
@@ -220,7 +246,9 @@ async function main() {
   const describe = () => {
     const o = settings();
     const parts = [];
-    if (o.background === "subtract") parts.push(`power-law background subtracted (fit ${o.window[0]}–${o.window[1]} eV)`);
+    const sub = o.background === "subtract" || (o.background === "frd" && !bgSubtracted);
+    if (sub) parts.push(`power-law background subtracted (fit ${o.window[0]}–${o.window[1]} eV)`);
+    if (o.background === "frd" && view?.frd?.fwhm) parts.push(`Fourier-ratio deconvolved with the low-loss spectrum ${lowlossInfo.name}`);
     if (o.smooth) parts.push(`Savitzky–Golay smoothed (${o.smooth} points)`);
     if (o.normalise) parts.push(`normalised to ${o.normalise === "max" ? "maximum" : "area"}`);
     return parts.length ? `Processed: ${parts.join(", ")}` : "";
@@ -228,9 +256,19 @@ async function main() {
   // "Use in HyperSpy": code that loads every plotted spectrum and gives the same processing as the plot.
   const writeSnippet = (o, main, procs) => {
     const d = snippet.dataset;
-    const sub = o.background === "subtract";
+    const frd = o.background === "frd" && !!main.frd?.fwhm;
+    const sub = o.background === "subtract" || (o.background === "frd" && !bgSubtracted);
+    const lowlossFile = lowlossInfo && (lowlossInfo.slug ? `${lowlossInfo.slug}.hspy` : lowlossInfo.name);
+    const resampled = frd && lowloss && Math.abs((lowloss.x.at(-1) - lowloss.x[0]) / (lowloss.x.length - 1) - (data[0].at(-1) - data[0][0]) / (data[0].length - 1)) > 1e-6;
     const spectra = [
-      { name: title, url: d.url, file: d.file, signalType: d.signalType, window: sub && main.fit ? o.window : null },
+      {
+        name: title,
+        url: d.url,
+        file: d.file,
+        signalType: d.signalType,
+        window: sub && (main.fit || frd) ? o.window : null,
+        lowloss: frd ? { url: lowlossInfo.hyperspy, file: lowlossFile, resample: resampled } : null,
+      },
       ...compares.map((c, j) => ({
         name: c.name,
         ...(c.slug
@@ -424,12 +462,16 @@ async function main() {
   let view;
   const compute = () => {
     const o = settings();
-    const main = processSpectrum(data[0], data[1], o);
+    // Deconvolution needs the low-loss spectrum; compared spectra have none, so they only get the background step.
+    const frd = o.background === "frd";
+    if (frd && lowlossInfo) loadLowloss();
+    const main = processSpectrum(data[0], data[1], frd ? { ...o, background: bgSubtracted ? "" : "subtract", lowloss } : o);
     // A compared spectrum is fitted over the part of the window its data covers. powerLaw snaps the window to the
     // nearest channels, so with fewer than 10 channels there it would fit the spectrum's edge: leave it unfitted.
     const clipped = (x) => {
       const [lo, hi] = [Math.max(o.window[0], x[0]), Math.min(o.window[1], x.at(-1))];
-      return (hi - lo) / ((x.at(-1) - x[0]) / (x.length - 1)) >= 10 ? { ...o, window: [lo, hi] } : { ...o, background: "" };
+      const background = frd ? "subtract" : o.background;
+      return (hi - lo) / ((x.at(-1) - x[0]) / (x.length - 1)) >= 10 ? { ...o, background, window: [lo, hi] } : { ...o, background: "" };
     };
     const procs = compares.map((c) => {
       const opts = clipped(c.x);
@@ -442,8 +484,19 @@ async function main() {
       fit: shownFit(data[0], main.fit, o.window[0]),
       compares: procs.map((p) => p.y),
       compareFits: procs.map((p, j) => shownFit(compares[j].x, p.fit, p.from)),
+      frd: main.frd,
     };
-    if (procStatus) procStatus.textContent = o.background && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies." : PROC_NOTE;
+    if (procStatus) {
+      const pre = "Deconvolved with the low-loss spectrum ";
+      procStatus.textContent =
+        frd && lowlossState === "loading" ? `Loading the low-loss spectrum ${lowlossInfo.name}…`
+        : frd && lowlossState === "failed" ? `The low-loss spectrum ${lowlossInfo.name} could not be read, so it is not deconvolved.`
+        : frd && main.frd?.error ? `Not deconvolved: ${main.frd.error}`
+        : frd && main.frd
+          ? `${pre}${lowlossInfo.name}${lowlossInfo.slug ? ", an associated spectrum (check that it is from the same area)" : ""}, zero-loss width ${main.frd.fwhm.toFixed(2)} eV. This removes plural scattering but adds noise. Compared spectra are not deconvolved.`
+        : o.background && o.background !== "frd" && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies."
+        : PROC_NOTE;
+    }
     snippetArgs = [o, main, procs];
     if (snippet) writeSnippet(...snippetArgs);
     showValues();
@@ -588,7 +641,7 @@ async function main() {
   const windowPlugin = {
     hooks: {
       drawAxes: (u) => {
-        if (!bgMode?.value) return;
+        if (!bgMode?.value || (bgMode.value === "frd" && bgSubtracted)) return;
         const [a, b] = settings().window.map((v) => u.valToPos(v, "x", true));
         const left = Math.max(a, u.bbox.left);
         const right = Math.min(b, u.bbox.left + u.bbox.width);
