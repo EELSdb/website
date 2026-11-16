@@ -666,6 +666,9 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .quant-summary button:hover, .quant-summary button:focus-visible { text-decoration-color: currentColor; }
 .process-controls { display: grid; justify-items: start; gap: 0.6rem; }
 .bg-status { flex-basis: 100%; margin: 0; }
+/* A select is as wide as its longest option ("Subtract, then Fourier-ratio deconvolution"); keep it inside the panel. */
+.bg-row > label { display: flex; flex-wrap: wrap; align-items: center; gap: 0.35rem; max-width: 100%; }
+.bg-row select { max-width: 100%; min-width: 0; }
 .bg-row, .peaks-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
 .fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }
 .fit-text { white-space: nowrap; }
