@@ -1364,6 +1364,7 @@ html:not(.js) .picture-file label { display: none; }
 .compare-empty { flex-basis: 100%; display: flex; align-items: center; gap: 1rem; color: var(--muted); }
 .compare-empty svg { flex: none; }
 .compare-empty p { margin: 0; }
+.compare-notes { margin: 0; padding-left: 1.1rem; display: grid; gap: 0.2rem; }
 .compare-empty strong { color: var(--ink); font-weight: 600; }
 .compare:has(#compare-list:not([hidden])) .compare-empty { display: none; }
 .compare label:not(.button) { display: inline-flex; gap: 0.45rem; align-items: center; cursor: pointer; }

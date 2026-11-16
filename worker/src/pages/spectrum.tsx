@@ -439,7 +439,11 @@ export async function spectrumPage(c: Context<AppEnv>) {
                   <ul class="picker-list spectrum-options" id="compare-options" role="listbox" aria-label="Spectra to compare" hidden></ul>
                 </div>
                 <div class="compare-empty">
-                  <p>You can also drag files onto the plot. MSA, CSV, text, DM3/DM4, EMD and HSPY files, and X-ray absorption files (XDI, SPEC, Athena, NeXus and beamline columns), are read in your browser and never uploaded. To trace a spectrum from a published figure, drop or paste a screenshot of it.</p>
+                  <ul class="compare-notes">
+                    <li>Upload a spectra file above, or drag &amp; drop onto the plot.</li>
+                    <li>Paste / upload a screenshot of a plot to trace it and overlay.</li>
+                    <li>Files are read in your browser and not uploaded.</li>
+                  </ul>
                 </div>
                 <span class="hint" id="compare-status" aria-live="polite"></span>
                 <ul class="compare-list" id="compare-list" aria-label="Compared spectra" hidden></ul>
