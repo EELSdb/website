@@ -171,8 +171,6 @@ async function main() {
   const peaksBox = document.getElementById("find-peaks");
   const peakLevel = document.getElementById("peak-level");
   const peaksStatus = document.getElementById("peaks-status");
-  const procStatus = document.getElementById("process-status");
-  const PROC_NOTE = procStatus?.textContent;
   const snippet = document.getElementById("snippet-code");
   // The low-loss spectrum of the same area, for Fourier-ratio deconvolution; loaded when first chosen.
   const lowlossInfo = el.dataset.lowloss ? JSON.parse(el.dataset.lowloss) : null;
@@ -488,16 +486,20 @@ async function main() {
       compareFits: procs.map((p, j) => shownFit(compares[j].x, p.fit, p.from)),
       frd: main.frd,
     };
-    if (procStatus) {
-      const pre = "Deconvolved with the low-loss spectrum ";
-      procStatus.textContent =
-        frd && lowlossState === "loading" ? `Loading the low-loss spectrum ${lowlossInfo.name}…`
-        : frd && lowlossState === "failed" ? `The low-loss spectrum ${lowlossInfo.name} could not be read, so it is not deconvolved.`
-        : frd && main.frd?.error ? `Not deconvolved: ${main.frd.error}`
+    // Messages about the background and deconvolution go right under the Background menu, where the choice was made.
+    const bgStatus = document.getElementById("bg-status");
+    if (bgStatus) {
+      const link = lowlossInfo?.slug ? `<a href="/spectra/${encodeURIComponent(lowlossInfo.slug)}/">${esc(lowlossInfo.name)}</a>` : esc(lowlossInfo?.name ?? "");
+      const text =
+        frd && lowlossState === "loading" ? `Loading the low-loss spectrum ${link}…`
+        : frd && lowlossState === "failed" ? `The low-loss spectrum ${link} could not be read, so the spectrum is not deconvolved.`
+        : frd && main.frd?.error ? `Not deconvolved: ${esc(main.frd.error)}`
         : frd && main.frd
-          ? `${pre}${lowlossInfo.name}${lowlossInfo.slug ? ", an associated spectrum (check that it is from the same area)" : ""}, zero-loss width ${main.frd.fwhm.toFixed(2)} eV. This removes plural scattering but adds noise. Compared spectra are not deconvolved.`
-        : o.background && o.background !== "frd" && !main.fit ? "No power law fits that window. Pick a wider one before the edge, at positive energies."
-        : PROC_NOTE;
+          ? `Deconvolved with the low-loss spectrum ${link} (zero-loss width ${main.frd.fwhm.toFixed(2)} eV).${lowlossInfo.slug ? " It is an associated spectrum: check that it is from the same area." : ""} Deconvolution removes plural scattering but adds noise. Compared spectra are not deconvolved.`
+        : o.background && !main.fit && !(frd && bgSubtracted) ? "No power law fits that window. Pick a wider one before the edge, at positive energies."
+        : "";
+      bgStatus.innerHTML = text;
+      bgStatus.hidden = !text;
     }
     snippetArgs = [o, main, procs];
     if (snippet) writeSnippet(...snippetArgs);
@@ -508,15 +510,15 @@ async function main() {
   const shown = (ys) => (log() ? ys.map((v) => (v > 0 ? v : null)) : ys);
   const colour = (i) => paint(`--compare-${(i % 4) + 1}`);
   // Only where this spectrum has data, so a wider file does not squeeze the reference.
-  const plotData = (f = shown) => {
-    const main = [data[0], f(view.y), ...(view.fit ? [f(view.fit)] : [])];
+  const plotData = () => {
+    const main = [data[0], shown(view.y), ...(view.fit ? [shown(view.fit)] : [])];
     if (!compares.length) return main;
     const [lo, hi] = [data[0][0], data[0].at(-1)];
     return uPlot.join([
       main,
       ...compares.map((c, j) => {
         const x = c.x.map((v) => v + (c.shift || 0));
-        const ys = [view.compares[j], ...(view.compareFits[j] ? [view.compareFits[j]] : [])].map(f);
+        const ys = [view.compares[j], ...(view.compareFits[j] ? [view.compareFits[j]] : [])].map(shown);
         const keep = x.map((_, i) => i).filter((i) => x[i] >= lo && x[i] <= hi);
         return [keep.map((i) => x[i]), ...ys.map((y) => keep.map((i) => y[i]))];
       }),
@@ -783,7 +785,7 @@ async function main() {
   const quantResult = document.getElementById("quant-result");
   if (quantInfo && quantResult) {
     const [qx, qy] = data;
-    import("/quant.js").then(({ quantify }) => {
+    import("/quantify.js").then(({ quantify }) => {
       const q = quantify(qx, qy, JSON.parse(el.dataset.edges || "[]"), table, quantInfo, { backgroundSubtracted: quantInfo.bgsub });
       const pct = (f) => `${(100 * f).toFixed(f < 0.1 ? 1 : 0)}%`;
       const skipped = q.skipped?.length
@@ -1298,10 +1300,6 @@ async function main() {
 
   const legendItems = (u) => u.series.slice(1).filter((s) => !s.isFit).map((s) => ({ label: s.label, colour: s._stroke ?? s.stroke }));
 
-  async function savePng(theme) {
-    give(await renderPng(theme), "png");
-  }
-
   async function renderPng(theme) {
     const { u, colours, done } = await themedPlot(theme);
     const src = u.ctx.canvas;
@@ -1332,7 +1330,7 @@ async function main() {
     return new Promise((resolve) => out.toBlob(resolve, "image/png"));
   }
 
-  async function saveSvg(theme) {
+  async function renderSvg(theme) {
     const { u, colours, done } = await themedPlot(theme);
     const r = u.ctx.canvas.width / u.width;
     const [L, T, PW, PH] = [u.bbox.left / r, u.bbox.top / r + HEAD, u.bbox.width / r, u.bbox.height / r];
@@ -1410,7 +1408,7 @@ async function main() {
 ${parts.join("\n")}
 </svg>`;
     done();
-    give(new Blob([svg], { type: "image/svg+xml" }), "svg");
+    return new Blob([svg], { type: "image/svg+xml" });
   }
 
   function give(blob, ext) {
@@ -1421,47 +1419,35 @@ ${parts.join("\n")}
     setTimeout(() => URL.revokeObjectURL(a.href), 10_000);
   }
 
-  // The plotted values over the energies in view, as tab-separated columns that spreadsheets split on paste. Log axes
-  // hide values of zero and below, so the copy uses the values before that.
-  const plottedTable = () => {
-    const cols = plotData((ys) => ys);
-    const names = ["Energy (eV)", seriesName(), ...plot.series.slice(2).map((s) => s.label)];
-    const { min, max } = plot.scales.x;
-    const lines = [names.join("\t")];
-    cols[0].forEach((x, k) => {
-      if (min != null && (x < min || x > max)) return;
-      lines.push(cols.map((c) => c[k] ?? "").join("\t"));
-    });
-    return lines.join("\n") + "\n";
+  // The Export popover: choose a format and a background, then copy or save.
+  const choice = (name) => document.querySelector(`[name=${name}]:checked`).value;
+  const render = () => (choice("export-format") === "svg" ? renderSvg : renderPng)(choice("export-theme"));
+  const exportStatus = document.getElementById("export-status");
+  const copyButton = document.getElementById("export-copy");
+  // Every browser copies PNG images; only some take SVG.
+  const canCopy = () =>
+    typeof ClipboardItem === "function" && (choice("export-format") === "png" || !!ClipboardItem.supports?.("image/svg+xml"));
+  const syncExport = () => {
+    exportStatus.textContent = "";
+    copyButton.disabled = !canCopy();
+    copyButton.title = copyButton.disabled ? "This browser cannot copy this image. Save it instead." : "";
   };
-  const copyStatus = document.getElementById("copy-status");
-  for (const button of document.querySelectorAll("[data-copy-plot]")) {
-    const idle = button.textContent;
-    button.addEventListener("click", async () => {
-      copyStatus.textContent = "";
-      try {
-        // Safari only allows a clipboard write that starts in the click, so the image is passed as a promise.
-        if (button.dataset.copyPlot === "image") await navigator.clipboard.write([new ClipboardItem({ "image/png": renderPng("light") })]);
-        else await navigator.clipboard.writeText(plottedTable());
-        button.textContent = "Copied";
-        button.classList.add("copied");
-        setTimeout(() => {
-          button.textContent = idle;
-          button.classList.remove("copied");
-        }, 1600);
-      } catch {
-        copyStatus.textContent = "Your browser did not allow the copy. Save a file instead.";
-      }
-    });
-  }
-
-  for (const button of document.querySelectorAll("[data-save-plot]")) {
-    button.addEventListener("click", () => {
-      const [fmt, theme] = button.dataset.savePlot.split("-");
-      (fmt === "svg" ? saveSvg : savePng)(theme);
-      button.closest("[popover]")?.hidePopover();
-    });
-  }
+  for (const radio of document.querySelectorAll("[name=export-format], [name=export-theme]")) radio.addEventListener("change", syncExport);
+  syncExport();
+  copyButton.addEventListener("click", async () => {
+    const type = choice("export-format") === "svg" ? "image/svg+xml" : "image/png";
+    try {
+      // Safari allows a clipboard write only if it starts in the click, so the image goes in as a promise.
+      await navigator.clipboard.write([new ClipboardItem({ [type]: render() })]);
+      exportStatus.textContent = "Copied. Paste it into your document or slides.";
+    } catch {
+      exportStatus.textContent = "Your browser did not allow the copy. Save the image instead.";
+    }
+  });
+  document.getElementById("export-save").addEventListener("click", async () => {
+    give(await render(), choice("export-format"));
+    document.getElementById("save-plot").hidePopover();
+  });
 }
 
 /** File metadata as a flat table of dotted paths, fetched the first time it is opened. */

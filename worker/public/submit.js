@@ -684,7 +684,7 @@ function placeDropzone() {
   else list.before(dropzone);
   $("strong", dropzone).textContent = more ? "Add another file for this spectrum" : dropText[0];
   $(".hint", dropzone).textContent = more
-    ? `A companion low-loss, a companion file from the same session, or a processed version. A different specimen needs its own submission. Up to ${MAX_BYTES / 1024 / 1024} MB each.`
+    ? `A companion low-loss, a companion file from the same session, a processed version, or a related spectrum such as the same area after beam damage. A different specimen needs its own submission. Up to ${MAX_BYTES / 1024 / 1024} MB each.`
     : dropText[1];
 }
 $("#browse").addEventListener("click", () => picker.click());

@@ -665,6 +665,7 @@ input[type="password"], input[type="email"] { background: var(--surface); border
 .quant-summary button { all: unset; cursor: pointer; text-decoration: underline; text-decoration-color: var(--line); text-underline-offset: 3px; }
 .quant-summary button:hover, .quant-summary button:focus-visible { text-decoration-color: currentColor; }
 .process-controls { display: grid; justify-items: start; gap: 0.6rem; }
+.bg-status { flex-basis: 100%; margin: 0; }
 .bg-row, .peaks-row { display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 1rem; width: 100%; }
 .fit-window { display: flex; align-items: center; gap: 0.6rem; flex: 1; min-width: 15rem; }
 .fit-text { white-space: nowrap; }
@@ -1367,9 +1368,15 @@ html:not(.js) .picture-file label { display: none; }
 .save-plot { margin: auto; width: min(26rem, 100% - 2rem); padding: 1.25rem 1.5rem 1.5rem; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); box-shadow: var(--shadow); }
 .save-plot h2 { margin-top: 0; }
 .save-plot p { margin: 0 0 1rem; }
-.save-grid .save-wide { grid-column: span 2; }
-.save-plot .copy-status:empty { display: none; }
-.save-grid { display: grid; grid-template-columns: auto 1fr 1fr; gap: 0.5rem 0.75rem; align-items: center; font-size: 0.875rem; }
+.export-options { display: grid; grid-template-columns: auto 1fr; gap: 0.5rem 1rem; align-items: center; font-size: 0.875rem; }
+.export-options .choice-buttons { margin: 0; }
+.save-plot .export-status { margin: 0.75rem 0 0; }
+.save-plot .export-status:empty { display: none; }
+.save-plot .export-heading { margin: 0 0 0.5rem; font-size: 0.95rem; }
+.save-plot .export-image { margin-top: 1.25rem; padding-top: 1.25rem; border-top: 1px solid var(--rule); }
+.save-plot .export-image + p { margin-bottom: 0.75rem; }
+.export-link { margin-top: 0; }
+.export-link .cite-text { font-size: 0.85rem; word-break: break-all; }
 .plot .axis-drag { cursor: ns-resize; touch-action: none; }
 .plot .axis-drag::before { content: ""; position: absolute; left: 0; right: 0; height: 50%; background: currentColor; opacity: 0.1; pointer-events: none; visibility: hidden; }
 .plot .axis-drag[data-half="top"]::before { visibility: visible; top: 0; }

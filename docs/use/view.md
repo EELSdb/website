@@ -132,10 +132,10 @@ In a notebook, install `hyperspy` and `exspy` first. Without exSpy, HyperSpy loa
 
 Click **Export**.
 
-- **Copy: Image** copies a PNG image of the plot, on a light background, to paste into slides or documents.
-- **Copy: Data** copies the values in the plot as columns separated by tabs, with a header row: the energy, then each spectrum. Paste them into a spreadsheet or a plotting program. The copy has only the energy range you zoomed to, and the values after the **Adjust the plot** settings. Compared spectra and fits are extra columns, empty where a spectrum has no value at that energy.
-- **PNG** and **SVG** save an image file, with a light or dark background.
-- **Link: Copy permalink** copies the spectrum's permanent link, with its reference number.
+- **Link to this spectrum** shows the permanent link, with the reference number. Click **Copy** to copy it.
+- Under **Image of the plot**, choose the **Format** (PNG or SVG) and the **Background** (light or dark). Then click **Copy image** to paste it into slides or a document, or **Save image** to save a file. Some browsers cannot copy SVG images: **Copy image** is then unavailable for SVG.
+
+To get the data, use **Download** (see [Download and cite spectra](/docs/use/download/)).
 
 The image shows the plot as it is on the page: the area you zoomed to, the edge markers, the peak labels, any spectra you compare with it and the settings from **Adjust the plot**.
 If you changed the settings, the image says which processing it shows.

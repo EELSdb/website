@@ -335,30 +335,30 @@ export async function spectrumPage(c: Context<AppEnv>) {
               Export
             </button>
             <div id="save-plot" class="save-plot" popover="auto" role="dialog" aria-labelledby="save-plot-title">
-              <h2 id="save-plot-title">Export the plot</h2>
-              <p class="muted small">The plot as it is now, with any compared spectra: copy it to paste into another program, or save it as a file.</p>
-              <p class="hint copy-status" id="copy-status" aria-live="polite"></p>
-              <div class="save-grid">
-                <strong>Copy</strong>
-                <button type="button" class="button secondary" data-copy-plot="image" title="A PNG image in the light theme, for slides and documents">Image</button>
-                <button type="button" class="button secondary" data-copy-plot="data" title="The plotted values in view as tab-separated columns, for spreadsheets and plotting programs">Data</button>
-                {(["png", "svg"] as const).map((f) => (
-                  <>
-                    <strong>{f.toUpperCase()}</strong>
-                    {(["light", "dark"] as const).map((t) => (
-                      <button type="button" class="button secondary" data-save-plot={`${f}-${t}`} aria-label={`Save as ${f.toUpperCase()}, ${t} theme`}>
-                        {t === "light" ? "Light" : "Dark"}
-                      </button>
-                    ))}
-                  </>
-                ))}
-                <strong>Link</strong>
-                <button type="button" class="button secondary save-wide" data-copy-text={s.accession ? `${SITE}/${accessionId(s.accession)}` : `${SITE}/spectra/${encodeURIComponent(s.slug)}/`} title="The permanent link to this spectrum">
-                  <span class="copy-label" role="status" data-done="Link copied" data-idle="Copy permalink">Copy permalink</span>
-                </button>
+              <h2 id="save-plot-title">Export</h2>
+              <h3 class="export-heading">Link to this spectrum</h3>
+              <div class="cite-block export-link">
+                <div id="permalink" class="cite-text">{s.accession ? `${SITE}/${accessionId(s.accession)}` : `${SITE}/spectra/${encodeURIComponent(s.slug)}/`}</div>
+                <CopyButton target="permalink" what="permalink" />
               </div>
+              <h3 class="export-heading export-image">Image of the plot</h3>
+              <p class="muted small">As it is now: the zoom, the compared spectra and the settings from "Adjust the plot". For the data, use Download.</p>
+              <div class="export-options">
+                <span id="export-format-label">Format</span>
+                <div class="choice-buttons" role="radiogroup" aria-labelledby="export-format-label">
+                  <label><input type="radio" name="export-format" value="png" checked /><span>PNG</span></label>
+                  <label><input type="radio" name="export-format" value="svg" /><span>SVG</span></label>
+                </div>
+                <span id="export-theme-label">Background</span>
+                <div class="choice-buttons" role="radiogroup" aria-labelledby="export-theme-label">
+                  <label><input type="radio" name="export-theme" value="light" checked /><span>Light</span></label>
+                  <label><input type="radio" name="export-theme" value="dark" /><span>Dark</span></label>
+                </div>
+              </div>
+              <p class="hint export-status" id="export-status" aria-live="polite"></p>
               <div class="dialog-actions">
-                <button class="button secondary" type="button" popovertarget="save-plot" popovertargetaction="hide">Close</button>
+                <button class="button secondary" type="button" id="export-copy">Copy image</button>
+                <button class="button" type="button" id="export-save">Save image</button>
               </div>
             </div>
           </>
@@ -481,6 +481,7 @@ export async function spectrumPage(c: Context<AppEnv>) {
                         </svg>
                       </button>
                     </span>
+                    <p class="hint bg-status" id="bg-status" aria-live="polite" hidden></p>
                   </div>
                 )}
                 <label>

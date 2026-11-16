@@ -225,10 +225,22 @@ describe("pages", () => {
     expect((await exports.default.fetch("https://eelsdb.eu/spectra/no-such-spectrum/download/csv")).status).toBe(404);
     const html = await (await page("/spectra/mlc-nanotube-ylas-tas2/")).html;
     expect(html).toContain('name="download-format" value="/spectra/mlc-nanotube-ylas-tas2/download/msa"');
-    expect(html).toContain('data-save-plot="svg-dark"');
+    expect(html).toContain('name="export-format" value="svg"');
     expect(html).toContain('value="/spectra/mlc-nanotube-ylas-tas2/download/hspy"');
     expect(html).toContain("https://eelsdb.eu/spectra/mlc-nanotube-ylas-tas2/download/hspy");
     expect(html).not.toContain('signal_type');
+  });
+
+  it("lists other spectra from the contributor with their comments", async () => {
+    const id = await env.DB.prepare("SELECT id FROM spectra WHERE slug = 'graphite'").first<number>("id");
+    await env.DB.prepare("INSERT INTO files (spectrum_id, role, r2_key, filename, variant, note) VALUES (?, 'variant', 'test/other-1/damaged.msa', 'damaged.msa', 'other_1', 'Same area after 60 s of beam exposure')").bind(id).run();
+    const html = (await page("/spectra/graphite/")).html;
+    expect(html).toContain("Other spectra from the contributor");
+    expect(html).toContain("Same area after 60 s of beam exposure");
+    expect(html).toContain(">Other: Same area after 60 s of beam exposure</option>");
+    const api = await (await exports.default.fetch(`https://api.eelsdb.eu/v2/spectra/${id}`)).json<any>();
+    expect(api.files.find((f: any) => f.variant === "other_1").note).toBe("Same area after 60 s of beam exposure");
+    await env.DB.prepare("DELETE FROM files WHERE r2_key = 'test/other-1/damaged.msa'").run();
   });
 
   it("offers X-ray absorption spectra as XDI in place of the EELS formats", async () => {

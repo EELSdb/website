@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import cases from "../../data/fixtures/quant.json";
 import table from "../public/eels_binding_energies.json";
 // @ts-expect-error plain browser module, no types
-import { effectiveAngle, hydrogenic, quantify, windowCrossSection } from "../public/quant.js";
+import { effectiveAngle, hydrogenic, quantify, windowCrossSection } from "../public/quantify.js";
 
 const near = (got: number, want: number, tol: number) => expect(Math.abs(got - want) / Math.abs(want)).toBeLessThan(tol);
 

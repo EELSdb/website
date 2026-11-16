@@ -1,6 +1,6 @@
 """Record exSpy's hydrogenic K and L cross-sections into data/fixtures/quant.json.
 
-worker/public/quant.js reimplements them for the spectrum page's quick quantification; worker/test/quant.test.ts
+worker/public/quantify.js reimplements them for the spectrum page's quick quantification; worker/test/quantify.test.ts
 checks it against this file.
 
     uv run python record_quant.py

@@ -44,12 +44,10 @@ New tools go in one of the tabs by that rule, and a short result that viewers sh
 
 ### Export
 
-The Export popover copies to the clipboard or saves a file.
+The Export popover has two parts. At the top is the permanent link (the reference-number link, `https://eelsdb.eu/EELSDB-0017`, or the page address for a spectrum without one) with a copy button, as in the citation dialog. Below it are the image choices, Format (PNG or SVG) and Background (light or dark), then two actions at the bottom: "Copy image" and "Save image".
 
-- "Copy image" puts a PNG of the view, in the light theme, on the clipboard, for pasting into slides and documents. Safari allows a clipboard write only if it starts in the click, so the page passes the image to `ClipboardItem` as a promise.
-- "Copy data" puts the plotted values within the energies in view on the clipboard as tab-separated text with a header row, which spreadsheets and plotting programs split into columns. It copies the values after processing, with compared spectra and fits as more columns (gaps where a spectrum has no value at an energy). A log axis hides values of zero and below; the copy keeps them.
-- "Copy permalink" copies the reference-number link (`https://eelsdb.eu/EELSDB-0017`), or the page address for a spectrum without one.
-- If the browser refuses the write, the popover says so and points to the file buttons.
+- The popover is only about the image and the link. Data is in the Download dialog, so the Export button's image icon matches what it does.
+- Safari allows a clipboard write only if it starts in the click, so the page passes the image to `ClipboardItem` as a promise. Every browser copies PNG; "Copy image" is disabled for SVG where `ClipboardItem.supports("image/svg+xml")` is false. If the browser refuses the write, the popover says so.
 
 Viewers can export the current view as PNG or SVG, in light or dark. The page draws a second uPlot off-screen at 1200 × 560 in the chosen theme. uPlot draws only to canvas. The page therefore builds the SVG from the scales and ticks of that uPlot (`_splits`, `_values`, `_size`). These are internal fields of uPlot 1.6. Each export states the processing that the viewer applied.
 
@@ -77,9 +75,9 @@ The page does view processing in plain JS (`worker/public/process.js`), not with
 
 ### Quick quantification
 
-- For core-loss spectra in counts whose record has the beam energy and the collection angle, the page estimates element ratios when it loads (`worker/public/quant.js`, loaded on demand). The estimate shows in the bar under the plot ("≈ B 46% · N 54%"), and the "Analyse" tab has the table, the window and angles used, the edges left out and the caveats. A "?" next to both links to the documentation page that explains the method and its limits.
+- For core-loss spectra in counts whose record has the beam energy and the collection angle, the page estimates element ratios when it loads (`worker/public/quantify.js`, loaded on demand; not `quant.js`, which ad blockers block as Quantcast's tracking script). The estimate shows in the bar under the plot ("≈ B 46% · N 54%"), and the "Analyse" tab has the table, the window and angles used, the edges left out and the caveats. A "?" next to both links to the documentation page that explains the method and its limits.
 - It uses Egerton's integral method: one window Δ for every edge (50 eV, less if the next edge or the end of the data is closer, at least 20 eV), a power law fitted by least squares to log counts over the 30 eV before each onset (from 3 eV before it, and after the previous edge), the counts above it from the onset to onset + Δ, divided by the partial cross-section σ(β, Δ).
-- σ comes from exSpy's hydrogenic GOS (Egerton's SIGMAK3 and SIGMAL3), reimplemented in JS: the same tabulated energies, the same q integral (adaptive Simpson in place of scipy's `quad`), Egerton's effective collection angle for a convergent beam, and linear interpolation between energies, as exSpy's spline of order 1. `worker/test/quant.test.ts` checks ten K and L3 cases against `data/fixtures/quant.json` (from `python/record_quant.py`) to 1e-7, and a spectrum built from the cross-sections gives back its ratio.
+- σ comes from exSpy's hydrogenic GOS (Egerton's SIGMAK3 and SIGMAL3), reimplemented in JS: the same tabulated energies, the same q integral (adaptive Simpson in place of scipy's `quad`), Egerton's effective collection angle for a convergent beam, and linear interpolation between energies, as exSpy's spline of order 1. `worker/test/quantify.test.ts` checks ten K and L3 cases against `data/fixtures/quant.json` (from `python/record_quant.py`) to 1e-7, and a spectrum built from the cross-sections gives back its ratio.
 - Only K and L2,3 edges have hydrogenic cross-sections. An element with both in range uses its K edge.
 - The page quantifies the spectrum as published, not the view, so the result does not change with the plot settings.
 - On the seed data, hexagonal BN gives B 46%, N 54%, and LaCoO3 gives O 74%, Co 26% (Co L2,3 and O K). Cr2O3 gives too much Cr, because of the white lines.
